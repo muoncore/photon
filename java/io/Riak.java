@@ -19,6 +19,12 @@ import java.util.*;
 
 /**
  * Created by gawain on 11/05/2015.
+ *
+ * You can run a etst serach using curl on the riak database like so:
+ *
+ *
+ * curl -X GET 'http://riak1.cistechfutures.net:8098/search/query/eventstore?wt=json&q=stream_s:cambio&q=created_dt:%5B2015-05-14T10:00:00Z%20TO%20*%5D'  | json_pp
+ *
  */
 public class Riak {
 
