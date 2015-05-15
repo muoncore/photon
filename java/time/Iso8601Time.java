@@ -1,4 +1,4 @@
-package eventstore;
+package time;
 
 
 import java.text.ParseException;
@@ -29,7 +29,7 @@ public class Iso8601Time {
 
     public static void main(String[] args) {
 
-        solrFormat
+        //solrFormat
 
         System.out.println();
     }

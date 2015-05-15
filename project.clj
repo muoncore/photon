@@ -10,6 +10,9 @@
                  [http-kit "2.1.18"]
                  [clj-time "0.9.0"]
                  [ring "1.3.2"]
+                 [com.basho.riak/riak-client "2.0.1" :exclusions [com.sun/tools]]
+                 [org.json/json "20141113"]
+                 [ring/ring-defaults "0.1.2"]
                  [io.muoncore/muon-core "0.26"]
                  [io.muoncore/muon-transport-amqp "0.26"]
                  [io.muoncore/muon-discovery-amqp "0.26"]
@@ -17,6 +20,7 @@
   :plugins [[lein-ring "0.8.13"]]
   :ring {:handler eventstore.handler/app} ;; jetty
   :main eventstore.handler ;; http-kit
+  :java-source-paths ["java"]
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring-mock "0.1.5"]]}})
