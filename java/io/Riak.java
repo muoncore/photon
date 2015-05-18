@@ -79,11 +79,24 @@ public class Riak {
         String id = riak.persist("cambio", "create-user", "{'username': 'gawain hammond', 'uid': 'gah08', 'job_title': 'Software Developer'}");
         JSONObject event = riak.getEvent(id);
         System.out.println("\nReturned Event: " + event);
-        List<Map<String, List<String>>> results = riak.eventsSince(riak.toDate("2015-05-14T10:00:00Z"), "cambio", 1);
 
-        for (Map result: results) {
-            System.out.println(result);
+
+        boolean resultsLeft = true;
+        int pageNum = 1;
+        while(resultsLeft) {
+
+
+            List<Map<String, List<String>>> results = riak.eventsSince(riak.toDate("2015-05-14T10:00:00Z"), "cambio", pageNum);
+            if (results.size() < 1) resultsLeft = false;
+            pageNum++;
+            for (Map result: results) {
+                System.out.println(result);
+            }
+
         }
+
+
+
         //Object eventsAfter = riak.eventsAfter(null);
         riak.cluster.shutdown();
 
@@ -159,13 +172,14 @@ public class Riak {
     public  List<Map<String, List<String>>> eventsSince(Date date, String streamName, int  pageNum) {
 
         if (pageNum < 1) pageNum = 1;
-        int pageSize = 100;
+        int pageSize = 5;
 
         String streamField = "stream_s";
         String value = streamName;
 
         int startRow = pageSize * (pageNum - 1);
-        System.out.println("querying rows " + startRow + " to " + (pageSize + startRow));
+
+        System.out.println("querying rows " + startRow + " to " + (pageSize + startRow -1));
         String createdField = "created_dt";
         String fromDate = dateToIso8601(date);
 
@@ -174,7 +188,7 @@ public class Riak {
         SearchOperation searchOp = new SearchOperation
                 .Builder(BinaryValue.create(bucketType), querySTring)
                 //.withSortField("created_dt")
-                .withPresort("created_dt")
+                .withSortField("created_dt asc")
                 .withStart(startRow)
                 .withNumRows(pageSize)
                 .build();
