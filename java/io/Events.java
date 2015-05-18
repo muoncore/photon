@@ -67,8 +67,8 @@ public class Events {
         return getRiak().getEvent(id);
     }
 
-    public static  List<Map<String, List<String>>>  since(String stream, Date date) {
-        return getRiak().eventsSince(date, stream);
+    public static  List<Map<String, List<String>>>  since(String stream, Date date, int pageNum) {
+        return getRiak().eventsSince(date, stream, pageNum);
     }
 
 }

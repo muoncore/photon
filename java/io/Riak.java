@@ -79,9 +79,11 @@ public class Riak {
         String id = riak.persist("cambio", "create-user", "{'username': 'gawain hammond', 'uid': 'gah08', 'job_title': 'Software Developer'}");
         JSONObject event = riak.getEvent(id);
         System.out.println("\nReturned Event: " + event);
-        Thread.sleep(3000);
-        Object results = riak.eventsSince(riak.toDate("2015-05-14T10:00:00Z"), "cambio");
-        System.out.println("\nEvents Since Results: " + results);
+        List<Map<String, List<String>>> results = riak.eventsSince(riak.toDate("2015-05-14T10:00:00Z"), "cambio", 1);
+
+        for (Map result: results) {
+            System.out.println(result);
+        }
         //Object eventsAfter = riak.eventsAfter(null);
         riak.cluster.shutdown();
 
@@ -141,38 +143,29 @@ public class Riak {
         return new JSONObject(obj.getValue().toString());
     }
 
-    public Collection<JSONObject> eventsAfter(String id) {
+    public  List<Map<String, List<String>>>  eventsAfter(String id, int  pageNum) {
 
-        String field = "type_s";
-        String value = "cambio";
-        SearchOperation searchOp = new SearchOperation
-                .Builder(BinaryValue.create(bucketType), field + ":" + value)
-                .build();
+        JSONObject event = getEvent(id);
 
-        cluster.execute(searchOp);
-        // This will display the actual results as a List of Maps:
+        String dateString = event.get("created_dt").toString();
+        String streamName = event.get("stream_s").toString();
 
+        Date date = toDate(dateString);
+        List<Map<String, List<String>>>  results = eventsSince(date, streamName, pageNum);
 
-        List<Map<String, List<String>>> results;
-        try {
-            results = searchOp.get().getAllResults();
-        }catch (Exception e) {
-            throw new RuntimeException("Error executing riak query", e);
-        }
-
-        System.out.println("\nSearch 2.0 results from io.Riak");
-        System.out.println("query info: " + searchOp.getQueryInfo());
-        System.out.println("curl -X GET 'http://riak1.cistechfutures.net:8098/search/query/" + bucketType + "?wt=json&q=" + field + ":" + value + "' | json_pp");
-
-
-        return null;
+        return results;
     }
 
-    public  List<Map<String, List<String>>> eventsSince(Date date, String streamName) {
+    public  List<Map<String, List<String>>> eventsSince(Date date, String streamName, int  pageNum) {
+
+        if (pageNum < 1) pageNum = 1;
+        int pageSize = 100;
 
         String streamField = "stream_s";
         String value = streamName;
 
+        int startRow = pageSize * (pageNum - 1);
+        System.out.println("querying rows " + startRow + " to " + (pageSize + startRow));
         String createdField = "created_dt";
         String fromDate = dateToIso8601(date);
 
@@ -180,6 +173,10 @@ public class Riak {
         System.out.println("Query String: '" + querySTring + "'");
         SearchOperation searchOp = new SearchOperation
                 .Builder(BinaryValue.create(bucketType), querySTring)
+                //.withSortField("created_dt")
+                .withPresort("created_dt")
+                .withStart(startRow)
+                .withNumRows(pageSize)
                 .build();
 
         cluster.execute(searchOp);
