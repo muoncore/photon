@@ -2,9 +2,12 @@
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
-  :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]]
+  :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
+                 ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [compojure "1.3.4"]
+                 [org.clojure/tools.logging "0.3.1"]
+                 [org.slf4j/slf4j-log4j12 "1.7.12"]
                  [clj-http "1.1.2"]
                  [org.clojure/data.json "0.2.6"]
                  [http-kit "2.1.18"]
@@ -17,6 +20,7 @@
                  [io.muoncore/muon-core "0.26"]
                  [io.muoncore/muon-transport-amqp "0.26"]
                  [io.muoncore/muon-discovery-amqp "0.26"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [stylefruits/gniazdo "0.4.0"]]
   :plugins [[lein-ring "0.8.13"] ]
   :ring {:handler eventstore.handler/app} ;; jetty

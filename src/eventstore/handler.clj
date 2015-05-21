@@ -1,21 +1,37 @@
 (ns eventstore.handler
-  (:use [org.httpkit.server :only [run-server]])
+  (:use org.httpkit.server)
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
+            [gniazdo.core :as ws]
             [ring.middleware.reload :as reload]
-            [compojure.handler :refer [site]]
-            [ring.middleware.defaults :refer [wrap-defaults site-defaults]]))
+            [compojure.handler :refer [site]]))
+
+(defn async-handler [ring-request]
+  (with-channel ring-request channel
+    #_(send! channel {:status 200
+                    :headers {"Content-Type" "text/plain"}
+                    :body "Long polling?"})
+    (on-receive channel (fn [data]
+                          (send! channel data)))))
 
 (defroutes app-routes
-  (GET "/" [] "Hello World")
+  (GET "/ws" [] async-handler)
+  (GET "/thing" [] "Thing")
+  (GET "/thing2" [] "Thing4")
   (route/not-found "Not Found"))
 
-
 (def app
-  (wrap-defaults app-routes site-defaults))
+  (site app-routes))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
-  (let [handler (reload/wrap-reload app)]
+  (let [handler (reload/wrap-reload #'app)]
+    (println run-server)
     (time (run-server handler {:port 3000}))))
+
+#_(let [socket (ws/connect "ws://localhost:3000/ws" :on-receive #(prn 'received %))]
+  (ws/send-msg socket "hello")
+  (Thread/sleep 2000)
+  (ws/close socket))
+

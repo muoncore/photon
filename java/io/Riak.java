@@ -172,7 +172,7 @@ public class Riak {
     public  List<Map<String, List<String>>> eventsSince(Date date, String streamName, int  pageNum) {
 
         if (pageNum < 1) pageNum = 1;
-        int pageSize = 5;
+        int pageSize = 100;
 
         String streamField = "stream_s";
         String value = streamName;
@@ -221,7 +221,7 @@ public class Riak {
     }
 
 
-    private Date toDate(String date) {
+    public Date toDate(String date) {
         try {
             TimeZone tz = TimeZone.getTimeZone("UTC");
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
