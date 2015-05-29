@@ -23,7 +23,7 @@ import java.util.*;
  * You can run a etst serach using curl on the riak database like so:
  *
  *
- * curl -X GET 'http://riak1.cistechfutures.net:8098/search/query/eventstore?wt=json&q=stream_s:cambio&q=created_dt:%5B2015-05-14T10:00:00Z%20TO%20*%5D'  | json_pp
+ * curl -X GET 'http://riak1.cistechfutures.net:8098/search/query/eventstore?wt=json&q=stream_s:cambio%20AND%20created_dt:%5B2015-05-14T10:00:00Z%20TO%20*%5D' | json_pp
  *
  */
 public class Riak {
@@ -86,7 +86,7 @@ public class Riak {
         while(resultsLeft) {
 
 
-            List<Map<String, List<String>>> results = riak.eventsSince(riak.toDate("2015-05-14T10:00:00Z"), "cambio", pageNum);
+            List<Map<String, List<String>>> results = riak.eventsSince(0, "cambio", pageNum);
             if (results.size() < 1) resultsLeft = false;
             pageNum++;
             for (Map result: results) {
@@ -134,6 +134,7 @@ public class Riak {
 
     public JSONObject getEvent(String id) {
 
+
         Location location = new Location(namespace, id);
         FetchValue fv = new FetchValue.Builder(location).build();
 
@@ -160,16 +161,15 @@ public class Riak {
 
         JSONObject event = getEvent(id);
 
-        String dateString = event.get("created_dt").toString();
+        long date = Long.parseLong((String)event.get("created_l"));
         String streamName = event.get("stream_s").toString();
 
-        Date date = toDate(dateString);
         List<Map<String, List<String>>>  results = eventsSince(date, streamName, pageNum);
 
         return results;
     }
 
-    public  List<Map<String, List<String>>> eventsSince(Date date, String streamName, int  pageNum) {
+    public  List<Map<String, List<String>>> eventsSince(long date, String streamName, int  pageNum) {
 
         if (pageNum < 1) pageNum = 1;
         int pageSize = 100;
@@ -180,15 +180,14 @@ public class Riak {
         int startRow = pageSize * (pageNum - 1);
 
         System.out.println("querying rows " + startRow + " to " + (pageSize + startRow -1));
-        String createdField = "created_dt";
-        String fromDate = dateToIso8601(date);
+        String createdField = "created_l";
 
-        String querySTring = streamField + ":" + value + " AND " + createdField + ":[" + fromDate + " TO *]";
+        String querySTring = streamField + ":" + value + " AND " + createdField + ":[" + date + " TO *]";
         System.out.println("Query String: '" + querySTring + "'");
         SearchOperation searchOp = new SearchOperation
                 .Builder(BinaryValue.create(bucketType), querySTring)
                 //.withSortField("created_dt")
-                .withSortField("created_dt asc")
+                .withSortField("created_l asc")
                 .withStart(startRow)
                 .withNumRows(pageSize)
                 .build();
@@ -251,15 +250,15 @@ public class Riak {
 
         public RxEvent(String type, String name, String payload) {
 
-            TimeZone tz = TimeZone.getTimeZone("UTC");
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            df.setTimeZone(tz);
-            String nowAsISO = df.format(new Date());
+            //TimeZone tz = TimeZone.getTimeZone("UTC");
+            //DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            //df.setTimeZone(tz);
+            //String nowAsISO = df.format(new Date());
 
             json.put("name_s", name);
             json.put("stream_s", type);
             json.put("id_s", UUID.randomUUID().toString());
-            json.put("created_dt", nowAsISO);
+            json.put("created_l", System.currentTimeMillis());
             json.put("payload_s", payload);
         }
 
@@ -279,8 +278,8 @@ public class Riak {
             return ((String) json.get("payload_s")).toString();
         }
 
-        public String getCreatedDate() {
-            return (String) json.get("created_dt");
+        public long getCreatedDate() {
+            return Long.parseLong((String)json.get("created_l"));
         }
 
         public void setData(JSONObject data) {

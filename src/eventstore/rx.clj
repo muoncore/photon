@@ -18,11 +18,12 @@
     (^void onComplete [this]
       (log/info "onComplete"))))
 
-(defn publisher [stream-name]
+(defn publisher [params]
+  (log/info (str "::::::::::::::::::::::::::::::: " (pr-str params)))
   (reify Publisher
     (^void subscribe [this ^Subscriber s]
       (log/info "subscribe::::::::: SUBSCRIBER" s)
-      (let [ch (get @stm/streams stream-name)]
+      (let [ch (stm/stream params)]
         (go
           (loop [item (<! ch)]
             (.onNext s item)

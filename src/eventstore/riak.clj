@@ -54,20 +54,20 @@
   (.getEvent riak id))
 
 (defn lazy-events
-  ([stream-name date-string]
-   (lazy-events stream-name date-string 1))
-  ([stream-name date-string page]
-   (let [res (.eventsSince riak (.toDate riak date-string) stream-name page)]
+  ([date]
+   (lazy-events date 1))
+  ([date page]
+   (let [res (.eventsSince riak date "cambio" page)]
      (if (< (.size res) 1)
        '()
-       (concat res (lazy-seq (lazy-events stream-name date-string (inc page))))))))
+       (concat res (lazy-seq (lazy-events date (inc page))))))))
 
 #_(jo->map (event (store "cambio" "create-user"
                        {:username "sergio alvarez"
                         :uid "sal49"
                         :job_title "Software Developer"})))
 
-#_(count (lazy-events "cambio" "2015-05-14T10:00:00Z"))
+#_(count (lazy-events (- (System/currentTimeMillis) 60000)))
 
 
 

@@ -1,9 +1,10 @@
 (ns eventstore.muon
   (:require [eventstore.rx :as rx]
             [clojure.tools.logging :as log])
-  (:import (io.muoncore Muon)
+  (:import (io.muoncore Muon MuonStreamGenerator)
            (io.muoncore.extension.amqp AmqpTransportExtension)
            (io.muoncore.extension.amqp discovery.AmqpDiscovery)
+           (org.reactivestreams Publisher)
            (java.util Map)))
 
 #_(def amazon-url
@@ -33,10 +34,13 @@
 (def m (muon amazon-url))
 (def c (client amazon-url))
 
-(.streamSource m "/cambio" Map (rx/publisher :cambio))
-(Thread/sleep 10000)
+(.streamSource m "/cambio" Map (reify MuonStreamGenerator
+                                 (^Publisher generatePublisher [this ^Map params]
+                                   (log/info ":::: GENERATE-PUBLISHER")
+                                   (rx/publisher params))))
+(Thread/sleep 5000)
 (.subscribe c "muon://eventstore/cambio"
-            Map {"from" (str (- (System/currentTimeMillis) 10))}
+            Map {"from" (str (- (System/currentTimeMillis) 10))
+                 "stream-type" "hot"}
             (rx/subscriber))
-
 
