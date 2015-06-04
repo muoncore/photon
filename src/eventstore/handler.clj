@@ -2,6 +2,7 @@
   (:use org.httpkit.server)
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
+            [eventstore.muon :as m]
             [gniazdo.core :as ws]
             [ring.middleware.reload :as reload]
             [compojure.handler :refer [site]]))
@@ -26,6 +27,7 @@
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
+  (future (m/start-server!))
   (let [handler (reload/wrap-reload #'app)]
     (println run-server)
     (time (run-server handler {:port 3000}))))

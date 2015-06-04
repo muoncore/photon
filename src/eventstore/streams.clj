@@ -9,6 +9,10 @@
 (def tube (chan 1))
 (def tube-m (mult tube))
 
+(defn process-event! [ev]
+  (go (>! tube ev))
+  (riak/store "cambio" (riak/uuid) ev))
+
 (defn seq->channel [s]
   (let [ch (chan (buffer 1))]
     (go
