@@ -1,4 +1,5 @@
 (ns eventstore.handler
+  (:gen-class)
   (:use org.httpkit.server)
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
