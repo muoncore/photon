@@ -2,16 +2,18 @@
   (:require [clj-http.client :as client]
             [clojure.data.json :as json]
             [clj-time.core :as time]
+            [clojure.tools.logging :as log]
             [clj-time.format :as time-format]))
 
 (import (io Riak))
 
-(def eventstore "eventstore")
-(def bucket "rxriak-events-v1")
-(def nodes ["riak1.cistechfutures.net"
-            "riak2.cistechfutures.net"
-            "riak3.cistechfutures.net"])
-(def riak (Riak. "rxriak-events-v1" "eventstore" (into-array String nodes)))
+(defn jo->map [jo]
+  (let [ks (iterator-seq (.keys jo))
+        obj (zipmap (map keyword ks) (map #(.get jo %) ks))]
+    (assoc obj :payload (json/read-str
+                          (clojure.string/replace (:payload_s obj)
+                                                  #"'" "\"")
+                          :key-fn keyword))))
 
 (defn get-current-iso-8601-date
   "Returns current ISO 8601 compliant date."
@@ -23,46 +25,75 @@
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
-(defn riak-url [id] (str "http://riak1.cistechfutures.net:8098/types/"
-                         eventstore "/buckets/" bucket "/keys/" id))
+(def eventstore "eventstore")
+(def s-bucket "rxriak-events-v1")
 
-(defn fetch [id] (print (:body (client/get (riak-url id)))))
+(def s-nodes ["riak1.cistechfutures.net"
+              "riak2.cistechfutures.net"
+              "riak3.cistechfutures.net"])
 
-(defn put [data]
-  (let [id (uuid)
-        wrapper (json/write-str {:id_s id
-                                :created_dt (datetime)
-                                :data_s (json/write-str data)})]
-    (print (str "PUT "  (riak-url id) "\n"))
-    (print "BODY: " wrapper "\n")
-    (client/put (riak-url id) {:body wrapper :content-type :json})))
+(defprotocol DB
+  (bucket-url [this])
+  (riak-url [this id])
+  (fetch [this id])
+  (delete! [this id])
+  (delete-all! [this])
+  (put [this data])
+  (search [this id])
+  (store [this stream-name event-name payload])
+  (event [this id])
+  (lazy-events [this date])
+  (lazy-events-page [this date page]))
 
-(defn search [bucket id] (print (:body (client/get (riak-url id))))) 
+(defrecord RiakDB [riak nodes bucket]
+  DB
+  (bucket-url [_]
+    (str "http://riak1.cistechfutures.net:8098/types/"
+         eventstore "/buckets/" bucket "/keys"))
+  (riak-url [this id]
+    (str (bucket-url this) "/" id))
+  (fetch [this id]
+    (:body (client/get (riak-url this id))))
+  (delete! [this id]
+    (log/info "Deleting" id)
+    (client/delete (riak-url this id)))
+  (delete-all! [this]
+    (let [body (:body (client/get (str (bucket-url this) "?keys=true")))
+          js (json/read-str body :key-fn keyword)
+          k (first (:keys js))]
+      (dorun (map #(delete! this %) (:keys js)))))
+  (put [this data]
+    (let [id (uuid)
+          wrapper (json/write-str {:id_s id
+                                   :created_dt (datetime)
+                                   :data_s (json/write-str data)})]
+      (print (str "PUT "  (riak-url this id) "\n"))
+      (print "BODY: " wrapper "\n")
+      (client/put (riak-url this id) {:body wrapper :content-type :json})))
+  (search [this id] (:body (client/get (riak-url this id))))
+  (store [this stream-name event-name payload]
+    (.persist riak stream-name event-name (json/write-str payload)))
+  (event [this id]
+    (.getEvent riak id))
+  (lazy-events [this date] (lazy-events-page this date 1)) 
+  (lazy-events-page
+    [this date page]
+    (let [l-date (if (string? date) (read-string date) date)
+          res (.eventsSince riak l-date "events" page)]
+      (if (< (.size res) 1)
+        '()
+        (concat res (lazy-seq (lazy-events-page this l-date (inc page))))))))
 
-(defn jo->map [jo]
-  (let [ks (iterator-seq (.keys jo))
-        obj (zipmap (map keyword ks) (map #(.get jo %) ks))]
-    (assoc obj :payload (json/read-str
-                          (clojure.string/replace (:payload_s obj)
-                                                  #"'" "\"")
-                          :key-fn keyword))))
+(defn m-riak
+  ([nodes bucket]
+   (->RiakDB (Riak. bucket "eventstore" (into-array String nodes))
+             nodes bucket))
+  ([bucket]
+   (m-riak s-nodes bucket)))
 
-(defn store [stream-name event-name payload]
-  (.persist riak stream-name event-name (json/write-str payload)))
+(def riak (memoize m-riak))
 
-(defn event [id]
-  (.getEvent riak id))
-
-(defn lazy-events
-  ([date]
-   (lazy-events date 1))
-  ([date page]
-   (let [res (.eventsSince riak date "cambio" page)]
-     (if (< (.size res) 1)
-       '()
-       (concat res (lazy-seq (lazy-events date (inc page))))))))
-
-#_(jo->map (event (store "cambio" "create-user"
+#_(jo->map (event (store "events" "create-user"
                        {:username "sergio alvarez"
                         :uid "sal49"
                         :job_title "Software Developer"})))

@@ -28,7 +28,7 @@
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
-  (future (m/start-server!))
+  #_(future (m/start-server!))
   (let [handler (reload/wrap-reload #'app)]
     (println run-server)
     (time (run-server handler {:port 3000}))))
