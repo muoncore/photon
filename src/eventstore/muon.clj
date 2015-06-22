@@ -7,7 +7,7 @@
             [clojure.java.data :as j]
             [clojure.tools.logging :as log])
   (:import (io.muoncore Muon MuonStreamGenerator)
-           (io.muoncore.future MuonFuture)
+           (io.muoncore.future MuonFuture ImmediateReturnFuture)
            (io.muoncore.transport.resource MuonResourceEvent)
            (io.muoncore.extension.amqp AmqpTransportExtension)
            (io.muoncore.extension.amqp.discovery AmqpDiscovery)
@@ -41,7 +41,7 @@
           listener (reify io.muoncore.MuonService$MuonCommand
                      (^MuonFuture onCommand [_ ^MuonResourceEvent queryEvent]
                        (log/info "onCommand" (pr-str queryEvent))
-                       (f (decode-event queryEvent))))]
+                       (ImmediateReturnFuture. (f (decode-event queryEvent)))))]
       (.onCommand m "/events" Map listener))))
 
 (defn muon [rabbit-url]
