@@ -2,7 +2,9 @@
   (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer
                                         sliding-buffer mult tap close!]
              :as async]
+            [serializable.fn :as sfn]
             [clojure.tools.logging :as log]
+            [uap-clj.core :as uap]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
             [eventstore.riak :as riak]))
@@ -49,15 +51,24 @@
     (m/with-mongo db
       (m/destroy! :events {})))
   (data-from [this date]
-    (let [records (m/with-mongo db
-                    (m/fetch :events :where {}))
+    (let [records-raw (m/with-mongo db
+                        (m/fetch :events :where {:entityId {:$ne "fake_test_user"}}
+                                 :sort {:server_timestamp 1}
+                                 #_{:headers.user-agent
+                                    {:$ne "Apache-HttpClient/4.4 (Java/1.7.0_75)"}}))
+          first-ts (first
+                     (remove #(or (empty? %) (nil? %)) 
+                             (map :server_timestamp records-raw)))
+          records (map #(assoc % :server_timestamp
+                               (parse-old-date
+                                 (if (or (nil? (:server_timestamp %))
+                                         (empty? (:server_timestamp %)))
+                                   first-ts
+                                   (:server_timestamp %)))) records-raw)
+          records (sort-by :server_timestamp records)
           query-date (if (string? date) (read-string date) date)]
-      (filter #(and
-                 (not (nil? (:server_timestamp %)))
-                 (not (empty? (:server_timestamp %)))
-                 (let [db-date (parse-old-date (:server_timestamp %))]
-                   (>= db-date query-date)))
-              records)))
+      (log/info (take 5 records))
+      (filter #(>= (:server_timestamp %) query-date) records)))
   HotStream
   (next! [this] (go (<! channel)))
   EventProcessor
@@ -188,9 +199,75 @@
     (tap (:mult-channel a-stream) ch)
     ch))
 
-#_(def test-ch (chan))
-#_(def test-ds (->DummyStream (m/make-connection "eventstore") test-ch (mult test-ch)))
 
+
+(def test-ch (chan))
+(def test-ds (->DummyStream (m/make-connection "eventstore") test-ch (mult test-ch)))
+#_(register-query! test-ds :test-query-3
+                 (sfn/fn [prev item]
+                   (let [agg-unit 86400000
+                         ua (try
+                              (uap/lookup-useragent (:user-agent (:headers item)))
+                              (catch Exception e {}))
+                         payload (:payload item)
+                         event-name (:commandName item)
+                         action-name (:name item)
+                         entity-type (:type (:parameters item))
+                         path [(:method item) (:url item)]
+                         timestamp (:server_timestamp item)
+                         interval (* (int (/ timestamp agg-unit)) agg-unit)
+                         username (:username payload)]
+                     {:oses (assoc (:oses prev)
+                                   (:family (:os ua))
+                                   (inc (get (:oses prev)
+                                             (:family (:os ua)) 0)))
+                      :browsers (assoc (:browsers prev)
+                                       (:family (:browser ua))
+                                       (inc (get (:browsers prev)
+                                                 (:family (:browser ua)) 0)))
+                      :actions (assoc-in (:actions prev)
+                                         [interval action-name]
+                                         (inc (get-in (:actions prev)
+                                                      [interval action-name]
+                                                      0)))
+                      :events (assoc-in (:events prev)
+                                        [interval event-name]
+                                        (inc (get-in (:events prev)
+                                                     [interval event-name]
+                                                     0)))
+                      :profiles (if (or (nil? username)
+                                        (not (contains? payload :job_title)))
+                                  (:profiles prev)
+                                  (assoc (:profiles prev) username payload))
+                      :all-skills (if (contains? payload :skills)
+                                    (into #{} (concat (:all-skills prev)
+                                                      (:skills payload)))
+                                    (:all-skills prev))
+                      :skills-intervals (assoc (:skills-intervals prev)
+                                               interval
+                                               (count
+                                                 (if (contains? payload :skills)
+                                                   (into #{} (concat (:all-skills prev)
+                                                                     (:skills payload)))
+                                                   (:all-skills prev))))
+                      :intervals (if (or (not (= event-name "login-success"))
+                                         (nil? username))
+                                   (:intervals prev)
+                                   (assoc-in (:intervals prev)
+                                             [interval username]
+                                             (inc (get-in (:intervals prev)
+                                                          [interval username]
+                                                          0))))}))
+                 {:browsers {}
+                  :devices {}
+                  :oses {}
+                  :all-skills {}
+                  :skills-intervals {}
+                  :logins {}
+                  :intervals {}
+                  :events {}
+                  :actions {}
+                  :profiles {}})
 
 #_(def test-s (stream {"stream-type" "cold"}))
 #_(go (loop [e (<! test-s)] (println (nil? e)) (if (nil? e) (println "Finished") (do (println e) (recur (<! test-s))))) (println "Done"))
