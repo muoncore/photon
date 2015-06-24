@@ -73,7 +73,7 @@
   (next! [this] (go (<! channel)))
   EventProcessor
   (register-query! [this query-name f init]
-    (let [s (stream this {"from" "0" "stream-type" "hot-cold"})
+    (let [s (stream this {"from" "1427846400000" "stream-type" "hot-cold"})
           running-query (ref {:query-name query-name
                               :fn f
                               :current-value init
@@ -230,19 +230,33 @@
                                          (inc (get-in (:actions prev)
                                                       [interval action-name]
                                                       0)))
+                      :paths (assoc-in (:paths prev)
+                                        [interval path]
+                                        (inc (get-in (:paths prev)
+                                                     [interval path]
+                                                     0)))
                       :events (assoc-in (:events prev)
                                         [interval event-name]
                                         (inc (get-in (:events prev)
                                                      [interval event-name]
                                                      0)))
                       :profiles (if (or (nil? username)
-                                        (not (contains? payload :job_title)))
+                                        (not (contains? payload :id)))
                                   (:profiles prev)
-                                  (assoc (:profiles prev) username payload))
+                                  (assoc (:profiles prev) username
+                                         (merge (get (:profiles prev)
+                                                     username {})
+                                                payload)))
                       :all-skills (if (contains? payload :skills)
                                     (into #{} (concat (:all-skills prev)
                                                       (:skills payload)))
                                     (:all-skills prev))
+                      :non-skills (assoc (:non-skills prev)
+                                         interval
+                                         (count
+                                           (if (contains? payload :skills)
+                                             (into #{} (:skills payload))
+                                             [])))
                       :skills-intervals (assoc (:skills-intervals prev)
                                                interval
                                                (count
@@ -263,10 +277,12 @@
                   :oses {}
                   :all-skills {}
                   :skills-intervals {}
+                  :non-skills {}
                   :logins {}
                   :intervals {}
                   :events {}
                   :actions {}
+                  :paths {}
                   :profiles {}})
 
 #_(def test-s (stream {"stream-type" "cold"}))
