@@ -42,8 +42,8 @@
   (search [this id])
   (store [this stream-name event-name payload])
   (event [this id])
-  (lazy-events [this date])
-  (lazy-events-page [this date page]))
+  (lazy-events [this stream-name date])
+  (lazy-events-page [this stream-name date page]))
 
 (defrecord RiakDB [riak nodes bucket]
   DB
@@ -75,14 +75,16 @@
     (.persist riak stream-name event-name (json/write-str payload)))
   (event [this id]
     (.getEvent riak id))
-  (lazy-events [this date] (lazy-events-page this date 1)) 
-  (lazy-events-page
-    [this date page]
+  (lazy-events [this stream-name date]
+    (lazy-events-page this stream-name date 1)) 
+  (lazy-events-page [this stream-name date page]
     (let [l-date (if (string? date) (read-string date) date)
-          res (.eventsSince riak l-date "events" page)]
+          res (map #(clojure.walk/keywordize-keys (into {} %))
+                   (into [] (.eventsSince riak l-date stream-name page)))]
       (if (< (.size res) 1)
-        '()
-        (concat res (lazy-seq (lazy-events-page this l-date (inc page))))))))
+        []
+        (concat res
+                (lazy-seq (lazy-events-page this stream-name l-date (inc page))))))))
 
 (defn m-riak
   ([nodes bucket]

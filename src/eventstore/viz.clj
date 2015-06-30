@@ -2,7 +2,7 @@
   (:require [eventstore.streams :as streams])
   (:use (incanter core stats charts io)))
 
-(let [results (:current-value @(:test-query-3 @streams/queries))
+#_(let [results (:current-value @(:test-query-3 @streams/queries))
       registered-users (reduce
                          (fn [prev item]
                            (let [k (key item)

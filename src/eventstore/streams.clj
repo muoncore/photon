@@ -5,11 +5,17 @@
             [serializable.fn :as sfn]
             [clojure.tools.logging :as log]
             [uap-clj.core :as uap]
+            [clojure.data.json :as json]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
             [eventstore.riak :as riak]))
 
 (def cold-latency 5000)
+(def riak-streams (riak/riak "streams"))
+(def active-streams
+  (ref (into #{} (map #_#(hash-map :stream (pr-str %))
+                      #(json/read-str (first (:payload_s %)) :key-fn keyword)
+                      (riak/lazy-events riak-streams "streams" 0)))))
 
 (defn seq->channel [s]
   (let [ch (chan (buffer 1))]
@@ -20,7 +26,7 @@
 
 (defprotocol ColdStream
   (clean! [this])
-  (data-from [this date-string]))
+  (data-from [this stream-name date-string]))
 
 (defprotocol HotStream
   (next! [this]))
@@ -50,7 +56,7 @@
   (clean! [this]
     (m/with-mongo db
       (m/destroy! :events {})))
-  (data-from [this date]
+  (data-from [this stream-name date]
     (let [records-raw (m/with-mongo db
                         (m/fetch :events :where {:entityId {:$ne "fake_test_user"}}
                                  :sort {:server_timestamp 1}
@@ -111,8 +117,8 @@
 (defrecord AsyncStream [db channel mult-channel]
   ColdStream
   (clean! [this] (riak/delete-all! db))
-  (data-from [this date-string]
-    (riak/lazy-events db date-string))
+  (data-from [this stream-name date-string]
+    (riak/lazy-events db stream-name date-string))
   HotStream
   (next! [this] (go (<! channel)))
   EventProcessor
@@ -159,7 +165,12 @@
 
 (defmethod stream "cold" [a-stream params]
   (let [ch (chan (buffer 1))
-        full-s (data-from a-stream (get params "from" 0))]
+        full-s (data-from a-stream 
+                          (get params "stream-name" "events")
+                          (get params "from" 0))
+        full-s (if (contains? params :limit)
+                 (take (:limit params) full-s)
+                 full-s)]
     (go
       (log/info "Opening stream...")
       (loop [e (first full-s) s (rest full-s) closed? false]
@@ -176,14 +187,17 @@
 
 (defmethod stream "hot-cold" [a-stream params]
   (let [ch (chan (buffer 1))
-        full-s (data-from a-stream (get params "from" 0))]
+        stream-name (get params "stream-name" "events")
+        full-s (data-from a-stream
+                          stream-name
+                          (get params "from" 0))]
     (go
       (loop [e (first full-s)
              s (rest full-s)
              closed? false
              last-t (System/currentTimeMillis)]
         (let [rest-s (rest s)
-              new-s (if (empty? rest-s) (data-from a-stream last-t) s)
+              new-s (if (empty? rest-s) (data-from a-stream stream-name last-t) s)
               last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
           (if (nil? e)
             (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
@@ -199,91 +213,111 @@
     (tap (:mult-channel a-stream) ch)
     ch))
 
-
-
 (def test-ch (chan))
-(def test-ds (->DummyStream (m/make-connection "eventstore") test-ch (mult test-ch)))
-#_(register-query! test-ds :test-query-3
-                 (sfn/fn [prev item]
-                   (let [agg-unit 86400000
-                         ua (try
-                              (uap/lookup-useragent (:user-agent (:headers item)))
-                              (catch Exception e {}))
-                         payload (:payload item)
-                         event-name (:commandName item)
-                         action-name (:name item)
-                         entity-type (:type (:parameters item))
-                         path [(:method item) (:url item)]
-                         timestamp (:server_timestamp item)
-                         interval (* (int (/ timestamp agg-unit)) agg-unit)
-                         username (:username payload)]
-                     {:oses (assoc (:oses prev)
-                                   (:family (:os ua))
-                                   (inc (get (:oses prev)
-                                             (:family (:os ua)) 0)))
-                      :browsers (assoc (:browsers prev)
-                                       (:family (:browser ua))
-                                       (inc (get (:browsers prev)
-                                                 (:family (:browser ua)) 0)))
-                      :actions (assoc-in (:actions prev)
-                                         [interval action-name]
-                                         (inc (get-in (:actions prev)
-                                                      [interval action-name]
+(def mongo-ds (->DummyStream (m/make-connection "eventstore") test-ch (mult test-ch)))
+(def test-ds (->AsyncStream (riak/riak "rxriak-events-v1")
+                            test-ch (mult test-ch)))
+
+(defn transfer! []
+  (let [ch (stream mongo-ds {"stream-type" "cold" "from" "0"})]
+    (go
+      (loop [elem (<! ch)]
+        (if (nil? elem)
+          (println "Finished!")
+          (do
+            (println "Processing " (.hashCode elem))
+            (process-event! test-ds (dissoc elem :_id))
+            (recur (<! ch))))))))
+
+#_(stream mongo-ds {"stream-type" "cold" "from" "0" :limit 5})
+#_(riak/store (riak/riak "rxriak-events-v1") "events" "event" {:b 2})
+#_(Thread/sleep 5000)
+#_(riak/lazy-events-page (riak/riak "rxriak-events-v1") "events" "0" 1)
+
+(defn test-query []
+  (register-query! mongo-ds :test-query-3
+                   (sfn/fn [prev item]
+                     (let [agg-unit 604800000 #_86400000
+                           ua (try
+                                (uap/lookup-useragent (:user-agent (:headers item)))
+                                (catch Exception e {}))
+                           payload (:payload item)
+                           event-name (:commandName item)
+                           action-name (:name item)
+                           entity-type (:type (:parameters item))
+                           path [(:method item) (:url item)]
+                           timestamp (:server_timestamp item)
+                           interval (* (int (/ timestamp agg-unit)) agg-unit)
+                           username (:username payload)]
+                       {:oses (assoc (:oses prev)
+                                     (:family (:os ua))
+                                     (inc (get (:oses prev)
+                                               (:family (:os ua)) 0)))
+                        :browsers (assoc (:browsers prev)
+                                         (:family (:browser ua))
+                                         (inc (get (:browsers prev)
+                                                   (:family (:browser ua)) 0)))
+                        :actions (assoc-in (:actions prev)
+                                           [interval action-name]
+                                           (inc (get-in (:actions prev)
+                                                        [interval action-name]
+                                                        0)))
+                        :paths (assoc-in (:paths prev)
+                                         [interval path]
+                                         (inc (get-in (:paths prev)
+                                                      [interval path]
                                                       0)))
-                      :paths (assoc-in (:paths prev)
-                                        [interval path]
-                                        (inc (get-in (:paths prev)
-                                                     [interval path]
-                                                     0)))
-                      :events (assoc-in (:events prev)
-                                        [interval event-name]
-                                        (inc (get-in (:events prev)
-                                                     [interval event-name]
-                                                     0)))
-                      :profiles (if (or (nil? username)
-                                        (not (contains? payload :id)))
-                                  (:profiles prev)
-                                  (assoc (:profiles prev) username
-                                         (merge (get (:profiles prev)
-                                                     username {})
-                                                payload)))
-                      :all-skills (if (contains? payload :skills)
-                                    (into #{} (concat (:all-skills prev)
-                                                      (:skills payload)))
-                                    (:all-skills prev))
-                      :non-skills (assoc (:non-skills prev)
-                                         interval
-                                         (count
-                                           (if (contains? payload :skills)
-                                             (into #{} (:skills payload))
-                                             [])))
-                      :skills-intervals (assoc (:skills-intervals prev)
-                                               interval
-                                               (count
-                                                 (if (contains? payload :skills)
-                                                   (into #{} (concat (:all-skills prev)
-                                                                     (:skills payload)))
-                                                   (:all-skills prev))))
-                      :intervals (if (or (not (= event-name "login-success"))
-                                         (nil? username))
-                                   (:intervals prev)
-                                   (assoc-in (:intervals prev)
-                                             [interval username]
-                                             (inc (get-in (:intervals prev)
-                                                          [interval username]
-                                                          0))))}))
-                 {:browsers {}
-                  :devices {}
-                  :oses {}
-                  :all-skills {}
-                  :skills-intervals {}
-                  :non-skills {}
-                  :logins {}
-                  :intervals {}
-                  :events {}
-                  :actions {}
-                  :paths {}
-                  :profiles {}})
+                        :events (assoc-in (:events prev)
+                                          [interval event-name]
+                                          (inc (get-in (:events prev)
+                                                       [interval event-name]
+                                                       0)))
+                        :profiles (if (or (nil? username)
+                                          (not (contains? payload :id)))
+                                    (:profiles prev)
+                                    (assoc (:profiles prev) username
+                                           (merge (get (:profiles prev)
+                                                       username {})
+                                                  payload)))
+                        :all-skills (if (contains? payload :skills)
+                                      (into #{} (concat (:all-skills prev)
+                                                        (:skills payload)))
+                                      (:all-skills prev))
+                        :non-skills (assoc (:non-skills prev)
+                                           interval
+                                           (count
+                                             (if (contains? payload :skills)
+                                               (into #{} (:skills payload))
+                                               [])))
+                        :skills-intervals (assoc (:skills-intervals prev)
+                                                 interval
+                                                 (count
+                                                   (if (contains? payload :skills)
+                                                     (into #{} (concat (:all-skills prev)
+                                                                       (:skills payload)))
+                                                     (:all-skills prev))))
+                        :intervals (if (or (not (= event-name "login-success"))
+                                           (nil? username))
+                                     (:intervals prev)
+                                     (assoc-in (:intervals prev)
+                                               [interval username]
+                                               (inc (get-in (:intervals prev)
+                                                            [interval username]
+                                                            0))))}))
+                   {:browsers {}
+                    :devices {}
+                    :oses {}
+                    :all-skills {}
+                    :skills-intervals {}
+                    :non-skills {}
+                    :logins {}
+                    :intervals {}
+                    :events {}
+                    :actions {}
+                    :paths {}
+                    :profiles {}}))
+
+#_(riak/store riak-streams "streams" "stream" {:stream "events"})
 
 #_(def test-s (stream {"stream-type" "cold"}))
 #_(go (loop [e (<! test-s)] (println (nil? e)) (if (nil? e) (println "Finished") (do (println e) (recur (<! test-s))))) (println "Done"))

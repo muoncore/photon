@@ -1,6 +1,6 @@
 (ns eventstore.stream-test
   (:require [clojure.test :refer :all]
-            [clojure.core.async :refer [go-loop go <! >! chan buffer <!!]]
+            [clojure.core.async :refer [go-loop go <! >! chan buffer <!! close!]]
             [ring.mock.request :as mock]
             [clojure.tools.logging :as log]
             [eventstore.client :as cl]
@@ -30,29 +30,35 @@
           (log/info "Event received")
           (recur (<!! c) (inc n)))))))
 
-(defn test-cold-2 []
+(defn test-hot-cold []
   (let [b (cl/muon-client amazon-url "1monitor-client" "2monitor" "3lient")
         c (cl/with-muon b (cl/stream-subscription "muon://eventstore/stream"
-                                                  :stream-type :cold
+                                                  :stream-type :hot-cold
                                                   :from 0))]
-    (loop [ev (<!! c) n 0]
-      (if (nil? ev)
-        (do
-          (log/info "Total:" n "events.")
-          n)
-        (do
-          (log/info "Event received")
-          (recur (<!! c) (inc n)))))))
+    (go
+      (loop [ev (<! c) n 0]
+        (if (nil? ev)
+          (do
+            (log/info "Total:" n "events.")
+            n)
+          (do
+            (log/info "Event received")
+            (recur (<! c) (inc n))))))
+    (Thread/sleep 10000)
+    (close! c)))
 
-(let [ms (prepare!)
-      a (cl/muon-client amazon-url "asap-client" "asap" "client")
+#_(let [ms (prepare!)
       n1 (test-cold)
       n2 (test-cold)]
-  (fact "Consistent behaviour in cold streaming" n1 => n2)
-  #_(Thread/sleep 10000)
-  #_(test-cold-2)
+  (fact "Consistent behaviour in cold streaming" n1 => n2))
+
+(let [ms (prepare!)
+      a (cl/muon-client amazon-url "asap-client" "asap" "client")]
   (cl/with-muon a (cl/post-event "muon://eventstore/events" {:test :ok}))
-  (fact "Recorded one event" (test-cold-2) => 1))
+  (cl/with-muon a (cl/post-event "muon://eventstore/events" {:test :ok}))
+  (cl/with-muon a (cl/post-event "muon://eventstore/events" {:test :ok}))
+  (cl/with-muon a (cl/post-event "muon://eventstore/events" {:test :ok})))
+
 
 
 
