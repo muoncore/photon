@@ -109,10 +109,12 @@
                                   :current-value new-value
                                   :processed (inc (:processed @running-query))}))     
                   (recur new-value (<! s))))))))))
-  (process-event! [this ev]
-    (go (>! channel ev))
-    (m/with-mongo db
-      (m/insert! :events ev))))
+  (process-event! [this msg]
+    (let [ev (:payload msg)]
+      (go (>! channel ev))
+      (m/with-mongo db
+        (m/insert! :events ev)))
+    {:correct true}))
 
 (defrecord AsyncStream [db channel mult-channel]
   ColdStream
@@ -153,9 +155,13 @@
                                   :current-value new-value
                                   :processed (inc (:processed @running-query))}))
                   (recur new-value (<! s))))))))))
-  (process-event! [this ev]
-    (go (>! channel ev))
-    (riak/store db "events" (riak/uuid) ev)))
+  (process-event! [this msg]
+    ;; Think about the order of store+send to taps
+    (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
+    (let [ev (:payload msg)]
+      (go (>! channel ev))
+      (riak/store db (:stream-name msg) (riak/uuid) ev))
+    {:correct "true"}))
 
 (defn async-stream [db]
   (let [tube (chan 1)
@@ -234,7 +240,7 @@
 #_(Thread/sleep 5000)
 #_(riak/lazy-events-page (riak/riak "rxriak-events-v1") "events" "0" 1)
 
-(defn test-query []
+#_(defn test-query []
   (register-query! mongo-ds :test-query-3
                    (sfn/fn [prev item]
                      (let [agg-unit 604800000 #_86400000
