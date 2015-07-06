@@ -1,3 +1,5 @@
+eventstore.iml
+.idea/
 resources/public/js/main.js
 resources/public/js/out/
 main.js
