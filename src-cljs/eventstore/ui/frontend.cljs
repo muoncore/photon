@@ -176,10 +176,10 @@
         (apply dom/ul
                nil
                (map (fn [event]
-                      (let [payload (first (:payload_s event))]
+                      (let [payload (:payload event)]
                         (dom/li
                           nil
-                          (let [current? (= (:current data) (first (:id_s event)))]
+                          (let [current? (= (:current data) (:_id event))]
                             (dom/div
                               nil
                               (dom/a
@@ -188,15 +188,16 @@
                                      (fn [ev] (if current?
                                                 (om/update! data :current nil)
                                                 (om/update! data :current
-                                                            (first (:id_s event)))))}
-                                (first (:name_s event)))
+                                                            (:_id event))))}
+                                (:_id event))
                               (if current?
                                 (dom/pre
                                   nil
                                   (dom/code
                                     #js {:className "clojure"}
-                                    (clj->str (js->clj (.parse js/JSON payload)
-                                                       :keywordize-keys true))))))))))
+                                    (clj->str event)
+                                    #_(clj->str (js->clj (.parse js/JSON payload)
+                                                         :keywordize-keys true))))))))))
                     (:events state)))))))
 
 (defn full-page [data owner]

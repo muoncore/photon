@@ -14,6 +14,9 @@
             [clojure.core.async :as async]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
+            [eventstore.db :as db]
+            [eventstore.mongo :as mongo]
+            [eventstore.riak :as riak]
             [compojure.handler :refer [site]]))
 
 (defn async-handler [ring-request]
@@ -34,15 +37,29 @@
 
 (extend org.bson.types.ObjectId json/JSONWriter
   {:-write (fn [object out]
-             (.print out "null"))})
+             (.print out (str "\"" (.toString object) "\"")))})
 
 (extend clojure.lang.Ref json/JSONWriter
   {:-write (fn [object out]
              (.print out (json/write-str @object)))})
 
+(def cold-latency 5000)
+(def riak-streams (riak/riak "streams"))
+#_(def active-streams
+  (ref (into #{} (map #_#(hash-map :stream (pr-str %))
+                      #(json/read-str (first (:payload_s %)) :key-fn keyword)
+                      (db/lazy-events riak-streams "streams" 0)))))
+
+(def test-ds 
+  (streams/new-async-stream 
+    (mongo/mongo)
+    #_(riak/riak riak/s-bucket)))
+
+#_(def ms (m/start-server! ))
+
 (defroutes app-routes
   (GET "/streams" []
-       (wrap-json {:streams @streams/active-streams}))
+       (wrap-json (streams/streams test-ds)))
   (GET "/projections" []
        (wrap-json (map
                     (fn [v] (assoc v :fn (pr-str (:fn v))))
@@ -53,10 +70,10 @@
          {:results
           (async/<!!
             (async/reduce (fn [prev n] (concat prev [n])) []
-                          (streams/stream streams/test-ds {"from" "0"
-                                                           "stream-name" stream-name
-                                                           "stream-type" "cold"
-                                                           :limit 5})))}))
+                          (streams/stream test-ds {"from" "0"
+                                                   "stream-name" stream-name
+                                                   :limit 5 
+                                                   "stream-type" "cold"})))}))
   (GET "/ws" [] async-handler)
   (GET "/thing" [] "Thing")
   (GET "/thing2" [] "Thing4")
@@ -65,7 +82,7 @@
               projection-name (:projection-name body)
               code (:code body)
               initial-value (:initial-value body)]
-          (streams/register-query! streams/test-ds (keyword projection-name)
+          (streams/register-query! test-ds (keyword projection-name)
                                    (eval (let [f (read-string code)]
                                            (if (= (first f) 'fn)
                                              (conj (rest f) 'serializable.fn/fn)

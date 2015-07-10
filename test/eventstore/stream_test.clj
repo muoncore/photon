@@ -49,12 +49,12 @@
     (Thread/sleep 10000)
     (close! c)))
 
-(let [ms (prepare!)
+#_(let [ms (prepare!)
       n1 (test-cold)
       n2 (test-cold)]
   (fact "Consistent behaviour in cold streaming" n1 => n2))
 
-(let [ms (prepare!)
+#_(let [ms (prepare!)
       a (cl/muon-client amazon-url "asap-client" "asap" "client")]
   (cl/with-muon a (cl/post-event "muon://eventstore/events" "dummy" {:test :ok}))
   (cl/with-muon a (cl/post-event "muon://eventstore/events" "dummy" {:test :ok}))
@@ -62,13 +62,14 @@
   (cl/with-muon a (cl/post-event "muon://eventstore/events" "dummy" {:test :ok}))
   (fact "Correct count" (test-cold) => 4))
 
-(Thread/sleep 20000)
+#_(Thread/sleep 20000)
 
-(let [n1 (test-cold)
+#_(let [n1 (test-cold)
       n2 (test-cold)]
   (fact "Consistent behaviour in cold streaming" n1 => n2))
 
-
+(let [ms (m/start-server! "rxriak-events-v1")]
+  (streams/clean! (:stm ms)))
 
 
 

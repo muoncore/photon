@@ -41,11 +41,15 @@
                        (ImmediateReturnFuture. (f (decode-event queryEvent)))))]
       (.onCommand m "/events" Map listener))))
 
-#_ (muon amazon-url "eventstore" ["eventstore" "helios"])
+(defn new-microservice [mq-url db]
+  (->PhotonMicroservice (mcs/muon mq-url "eventstore" ["eventstore" "helios"])
+                        (streams/new-async-stream db)))
 
-(defn start-server! [bucket]
+(defn start-server! [db]
   (let [ms (->PhotonMicroservice (mcs/muon amazon-url "eventstore" ["eventstore" "helios"])
-                                 (streams/async-stream (riak/riak bucket)))]
+                                 (streams/new-async-stream (riak/riak riak/s-bucket))
+                                 #_(streams/async-stream (riak/riak bucket))
+                                 #_streams/mongo-ds)]
     (mcs/start-server! ms)))
 
 
