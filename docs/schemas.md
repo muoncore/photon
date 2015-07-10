@@ -34,8 +34,8 @@
  :processed ^Integer
  :last-event ^Map
  :current-status ^[:running :paused :failed]
- :last-exception
- :current-value}
+ :last-exception ^String
+ :current-value ^Any}
 ```
 
 
