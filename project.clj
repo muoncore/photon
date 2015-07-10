@@ -26,7 +26,7 @@
                  [incanter "1.5.6"]
                  [ring "1.3.2"]
                  [ring/ring-json "0.3.1"]
-                 [eventstore-deps "0.1.0-SNAPSHOT"]
+                 #_[eventstore-deps "0.1.0-SNAPSHOT"]
                  [com.basho.riak/riak-client "2.0.1" :exclusions [com.sun/tools]]
                  [org.json/json "20141113"]
                  [midje "1.6.3"]
