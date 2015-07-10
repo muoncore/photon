@@ -18,20 +18,24 @@
 
 ### Subscription
 
+```clojure
 {:projection-name ^String
  :stream-name ^String
  :language ^String
  :initial-value ^Any
  :filter ^String
  :reduction ^String}
+```
 
 ### Current value
 
+```clojure
 {:projection-name ^String
  :processed ^Integer
  :last-event ^Map
  :current-status ^[:running :paused :failed]
  :last-exception
  :current-value}
+```
 
 
