@@ -1,12 +1,13 @@
 (ns eventstore.mongo
   (:require [eventstore.db :as db]
+            [eventstore.config :as conf]
             [clojure.tools.logging :as log]
             [somnium.congomongo :as m]))
 
 (def page-size 100)
 
 (defn mongo-conn []
-  (m/make-connection "eventstore" :host "10.90.228.88"))
+  (m/make-connection "eventstore" :host (:mongodb.host conf/config)))
 
 (defrecord LocalMongoDB [db collection]
   db/DB

@@ -3,20 +3,21 @@
             [clojure.data.json :as json]
             [clj-time.core :as time]
             [eventstore.db :as db]
+            [eventstore.config :as conf]
             [clojure.tools.logging :as log]
             [clj-time.format :as time-format]))
 
 (import (io Riak))
 
 (def eventstore "eventstore")
-(def s-bucket "rxriak-events-v1")
+(def s-bucket (:riak.default_bucket conf/config))
 
-(def s-nodes ["riak1.cistechfutures.net"
-              "riak2.cistechfutures.net"
-              "riak3.cistechfutures.net"])
+(def s-nodes (map (fn [k] (get conf/config k))
+                  (filter #(.startsWith (name %) "riak.node") (keys conf/config))))
+(def entry-point (first s-nodes))
 
 (defn bucket-url [rdb]
-  (str "http://riak1.cistechfutures.net:8098/types/"
+  (str "http://" entry-point ":8098/types/"
        eventstore "/buckets/" (:bucket rdb) "/keys"))
 (defn riak-url [rdb id]
   (str (bucket-url rdb) "/" id))

@@ -5,6 +5,7 @@
             [muon-clojure.server :as mcs]
             [clojure.data.json :as json]
             [clojure.java.data :as j]
+            [eventstore.config :as conf]
             [clojure.tools.logging :as log])
   (:import (io.muoncore Muon MuonStreamGenerator)
            (io.muoncore.future MuonFuture ImmediateReturnFuture)
@@ -14,10 +15,7 @@
            (org.reactivestreams Publisher)
            (java.util Map)))
 
-#_(def amazon-url
-  "amqp://sentinel:lkjljkllj@ec2-52-28-16-238.eu-central-1.compute.amazonaws.com")
-(def amazon-url
-  "amqp://localhost")
+(def amazon-url (:amqp.url conf/config))
 
 (defmulti decode-event #(.getContentType %))
 
