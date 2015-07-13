@@ -3,6 +3,7 @@
                                         sliding-buffer mult tap close!]
              :as async]
             [serializable.fn :as sfn]
+            [clj-rhino :as js]
             [clojure.tools.logging :as log]
             [uap-clj.core :as uap]
             [clojure.data.json :as json]
@@ -25,7 +26,7 @@
   (next! [this]))
 
 (defprotocol EventProcessor
-  (register-query! [this query-name f init])
+  (register-query! [this query-name lang f init])
   (current-query-value [this query-name])
   (process-event! [this ev]))
 
@@ -47,6 +48,33 @@
 
 (def queries (ref {}))
 
+(defmulti generate-function (fn [lang _] (name lang)))
+
+(defmethod generate-function "clojure" [lang f-string]
+  (let [code (eval (let [f (read-string f-string)]
+                     (if (= (first f) 'fn)
+                       (conj (rest f) 'serializable.fn/fn)
+                       f)))]
+    {:computable code
+     :persist f-string}))
+
+(defn generate-fun-with-return [scope fun]
+  (fn [& args]
+    (let [res (apply js/call-timeout scope fun 9999999 args)]
+      (try
+        (json/read-str res :key-fn keyword)
+        (catch Exception e res)))))
+
+(defmethod generate-function "javascript" [lang f]
+  (let [sc (js/new-safe-scope)
+        compiled-fun (js/compile-function sc f :filename (str (db/uuid) ".js"))
+        fun-with-return (generate-fun-with-return sc compiled-fun)]
+    {:computable fun-with-return
+     :persist f}))
+
+(extend org.bson.types.ObjectId js/RhinoConvertible
+  {:-to-rhino (fn [obj scope ctx] (str obj))})
+
 (defrecord AsyncStream [db channel mult-channel]
   StreamManager
   (streams [this] {:streams
@@ -60,11 +88,14 @@
   HotStream
   (next! [this] (go (<! channel)))
   EventProcessor
-  (register-query! [this query-name f init]
-    (let [s (stream this {"from" "0" "stream-type" "hot-cold"
+  (register-query! [this query-name lang f init]
+    (let [function-descriptor (generate-function lang f)
+          function (:computable function-descriptor)
+          s (stream this {"from" "0" "stream-type" "hot-cold"
                           "stream-name" "cambio"})
           running-query (ref {:query-name query-name
-                              :fn f
+                              :fn (:persist function-descriptor)
+                              :language lang
                               :current-value init
                               :processed 0
                               :last-event nil
@@ -76,7 +107,7 @@
           (if (nil? current-event)
             (dosync (alter running-query assoc :status :finished))
             (let [new-value (try
-                              (f current-value current-event)
+                              (function current-value current-event)
                               (catch Exception e e))]
               (if (instance? Exception new-value)
                 (dosync

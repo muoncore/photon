@@ -31,6 +31,10 @@
   (response/header (response/response (json/write-str r))
     "Content-Type" "application/json"))
 
+(extend Exception json/JSONWriter
+  {:-write (fn [object out]
+             (.print out (.getMessage object)))})
+
 (extend clojure.lang.AFunction json/JSONWriter
   {:-write (fn [object out]
              (.print out (pr-str object)))})
@@ -80,15 +84,15 @@
   (POST "/projections" request
         (let [body (:body request)
               projection-name (:projection-name body)
+              language (:language body)
               code (:code body)
               initial-value (:initial-value body)]
           (streams/register-query! test-ds (keyword projection-name)
-                                   (eval (let [f (read-string code)]
-                                           (if (= (first f) 'fn)
-                                             (conj (rest f) 'serializable.fn/fn)
-                                             f)))
+                                   (keyword language)
+                                   code
                                    (read-string initial-value))
           "Ok"))
+  (route/resources "/")
   (route/not-found "Not Found"))
 
 (def app

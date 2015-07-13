@@ -45,6 +45,17 @@
                  :value (:projection-name data)
                  :onChange (fn [ev]
                              (om/update! data :projection-name (.-value (.-target ev))))}))
+        (dom/div nil "Language")
+        (apply dom/div
+          #js {:className "radio"}
+          (map #(dom/div
+                  nil
+                  (dom/input
+                    #js {:type "checkbox"
+                         :checked (= % (:language data))
+                         :onChange (fn [ev] (om/update! data :language %))})
+                  %)
+               ["clojure" "javascript"]))
         (dom/div nil "Initial value")
         (dom/pre
           nil
@@ -81,6 +92,7 @@
                                             {:json-params
                                              {:projection-name (:projection-name data)
                                               :initial-value (:initial-value data)
+                                              :language (:language data)
                                               :code (:code data)}})))]
                                 (update-projections! data))))}
             "Register projection"))))))
