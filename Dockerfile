@@ -1,4 +1,9 @@
 FROM java:openjdk-8u45-jdk
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+RUN echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.0.list
+RUN apt-get update && apt-get install -y mongodb-org
+RUN mkdir -p /data/db
+RUN /usr/bin/mongod
 ENV LEIN_VERSION 2.5.1
 ENV LEIN_INSTALL /usr/local/bin/
 RUN echo $LEIN_INSTALL
