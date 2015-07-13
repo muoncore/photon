@@ -5,6 +5,9 @@
 
 (def page-size 100)
 
+(defn mongo-conn []
+  (m/make-connection "eventstore" :host 10.90.228.88))
+
 (defrecord LocalMongoDB [db collection]
   db/DB
   (fetch [this id]
@@ -47,18 +50,18 @@
 
 (defn m-mongo
   ([collection]
-   (->LocalMongoDB (m/make-connection "eventstore") collection))
+   (->LocalMongoDB (mongo-conn) collection))
   ([]
    (m-mongo :events)))
 
 (def mongo (memoize m-mongo))
 
-#_(m/with-mongo (m/make-connection "eventstore")
+#_(m/with-mongo (mongo-conn)
   (let [everything (m/fetch :events :where {})]
     (dorun (map #(m/insert! :new-events {:stream-name "cambio"
                                          :server_timestamp (:server_timestamp %)
                                          :payload %}) everything))))
 
-(m/with-mongo (m/make-connection "eventstore")
+(m/with-mongo (mongo-conn)
   (m/distinct-values :events "stream-name"))
 
