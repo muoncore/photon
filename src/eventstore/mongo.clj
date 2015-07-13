@@ -6,7 +6,7 @@
 (def page-size 100)
 
 (defn mongo-conn []
-  (m/make-connection "eventstore" :host 10.90.228.88))
+  (m/make-connection "eventstore" :host "10.90.228.88"))
 
 (defrecord LocalMongoDB [db collection]
   db/DB
