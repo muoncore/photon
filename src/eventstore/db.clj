@@ -31,3 +31,16 @@
   (lazy-events [this stream-name date])
   (lazy-events-page [this stream-name date page]))
 
+(defrecord DBDummy []
+  DB
+  (fetch [this id] {})
+  (delete! [this id])
+  (delete-all! [this])
+  (put [this data])
+  (search [this id] [])
+  (store [this stream-name event-name payload])
+  (event [this id] {})
+  (distinct-values [this k] [])
+  (lazy-events [this stream-name date] [])
+  (lazy-events-page [this stream-name date page] []))
+

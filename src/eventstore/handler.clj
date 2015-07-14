@@ -48,7 +48,7 @@
              (.print out (json/write-str @object)))})
 
 (def cold-latency 5000)
-(def riak-streams (riak/riak "streams"))
+#_(def riak-streams (riak/riak "streams"))
 #_(def active-streams
   (ref (into #{} (map #_#(hash-map :stream (pr-str %))
                       #(json/read-str (first (:payload_s %)) :key-fn keyword)
@@ -56,6 +56,7 @@
 
 (def test-ds 
   (streams/new-async-stream 
+    #_(db/->DBDummy)
     (mongo/mongo)
     #_(riak/riak riak/s-bucket)))
 

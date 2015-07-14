@@ -63,6 +63,6 @@
                                          :server_timestamp (:server_timestamp %)
                                          :payload %}) everything))))
 
-(m/with-mongo (mongo-conn)
+#_(m/with-mongo (mongo-conn)
   (m/distinct-values :events "stream-name"))
 

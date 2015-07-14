@@ -150,7 +150,8 @@
             (log/info ":::::::::::::::::::: Stream closed!")
             (do
               (let [closed? (not (>! ch e))]
-                (recur (first s) (rest s) closed?)))))))
+                (recur (first s) (rest s) closed?))))))
+      (log/info "::: Cold stream over"))
     ch))
 
 (defmethod stream "hot-cold" [a-stream params]

@@ -33,11 +33,24 @@
   mcs/MicroserviceCommand
   (expose-post! [this]
     (let [f (fn [ev] (streams/process-event! stm (clojure.walk/keywordize-keys ev)))
-          listener (reify io.muoncore.MuonService$MuonCommand
-                     (^MuonFuture onCommand [_ ^MuonResourceEvent queryEvent]
-                       (log/info "onCommand" (pr-str queryEvent))
-                       (ImmediateReturnFuture. (f (decode-event queryEvent)))))]
-      (.onCommand m "/events" Map listener))))
+          listener-projections
+          (reify io.muoncore.MuonService$MuonCommand
+            (^MuonFuture onCommand [_ ^MuonResourceEvent resource]
+              (let [params (clojure.walk/keywordize-keys (decode-event resource))]
+                (log/info "onCommand|/projections" (pr-str params))
+                (ImmediateReturnFuture.
+                  (streams/register-query! stm
+                                           (keyword (:projection-name params))
+                                           (keyword (:language params))
+                                           (:code params)
+                                           (read-string (:initial-value params)))))))
+          listener
+          (reify io.muoncore.MuonService$MuonCommand
+            (^MuonFuture onCommand [_ ^MuonResourceEvent queryEvent]
+              (log/info "onCommand" (pr-str queryEvent))
+              (ImmediateReturnFuture. (f (decode-event queryEvent)))))]
+      (.onCommand m "/events" Map listener)
+      (.onCommand m "/projections" Map listener-projections))))
 
 (defn new-microservice [mq-url db]
   (->PhotonMicroservice (mcs/muon mq-url "eventstore" ["eventstore" "helios"])
