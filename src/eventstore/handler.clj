@@ -15,6 +15,7 @@
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [eventstore.db :as db]
+            [eventstore.filedb :as filedb]
             [eventstore.mongo :as mongo]
             [eventstore.riak :as riak]
             [compojure.handler :refer [site]]))
@@ -30,6 +31,15 @@
 (defn wrap-json [r]
   (response/header (response/response (json/write-str r))
     "Content-Type" "application/json"))
+
+(extend Double json/JSONWriter
+  {:-write (fn [object out]
+             (cond (.isInfinite object)
+                   (.print out 9007199254740992.0)
+                   (.isNaN object)
+                   (.print out 0.0)
+                   :else
+                   (.print out object)))})
 
 (extend Exception json/JSONWriter
   {:-write (fn [object out]
@@ -57,7 +67,8 @@
 (def test-ds 
   (streams/new-async-stream 
     #_(db/->DBDummy)
-    (mongo/mongo)
+    #_(mongo/mongo)
+    (filedb/->DBFile "/Users/sergio/Downloads/events.json")
     #_(riak/riak riak/s-bucket)))
 
 #_(def ms (m/start-server! ))

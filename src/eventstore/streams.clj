@@ -75,6 +75,13 @@
 (extend org.bson.types.ObjectId js/RhinoConvertible
   {:-to-rhino (fn [obj scope ctx] (str obj))})
 
+(defn extract-date [params]
+  (let [pre-date (get params "from" 0)
+        post-date (if (string? pre-date) (read-string pre-date) pre-date)]
+    post-date))
+
+(defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
+
 (defrecord AsyncStream [db channel mult-channel]
   StreamManager
   (streams [this] {:streams
@@ -100,19 +107,29 @@
                               :processed 0
                               :last-event nil
                               :last-error nil
+                              :avg-time 0
                               :status :running})]
       (dosync (alter queries assoc query-name running-query))
       (go
         (loop [current-value init current-event (<! s)]
           (if (nil? current-event)
             (dosync (alter running-query assoc :status :finished))
-            (let [new-value (try
+            (let [start-ts (System/currentTimeMillis)
+                  new-value (try
                               (function current-value current-event)
-                              (catch Exception e e))]
+                              (catch Exception e
+                                (log/info (.getMessage e))
+                                (.printStackTrace e)
+                                e))
+                  current-time (- (System/currentTimeMillis) start-ts)]
               (if (instance? Exception new-value)
                 (dosync
                   (alter running-query
                          merge {:last-event current-event
+                                :avg-time (next-avg
+                                            (:avg-time @running-query)
+                                            current-time
+                                            (:processed @running-query))
                                 :processed (inc (:processed @running-query))
                                 :last-error new-value 
                                 :status :failed}))                
@@ -120,6 +137,10 @@
                   (dosync
                     (alter running-query
                            merge {:last-event current-event
+                                  :avg-time (next-avg
+                                              (:avg-time @running-query)
+                                              current-time
+                                              (:processed @running-query))
                                   :current-value new-value
                                   :processed (inc (:processed @running-query))}))
                   (recur new-value (<! s))))))))))
@@ -135,7 +156,7 @@
   (let [ch (chan (buffer 1))
         full-s (data-from a-stream 
                           (get params "stream-name" "events")
-                          (get params "from" 0))
+                          (extract-date params))
         full-s (if (contains? params :limit)
                  (take (:limit params) full-s)
                  full-s)]
@@ -155,21 +176,23 @@
     ch))
 
 (defmethod stream "hot-cold" [a-stream params]
-  (let [ch (chan (buffer 1))
+  (let [date (extract-date params)
+        ch (chan (buffer 1))
         stream-name (get params "stream-name" "events")
         full-s (data-from a-stream
                           stream-name
-                          (get params "from" 0))]
+                          (extract-date params))]
     (go
       (loop [e (first full-s)
              s (rest full-s)
              closed? false
              last-t (System/currentTimeMillis)]
-        (let [rest-s (rest s)
-              new-s (if (empty? rest-s) (data-from a-stream stream-name last-t) s)
-              last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
-          (if (nil? e)
-            (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
+        (if (nil? e)
+          (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
+          (let [rest-s (rest s)
+                new-s (concat s (if (empty? rest-s)
+                                  (data-from a-stream stream-name last-t) []))
+                last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
             (if closed?
               (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
               (let [closed? (not (>! ch e))]
