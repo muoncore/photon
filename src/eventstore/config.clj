@@ -8,5 +8,13 @@
       (.load props reader)
       (into {} (for [[k v] props] [(keyword k) (read-string v)])))))
 
-(def config (load-props "config.properties"))
+(def config (try
+              (load-props "config.properties")
+              (catch Exception e
+                {:amqp.url "amqp://localhost"
+                 :mongodb.host "localhost"
+                 :riak.default_bucket "rxriak-events-v1"
+                 :riak.node.1 "riak1.node.com"
+                 :riak.node.2 "riak2.node.com"
+                 :riak.node.3 "riak3.node.com"})))
 

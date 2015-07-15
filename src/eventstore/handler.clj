@@ -68,7 +68,7 @@
   (streams/new-async-stream 
     #_(db/->DBDummy)
     #_(mongo/mongo)
-    (filedb/->DBFile "/Users/sergio/Downloads/events.json")
+    (filedb/->DBFile (clojure.java.io/resource "events.json"))
     #_(riak/riak riak/s-bucket)))
 
 #_(def ms (m/start-server! ))
