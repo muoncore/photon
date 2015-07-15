@@ -1,5 +1,5 @@
 (ns eventstore.muon
-  (:require [eventstore.riak :as riak]
+  (:require #_[eventstore.riak :as riak]
             [eventstore.streams :as streams]
             [muon-clojure.common :as mcc]
             [muon-clojure.server :as mcs]
@@ -40,7 +40,8 @@
 
 (defn start-server! [db]
   (let [ms (->PhotonMicroservice (mcs/muon amazon-url "eventstore" ["eventstore" "helios"])
-                                 (streams/new-async-stream (riak/riak riak/s-bucket))
+                                 (streams/new-async-stream db)
+                                 #_(streams/new-async-stream (riak/riak riak/s-bucket))
                                  #_(streams/async-stream (riak/riak bucket))
                                  #_streams/mongo-ds)]
     (mcs/start-server! ms)))
