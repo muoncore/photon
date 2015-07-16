@@ -11,7 +11,7 @@
 (defonce app-state (atom {:stream nil
                           :current nil
                           :initial-value ""
-                          :code ""
+                          :reduction ""
                           :projections []
                           :new-projection false}))
 
@@ -77,9 +77,9 @@
                    :ref "code-box"
                    :className "clojure"
                    :onBlur (fn [ev]
-                             (om/update! data :code (.-textContent (.-target ev)))
+                             (om/update! data :reduction (.-textContent (.-target ev)))
                              (update-box owner "code-box"))}
-              (:code data))))
+              (:reduction data))))
         (dom/div
           nil
           (dom/button
@@ -93,7 +93,7 @@
                                              {:projection-name (:projection-name data)
                                               :initial-value (:initial-value data)
                                               :language (:language data)
-                                              :code (:code data)}})))]
+                                              :reduction (:reduction data)}})))]
                                 (update-projections! data))))}
             "Register projection"))))))
 
