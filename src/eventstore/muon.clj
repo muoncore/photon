@@ -18,8 +18,6 @@
            (org.reactivestreams Publisher)
            (java.util Map)))
 
-(def amazon-url (:amqp.url conf/config))
-
 (defmulti decode-event #(.getContentType %))
 
 (defmethod decode-event "application/json" [queryEvent]
@@ -52,8 +50,8 @@
 
 (defn start-server! [db]
   (do
-    (log/info "Connecting to" amazon-url)
-    (let [muon-url amazon-url
+    (log/info "Connecting to" (:amqp.url conf/config))
+    (let [muon-url (:amqp.url conf/config)
           ms (->PhotonMicroservice (mcs/muon muon-url "eventstore" ["eventstore" "helios"])
                                  (streams/new-async-stream db)
                                  #_(streams/new-async-stream (riak/riak riak/s-bucket))
