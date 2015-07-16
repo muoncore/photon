@@ -40,7 +40,7 @@
 
 (defn start-server! [db]
   (let [ms (->PhotonMicroservice (mcs/muon amazon-url "eventstore" ["eventstore" "helios"])
-                                 db
+                                 (streams/new-async-stream db)
                                  #_(streams/new-async-stream (riak/riak riak/s-bucket))
                                  #_(streams/async-stream (riak/riak bucket))
                                  #_streams/mongo-ds)]

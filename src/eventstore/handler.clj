@@ -17,7 +17,7 @@
             [eventstore.db :as db]
             [eventstore.filedb :as filedb]
             [eventstore.mongo :as mongo]
-           #_ [eventstore.riak :as riak]
+            #_[eventstore.riak :as riak]
             [compojure.handler :refer [site]]))
 
 (defn async-handler [ring-request]
@@ -64,12 +64,12 @@
                       #(json/read-str (first (:payload_s %)) :key-fn keyword)
                       (db/lazy-events riak-streams "streams" 0)))))
 
-(def test-ds
-  (streams/new-async-stream
-    #_(db/->DBDummy)
-    #_(mongo/mongo)
-    (filedb/->DBFile (clojure.java.io/resource "events.json"))
-    #_(riak/riak riak/s-bucket)))
+(def ms (m/start-server!
+          #_(db/->DBDummy)
+          #_(mongo/mongo)
+          (filedb/->DBFile (clojure.java.io/resource "events.json"))
+          #_(riak/riak riak/s-bucket)))
+(def test-ds (:stm ms))
 
 (defroutes app-routes
   (GET "/streams" []
@@ -115,7 +115,6 @@
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
   #_(future (m/start-server!))
-  (def ms (m/start-server! test-ds))
   (let [handler (reload/wrap-reload #'app)]
     (println run-server)
     (time (run-server handler {:port 3000}))))
