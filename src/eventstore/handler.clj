@@ -65,12 +65,7 @@
                         #(json/read-str (first (:payload_s %)) :key-fn keyword)
                         (db/lazy-events riak-streams "streams" 0)))))
 
-(def ms (m/start-server!
-          #_(db/->DBDummy)
-          #_(mongo/mongo)
-          (filedb/->DBFile (clojure.java.io/resource "events.json"))
-          #_(riak/riak riak/s-bucket)))
-(def test-ds (:stm ms))
+(def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
 
 (defroutes app-routes
   (GET "/streams" []
@@ -100,6 +95,11 @@
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
   #_(future (m/start-server!))
+  (def ms (m/start-server!
+            #_(db/->DBDummy)
+            #_(mongo/mongo)
+            (filedb/->DBFile (clojure.java.io/resource "events.json"))
+            #_(riak/riak riak/s-bucket)))
   (let [handler (reload/wrap-reload #'app)]
     (println run-server)
     (time (run-server handler {:port 3000}))))
