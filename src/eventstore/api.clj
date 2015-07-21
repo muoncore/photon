@@ -1,13 +1,7 @@
 (ns eventstore.api
   (:require [eventstore.streams :as streams]
+            [clojure.tools.logging :as log]
             [clojure.core.async :as async]))
-
-(defn projection []
-  (first
-    (map
-      (fn [v] (assoc v :fn (pr-str (:fn v))))
-      (map #(apply dissoc (deref %) [:_id])
-           (vals @streams/queries)))))
 
 (defn post-projection! [stm request]
   (let [body request
@@ -27,13 +21,21 @@
     (map #(apply dissoc (deref %) [:_id])
          (vals @streams/queries))))
 
+(defn projection [projection-name]
+  (log/info "Querying" projection-name)
+  (let [res (first (filter #(= (name (:projection-name %)) projection-name)
+                           (map deref (vals @streams/queries))))]
+    (log/info "Result:" (pr-str res))
+    (log/info "Result:" (pr-str (muon-clojure.common/dekeywordize res)))
+    res))
+
 (defn proper-map [m]
   (java.util.HashMap. (clojure.walk/stringify-keys m)))
 
 (defn projection-keys []
   (proper-map
     {:projection-keys
-     (map :query-name
+     (map :projection-name
           (map
             (fn [v] (assoc v :fn (pr-str (:fn v))))
             (map #(apply dissoc (deref %) [:_id])
@@ -45,6 +47,5 @@
      (async/reduce (fn [prev n] (concat prev [n])) []
                    (streams/stream stm {"from" "0"
                                         "stream-name" stream-name
-                                        :limit 5 
                                         "stream-type" "cold"})))})
 

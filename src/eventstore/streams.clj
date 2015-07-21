@@ -26,8 +26,8 @@
   (next! [this]))
 
 (defprotocol EventProcessor
-  (register-query! [this query-name lang f init])
-  (current-query-value [this query-name])
+  (register-query! [this projection-name lang f init])
+  (current-query-value [this projection-name])
   (process-event! [this ev]))
 
 (defprotocol StreamManager
@@ -86,7 +86,7 @@
   StreamManager
   (streams [this] {:streams
                    (map #(hash-map :stream %)
-                        (conj (db/distinct-values db "stream-name")
+                        (conj (db/distinct-values db :stream-name)
                               "__all__"))})
   ColdStream
   (clean! [this] (db/delete-all! db))
@@ -95,12 +95,12 @@
   HotStream
   (next! [this] (go (<! channel)))
   EventProcessor
-  (register-query! [this query-name lang f init]
+  (register-query! [this projection-name lang f init]
     (let [function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
           s (stream this {"from" "0" "stream-type" "hot-cold"
-                          "stream-name" "cambio"})
-          running-query (ref {:query-name query-name
+                          "stream-name" "__all__"})
+          running-query (ref {:projection-name projection-name
                               :fn (:persist function-descriptor)
                               :language lang
                               :current-value init
@@ -109,7 +109,7 @@
                               :last-error nil
                               :avg-time 0
                               :status :running})]
-      (dosync (alter queries assoc query-name running-query))
+      (dosync (alter queries assoc projection-name running-query))
       (go
         (loop [current-value init current-event (<! s)]
           (if (nil? current-event)
@@ -149,7 +149,7 @@
     (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
     (let [ev (:payload msg)]
       (go (>! channel ev))
-      (db/store db (:stream-name msg) (db/uuid) ev))
+      (db/store db (:stream-name msg) (db/uuid) msg))
     {:correct "true"}))
 
 (defmethod stream "cold" [a-stream params]
@@ -178,7 +178,7 @@
 (defmethod stream "hot-cold" [a-stream params]
   (let [date (extract-date params)
         ch (chan (buffer 1))
-        stream-name (get params "stream-name" "events")
+        stream-name (get params "stream-name" "__all__")
         full-s (data-from a-stream
                           stream-name
                           (extract-date params))]

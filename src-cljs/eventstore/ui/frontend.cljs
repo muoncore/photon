@@ -2,9 +2,10 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:use [jayq.core :only [$ css html]])
   (:require [cljs-http.client :as client]
-            [cljs.core.async :refer [<!]]
+            [cljs.core.async :refer [<! >! put! close!]]
             [fipp.edn :as fipp]
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
+            [chord.client :refer [ws-ch]]
             [om.core :as om]
             [om.dom :as dom]))
 
@@ -13,6 +14,7 @@
                           :initial-value ""
                           :reduction ""
                           :projections []
+                          :chord-test ""
                           :new-projection false}))
 
 (defn clj->str [c]
@@ -130,7 +132,7 @@
                                          (if (= (:current-projection data) %)
                                            (om/update! data :current-projection nil)
                                            (om/update! data :current-projection %)))}
-                         (:query-name %))
+                         (:projection-name %))
                        (if (= (:current-projection data) %)
                          (dom/pre
                            nil
@@ -188,10 +190,11 @@
         (apply dom/ul
                nil
                (map (fn [event]
-                      (let [payload (:payload event)]
+                      (let [payload (:payload event)
+                            id (str (:service-id event) ":" (:local-id event))]
                         (dom/li
                           nil
-                          (let [current? (= (:current data) (:_id event))]
+                          (let [current? (= (:current data) id)]
                             (dom/div
                               nil
                               (dom/a
@@ -199,9 +202,8 @@
                                      :onClick
                                      (fn [ev] (if current?
                                                 (om/update! data :current nil)
-                                                (om/update! data :current
-                                                            (:_id event))))}
-                                (:_id event))
+                                                (om/update! data :current id)))}
+                                id)
                               (if current?
                                 (dom/pre
                                   nil
@@ -214,10 +216,19 @@
 
 (defn full-page [data owner]
   (reify
+    om/IDidMount
+    (did-mount [_]
+      (go
+        (>! (ws-ch "ws://localhost:3000/ws") "message")
+        (let [{:keys [ws-channel]} (<! (ws-ch "ws://localhost:3000/ws"))
+              {:keys [message]} (<! ws-channel)]
+          (om/update! data :chord-test message)
+          (js/console.log "Got message from server:" (pr-str message)))))
     om/IRender
     (render [_]
       (dom/div
         nil
+        (:chord-test data)
         (om/build widget-streams {:handler (fn [ev]
                                              (om/update! data :stream (:stream ev)))
                                   :streams []})

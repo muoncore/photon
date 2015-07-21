@@ -33,7 +33,7 @@
   (expose-get [this]
     (mcc/on-query this "projection" (fn [resource]
                                       (log/info ":::: QUERY " (pr-str resource))
-                                      (api/projection)))
+                                      (api/projection (:projection-name resource))))
     (mcc/on-query this "projection-keys" (fn [resource]
                                            (api/projection-keys))))
   mcs/MicroserviceCommand
@@ -52,6 +52,7 @@
 
 (defn start-server! 
   ([db]
+   (println conf/config)
    (start-server! db (if (nil? (:amqp.url conf/config))
                        "amqp://localhost"
                        (:amqp.url conf/config))))

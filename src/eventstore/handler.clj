@@ -11,13 +11,14 @@
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
             [clojure.data.json :as json]
-            [clojure.core.async :as async]
+            [clojure.core.async :as async :refer [go <! >! close!]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [eventstore.db :as db]
             [eventstore.filedb :as filedb]
             [eventstore.api :as api]
             [eventstore.mongo :as mongo]
+            [chord.http-kit :refer [wrap-websocket-handler]]
             #_[eventstore.riak :as riak]
             [compojure.handler :refer [site]]))
 
@@ -44,7 +45,7 @@
 
 (extend Exception json/JSONWriter
   {:-write (fn [object out]
-             (.print out (.getMessage object)))})
+             (.print out (pr-str (.getMessage object))))})
 
 (extend clojure.lang.AFunction json/JSONWriter
   {:-write (fn [object out]
@@ -66,27 +67,39 @@
                         (db/lazy-events riak-streams "streams" 0)))))
 
 (def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
+(defonce own-stream (ref nil))
 
 (defroutes app-routes
   (GET "/streams" []
-       (wrap-json (streams/streams test-ds)))
+       (log/info @own-stream)
+       (wrap-json (streams/streams (:stm @own-stream))))
   (GET "/projection-keys" []
        (wrap-json (api/projection-keys)))
   (GET "/projections" []
        (wrap-json (api/projections)))
+  (GET "/projection/:projection-name" [projection-name]
+       (wrap-json (api/projection projection-name)))
   (GET "/stream/:stream-name" [stream-name]
-       (wrap-json (api/stream test-ds stream-name)))
+       (wrap-json (api/stream (:stm @own-stream) stream-name)))
   (GET "/ws" [] async-handler)
   (GET "/thing" [] "Thing")
   (GET "/thing2" [] "Thing4")
   (GET "/first-projection" []
        (wrap-json (api/projection)))
-  (POST "/projections" request (api/post-projection! test-ds (:body request)))
+  (POST "/projections" request (api/post-projection! (:stm @own-stream) (:body request)))
   (route/resources "/")
   (route/not-found "Not Found"))
 
+(defn ws-handler [{:keys [ws-channel] :as req}]
+  (go
+    (let [{:keys [message]} (<! ws-channel)]
+      (println "Message received:" message)
+      (>! ws-channel "Hello client from server!")
+      (close! ws-channel))))
+
 (def app
-  (rjson/wrap-json-body (pms/wrap-params (site app-routes)) {:keywords? true}))
+  (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes)) {:keywords? true})
+          (wrap-websocket-handler ws-handler)))
 
 (def reloadable-app
   (reload/wrap-reload #'app))
@@ -100,6 +113,7 @@
             #_(mongo/mongo)
             (filedb/->DBFile (clojure.java.io/resource "events.json"))
             #_(riak/riak riak/s-bucket)))
+  (dosync (alter own-stream (fn [_] ms)))
   (let [handler (reload/wrap-reload #'app)]
     (println run-server)
     (time (run-server handler {:port 3000}))))
