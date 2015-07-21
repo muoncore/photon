@@ -6,9 +6,8 @@
   [resource-name]
   (do
     (log/info "opening resource" resource-name)
-    (let [io (java.io.FileInputStream.
-               (clojure.java.io/file
-                 (clojure.java.io/resource (str resource-name ".properties"))))
+    (let [io (clojure.java.io/input-stream
+               (clojure.java.io/resource (str resource-name ".properties")))
           prop (java.util.Properties.)]
       (.load prop io)
       (into {} (for [[k v] prop]
