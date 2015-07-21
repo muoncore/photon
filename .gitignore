@@ -1,3 +1,4 @@
+resources/config.properties
 eventstore.iml
 .idea/
 resources/public/js/main.js
