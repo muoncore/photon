@@ -47,7 +47,7 @@
       (mcc/on-command this "projections" listener-projections))))
 
 (defn new-microservice [mq-url db]
-  (->PhotonMicroservice (mcs/muon mq-url "eventstore" ["eventstore" "photon"])
+  (->PhotonMicroservice (mcs/muon mq-url "photon" ["eventstore" "photon"])
                         (streams/new-async-stream db)))
 
 (defn start-server! 
@@ -58,7 +58,7 @@
                        (:amqp.url conf/config))))
   ([db url]
    (log/info "Connecting to" url)
-   (let [ms (->PhotonMicroservice (mcs/muon url "eventstore" ["eventstore" "helios"])
+   (let [ms (->PhotonMicroservice (mcs/muon url "photon" ["eventstore" "helios"])
                                   (streams/new-async-stream db)
                                   #_(streams/new-async-stream (riak/riak riak/s-bucket))
                                   #_(streams/async-stream (riak/riak bucket))
