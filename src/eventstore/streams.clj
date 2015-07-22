@@ -102,14 +102,14 @@
   (next! [this] (go (<! channel)))
   EventProcessor
   (register-query! [this projection-name stream-name lang f init]
-    (let [function-descriptor (generate-function lang f)
+    (let [s-name (if (nil? stream-name) "__all__" stream-name) 
+          function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
           s (stream this {"from" "0" "stream-type" "hot-cold"
-                          "stream-name" (if (nil? stream-name)
-                                          "__all__"
-                                          stream-name)})
+                          "stream-name" s-name})
           running-query (ref {:projection-name projection-name
                               :fn (:persist function-descriptor)
+                              :stream-name s-name
                               :language lang
                               :current-value init
                               :processed 0
