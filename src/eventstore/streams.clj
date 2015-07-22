@@ -1,6 +1,6 @@
 (ns eventstore.streams
-  (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer
-                                        sliding-buffer mult tap close!]
+  (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer sub
+                                        sliding-buffer mult tap close! pub]
              :as async]
             [serializable.fn :as sfn]
             [clj-rhino :as js]
@@ -26,7 +26,7 @@
   (next! [this]))
 
 (defprotocol EventProcessor
-  (register-query! [this projection-name lang f init])
+  (register-query! [this projection-name stream-name lang f init])
   (current-query-value [this projection-name])
   (process-event! [this ev]))
 
@@ -82,6 +82,12 @@
 
 (defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
 
+(def publications (ref {}))
+
+(defn publisher [async-stream]
+  (get publications async-stream (pub (:channel async-stream)
+                                      (fn [ev] (:stream-name ev)))))
+
 (defrecord AsyncStream [db channel mult-channel]
   StreamManager
   (streams [this] {:streams
@@ -95,11 +101,13 @@
   HotStream
   (next! [this] (go (<! channel)))
   EventProcessor
-  (register-query! [this projection-name lang f init]
+  (register-query! [this projection-name stream-name lang f init]
     (let [function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
           s (stream this {"from" "0" "stream-type" "hot-cold"
-                          "stream-name" "__all__"})
+                          "stream-name" (if (nil? stream-name)
+                                          "__all__"
+                                          stream-name)})
           running-query (ref {:projection-name projection-name
                               :fn (:persist function-descriptor)
                               :language lang
@@ -147,9 +155,8 @@
   (process-event! [this msg]
     ;; Think about the order of store+send to taps
     (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
-    (let [ev (:payload msg)]
-      (go (>! channel ev))
-      (db/store db (:stream-name msg) (db/uuid) msg))
+    (go (>! channel msg))
+    (db/store db (:stream-name msg) (db/uuid) msg)
     {:correct "true"}))
 
 (defmethod stream "cold" [a-stream params]
@@ -197,12 +204,17 @@
               (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
               (let [closed? (not (>! ch e))]
                 (recur (first new-s) (rest new-s) closed? last-t))))))
-      (tap (:mult-channel a-stream) ch))
+      (if (= stream-name "__all__")
+        (tap (:mult-channel a-stream) ch)
+        (sub (publisher a-stream) stream-name ch)))
     ch))
 
 (defmethod stream "hot" [a-stream params]
-  (let [ch (chan 1)]
-    (tap (:mult-channel a-stream) ch)
+  (let [ch (chan 1)
+        stream-name (get params "stream-name" "__all__")]
+    (if (= stream-name "__all__")
+      (tap (:mult-channel a-stream) ch)
+      (sub (publisher a-stream) stream-name ch))
     ch))
 
 #_(def test-ch (chan))
