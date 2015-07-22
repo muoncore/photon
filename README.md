@@ -41,6 +41,16 @@ To start a web server for the application, run:
 
      Browse to http://localhost:3000/index.html
 
+
+
+## Testing
+
+create a test photon client to interact with photon event store:
+
+lein new muon-clojure photon-test-client
+
+
+
 ## License
 
 Copyright © 2015 FIXME
