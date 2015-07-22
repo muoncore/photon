@@ -47,41 +47,49 @@
                  :value (:projection-name data)
                  :onChange (fn [ev]
                              (om/update! data :projection-name (.-value (.-target ev))))}))
+        (dom/div
+          nil
+          "Stream name"
+          (dom/input
+            #js {:type "text" :ref "name"
+                 :value (:stream-name data)
+                 :onChange (fn [ev]
+                             (om/update! data :stream-name (.-value (.-target ev))))}))
         (dom/div nil "Language")
         (apply dom/div
-          #js {:className "radio"}
-          (map #(dom/div
-                  nil
-                  (dom/input
-                    #js {:type "checkbox"
-                         :checked (= % (:language data))
-                         :onChange (fn [ev] (om/update! data :language %))})
-                  %)
-               ["clojure" "javascript"]))
+               #js {:className "radio"}
+               (map #(dom/div
+                       nil
+                       (dom/input
+                         #js {:type "checkbox"
+                              :checked (= % (:language data))
+                              :onChange (fn [ev] (om/update! data :language %))})
+                       %)
+                    ["clojure" "javascript"]))
         (dom/div nil "Initial value")
         (dom/pre
           nil
           (dom/code #js {:className "clojure"}
-            (dom/div
-              #js {:contentEditable "true"
-                   :ref "initial-value-box"
-                   :className "clojure"
-                   :onBlur (fn [ev]
-                             (om/update! data :initial-value (.-textContent (.-target ev)))
-                             (update-box owner "initial-value-box"))}
-              (:initial-value data))))
+                    (dom/div
+                      #js {:contentEditable "true"
+                           :ref "initial-value-box"
+                           :className "clojure"
+                           :onBlur (fn [ev]
+                                     (om/update! data :initial-value (.-textContent (.-target ev)))
+                                     (update-box owner "initial-value-box"))}
+                      (:initial-value data))))
         (dom/div nil "Code: content of (fn [prev item] ... )")
         (dom/pre
           nil
           (dom/code #js {:className "clojure"}
-            (dom/div
-              #js {:contentEditable "true"
-                   :ref "code-box"
-                   :className "clojure"
-                   :onBlur (fn [ev]
-                             (om/update! data :reduction (.-textContent (.-target ev)))
-                             (update-box owner "code-box"))}
-              (:reduction data))))
+                    (dom/div
+                      #js {:contentEditable "true"
+                           :ref "code-box"
+                           :className "clojure"
+                           :onBlur (fn [ev]
+                                     (om/update! data :reduction (.-textContent (.-target ev)))
+                                     (update-box owner "code-box"))}
+                      (:reduction data))))
         (dom/div
           nil
           (dom/button
@@ -93,6 +101,7 @@
                                             "/projections"
                                             {:json-params
                                              {:projection-name (:projection-name data)
+                                              :stream-name (:stream-name data)
                                               :initial-value (:initial-value data)
                                               :language (:language data)
                                               :reduction (:reduction data)}})))]

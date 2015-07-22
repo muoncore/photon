@@ -6,10 +6,12 @@
 (defn post-projection! [stm request]
   (let [body request
         projection-name (:projection-name body)
+        stream-name (:stream-name body)
         language (:language body)
         code (:reduction body)
         initial-value (:initial-value body)]
     (streams/register-query! stm (keyword projection-name)
+                             stream-name
                              (keyword language)
                              code
                              (read-string initial-value))
