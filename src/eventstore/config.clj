@@ -5,10 +5,13 @@
   "Receives a path and loads the Java properties for the file represented by the path inside the classpath (typically, a resource)."
   [resource-name]
   (do
-    (log/info "opening resource" resource-name)
-    (let [io (clojure.java.io/input-stream
-               (clojure.java.io/resource (str resource-name ".properties")))
+    (let [f (java.io.File. "./config.properties")
+          config-file (if (.exists f)
+                        (clojure.java.io/file f)
+                        (clojure.java.io/resource (str resource-name ".properties")))
+          io (clojure.java.io/input-stream config-file)
           prop (java.util.Properties.)]
+      (log/info "opening resource" config-file)
       (.load prop io)
       (into {} (for [[k v] prop]
                  [(keyword k) v])))))
