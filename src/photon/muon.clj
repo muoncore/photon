@@ -18,8 +18,6 @@
            (org.reactivestreams Publisher)
            (java.util Map)))
 
-(def amazon-url (:amqp.url conf/config))
-
 (defmulti decode-event #(.getContentType %))
 
 (defmethod decode-event "application/json" [queryEvent]
