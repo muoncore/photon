@@ -5,11 +5,23 @@
 
 (defrecord DBFile [file-name]
   db/DB
-  (db/fetch [this id] {})
-  (db/delete! [this id])
-  (db/delete-all! [this])
-  (db/put [this data])
-  (db/search [this id] [])
+  (db/fetch [this id]
+    (first (db/search this id)))
+  (db/delete! [this id]
+    (let [all (db/lazy-events this "__all__" 0)
+          filtered (remove #(= id (:local-id %)) all)]
+      (db/delete-all! this)
+      (dorun (map #(db/store this (:stream-name %) "" %) filtered))))
+  (db/delete-all! [this]
+    (.delete (java.io.File. file-name))
+    (java.io.File. file-name))
+  (db/put [this data]
+    (db/delete! this (:local-id data))
+    (db/store this (:stream-name data) "" data))
+  (db/search [this id]
+    (let [all (db/lazy-events this "__all__" 0)
+          filtered (filter #(= id (:local-id %)) all)]
+      filtered))
   (db/store [this stream-name event-name payload]
     (log/info "Payload" payload)
     (let [server-timestamp (:server-timestamp payload)
@@ -19,7 +31,8 @@
                                (long server-timestamp)))]
       (with-open [w (clojure.java.io/writer file-name :append true)]
         (.write w (str (json/write-str new-payload) "\n")))))
-  (db/event [this id] {})
+  (db/event [this id]
+    (db/fetch this id))
   (db/distinct-values [this k]
     (into #{} (map #(get % k)
                    (db/lazy-events this "__all__" 0))))
