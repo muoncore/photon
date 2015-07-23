@@ -11,13 +11,6 @@
             [clj-time.coerce :as cc]
             [photon.db :as db]))
 
-(defn seq->channel [s]
-  (let [ch (chan (buffer 1))]
-    (go
-      (doseq [event s]
-        (>! ch event)))
-    ch))
-
 (defprotocol ColdStream
   (clean! [this])
   (data-from [this stream-name date-string]))
