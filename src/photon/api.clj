@@ -1,5 +1,5 @@
-(ns eventstore.api
-  (:require [eventstore.streams :as streams]
+(ns photon.api
+  (:require [photon.streams :as streams]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async]))
 

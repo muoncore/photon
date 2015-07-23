@@ -1,4 +1,4 @@
-(ns eventstore.config
+(ns photon.config
   (:require [clojure.tools.logging :as log]))
 
 (defn load-props

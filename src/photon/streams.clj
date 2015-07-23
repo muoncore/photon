@@ -1,4 +1,4 @@
-(ns eventstore.streams
+(ns photon.streams
   (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer sub
                                         sliding-buffer mult tap close! pub]
              :as async]
@@ -9,7 +9,7 @@
             [clojure.data.json :as json]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
-            [eventstore.db :as db]))
+            [photon.db :as db]))
 
 (defn seq->channel [s]
   (let [ch (chan (buffer 1))]
@@ -238,7 +238,7 @@
     ch))
 
 #_(def test-ch (chan))
-#_(def mongo-ds (->DummyStream (m/make-connection "eventstore") test-ch (mult test-ch)))
+#_(def mongo-ds (->DummyStream (m/make-connection "photon") test-ch (mult test-ch)))
 #_(def test-ds (->AsyncStream (db/riak "rxriak-events-v1")
                             test-ch (mult test-ch)))
 

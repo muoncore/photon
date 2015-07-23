@@ -1,25 +1,25 @@
-(ns eventstore.handler
+(ns photon.handler
   (:gen-class)
   (:use org.httpkit.server)
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
-            [eventstore.muon :as m]
+            [photon.muon :as m]
             [gniazdo.core :as ws]
             [ring.middleware.reload :as reload]
-            [eventstore.streams :as streams]
+            [photon.streams :as streams]
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
             [clojure.data.json :as json]
             [clojure.core.async :as async :refer [go <! >! close!]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
-            [eventstore.db :as db]
-            [eventstore.filedb :as filedb]
-            [eventstore.api :as api]
-            [eventstore.mongo :as mongo]
+            [photon.db :as db]
+            [photon.filedb :as filedb]
+            [photon.api :as api]
+            [photon.mongo :as mongo]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            #_[eventstore.riak :as riak]
+            #_[photon.riak :as riak]
             [compojure.handler :refer [site]]))
 
 (defn async-handler [ring-request]

@@ -1,15 +1,15 @@
-(ns eventstore.riak
+(ns photon.riak
   (:require [clj-http.client :as client]
             [clojure.data.json :as json]
             [clj-time.core :as time]
-            [eventstore.db :as db]
-            [eventstore.config :as conf]
+            [photon.db :as db]
+            [photon.config :as conf]
             [clojure.tools.logging :as log]
             [clj-time.format :as time-format]))
 
 (import (io Riak))
 
-(def eventstore "eventstore")
+(def photon "photon")
 (def s-bucket (:riak.default_bucket conf/config))
 
 (def s-nodes (map (fn [k] (get conf/config k))
@@ -18,7 +18,7 @@
 
 (defn bucket-url [rdb]
   (str "http://" entry-point ":8098/types/"
-       eventstore "/buckets/" (:bucket rdb) "/keys"))
+       photon "/buckets/" (:bucket rdb) "/keys"))
 (defn riak-url [rdb id]
   (str (bucket-url rdb) "/" id))
 
@@ -61,7 +61,7 @@
 
 (defn m-riak
   ([nodes bucket]
-   (->RiakDB (Riak. bucket "eventstore" (into-array String nodes))
+   (->RiakDB (Riak. bucket "photon" (into-array String nodes))
              nodes bucket))
   ([bucket]
    (m-riak s-nodes bucket)))

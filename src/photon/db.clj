@@ -1,4 +1,4 @@
-(ns eventstore.db
+(ns photon.db
   (:require [clojure.data.json :as json]))
 
 (defn jo->map [jo]

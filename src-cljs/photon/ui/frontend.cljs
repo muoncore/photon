@@ -1,4 +1,4 @@
-(ns eventstore.ui.frontend
+(ns photon.ui.frontend
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:use [jayq.core :only [$ css html]])
   (:require [cljs-http.client :as client]

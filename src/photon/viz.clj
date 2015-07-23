@@ -1,5 +1,5 @@
-(ns eventstore.viz
-  (:require [eventstore.streams :as streams])
+(ns photon.viz
+  (:require [photon.streams :as streams])
   (:use (incanter core stats charts io)))
 
 #_(let [results (:current-value @(:test-query-3 @streams/queries))

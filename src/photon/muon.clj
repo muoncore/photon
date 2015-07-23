@@ -1,13 +1,13 @@
-(ns eventstore.muon
-  (:require #_[eventstore.riak :as riak]
-            [eventstore.streams :as streams]
+(ns photon.muon
+  (:require #_[photon.riak :as riak]
+            [photon.streams :as streams]
             [muon-clojure.common :as mcc]
             [muon-clojure.server :as mcs]
             [muon-clojure.rx :as rx]
             [clojure.data.json :as json]
             [clojure.java.data :as j]
-            [eventstore.api :as api]
-            [eventstore.config :as conf]
+            [photon.api :as api]
+            [photon.config :as conf]
             [clojure.data.json :as json]
             [clojure.tools.logging :as log])
   (:import (io.muoncore Muon MuonStreamGenerator)
@@ -47,7 +47,7 @@
       (mcc/on-command this "projections" listener-projections))))
 
 (defn new-microservice [mq-url db]
-  (->PhotonMicroservice (mcs/muon mq-url "photon" ["eventstore" "photon"])
+  (->PhotonMicroservice (mcs/muon mq-url "photon" ["photon" "photon"])
                         (streams/new-async-stream db)))
 
 (defn start-server! 
@@ -58,7 +58,7 @@
                        (:amqp.url conf/config))))
   ([db url]
    (log/info "Connecting to" url)
-   (let [ms (->PhotonMicroservice (mcs/muon url "photon" ["eventstore" "helios"])
+   (let [ms (->PhotonMicroservice (mcs/muon url "photon" ["photon" "helios"])
                                   (streams/new-async-stream db)
                                   #_(streams/new-async-stream (riak/riak riak/s-bucket))
                                   #_(streams/async-stream (riak/riak bucket))

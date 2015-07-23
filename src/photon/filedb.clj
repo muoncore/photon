@@ -1,7 +1,7 @@
-(ns eventstore.filedb
+(ns photon.filedb
   (:require [clojure.data.json :as json]
             [clojure.tools.logging :as log]
-            [eventstore.db :as db]))
+            [photon.db :as db]))
 
 (defrecord DBFile [file-name]
   db/DB

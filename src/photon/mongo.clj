@@ -1,13 +1,13 @@
-(ns eventstore.mongo
-  (:require [eventstore.db :as db]
-            [eventstore.config :as conf]
+(ns photon.mongo
+  (:require [photon.db :as db]
+            [photon.config :as conf]
             [clojure.tools.logging :as log]
             [somnium.congomongo :as m]))
 
 (def page-size 100)
 
 (defn mongo-conn []
-  (m/make-connection "eventstore" :host (:mongodb.host conf/config)))
+  (m/make-connection "photon" :host (:mongodb.host conf/config)))
 
 (defrecord LocalMongoDB [db collection]
   db/DB

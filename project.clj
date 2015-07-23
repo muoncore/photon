@@ -1,4 +1,4 @@
-(defproject eventstore "0.1.0-SNAPSHOT"
+(defproject photon "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
@@ -30,7 +30,7 @@
                  [incanter "1.5.6"]
                  [ring "1.4.0"]
                  [ring/ring-json "0.3.1"]
-                 #_[eventstore-deps "0.1.0-SNAPSHOT"]
+                 #_[photon "0.1.0-SNAPSHOT"]
                  [com.basho.riak/riak-client "2.0.1" :exclusions [com.sun/tools]]
                  [org.json/json "20141113"]
                  [midje "1.6.3"]
@@ -47,15 +47,15 @@
             [lein-figwheel "0.3.3"]
             [cider/cider-nrepl "0.9.1"]
             [org.clojure/tools.nrepl "0.2.10"]]
-  :ring {:handler eventstore.handler/app} ;; jetty
-  :main eventstore.handler ;; http-kit
+  :ring {:handler photon} ;; jetty
+  :main photon.handler ;; http-kit
   :java-source-paths ["java"]
   :figwheel {:server-port 3500
              :load-warninged-code true
-             :ring-handler eventstore.handler/reloadable-app}
+             :ring-handler photon.handler/reloadable-app}
   :cljsbuild {:builds [{:source-paths ["src-cljs"]
                         :figwheel true
-                        :compiler {:main eventstore.ui.frontend
+                        :compiler {:main photon.ui.frontend
                                    :asset-path "js/out"
                                    :output-to "resources/public/js/main.js"}}]}
   :docker {:image-name "myregistry.example.org/myimage"
