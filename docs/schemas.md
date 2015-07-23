@@ -15,21 +15,21 @@
 
 * Body:
 
-```json
+```javascript
 {"service-id" : "muon://origin",
  "local-id" : "any-uuid",
  "server-timestamp" : 1437646327886,
  "provenance" : {"service-id" : "muon://some-service",
                  "local-id" : "some-uuid",
                  "relationship-type" : "caused-by"},
- "schema-url" : "http://some.url/some.schema.json",
+ "schema-url" : "http://some.url/some.schema.javascript",
  "stream-name" : "target-stream",
  "payload" : {"any" : "object"}}
 ```
 
 * Response:
 
-```json
+```javascript
 {"correct" : "true"}
 ```
 
@@ -47,7 +47,7 @@
 
 * Body:
 
-```json
+```javascript
 {"projection-name" : "any-name",
  "stream-name" : "any-stream or __all__",
  "language" : "javascript or clojure",
@@ -57,7 +57,7 @@
 
 * Response:
 
-```json
+```javascript
 "Ok"
 ```
 
@@ -69,13 +69,13 @@
 
 * Body:
 
-```json
+```javascript
 {}
 ```
 
 * Response:
 
-```json
+```javascript
 {"projection-keys" : ["projection-1", "projection-2"]}
 ```
 
@@ -88,13 +88,13 @@
 
 * Body:
 
-```json
+```javascript
 {"projection-name" : "any-projection-key"}
 ```
 
 * Response:
 
-```json
+```javascript
 {"fn" : "projection-code",
  "last-error" : null, //null or exception message
  "current-value" : {}, // the last computed value of the reduction
@@ -117,7 +117,7 @@
 
 * Body:
 
-```json
+```javascript
 {"stream-name" : "__all__ or a stream-name",
  "from" : 0, // Lower bound in milliseconds, default 0
  "stream-type" : "hot or cold or hot-cold, default is hot"}
