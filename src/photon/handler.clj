@@ -1,7 +1,8 @@
 (ns photon.handler
   (:gen-class)
   (:use org.httpkit.server)
-  (:require [compojure.core :refer :all]
+  (:require [photon.db :as db]
+            [compojure.core :refer :all]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
             [photon.muon :as m]
@@ -14,7 +15,7 @@
             [clojure.core.async :as async :refer [go <! >! close!]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
-            [photon.db :as db]
+            [photon.config :as conf]
             [photon.filedb :as filedb]
             [photon.api :as api]
             [photon.mongo :as mongo]
@@ -98,25 +99,27 @@
       (close! ws-channel))))
 
 (def app
-  (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes)) {:keywords? true})
+  (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
+                                {:keywords? true})
           (wrap-websocket-handler ws-handler)))
 
-(def reloadable-app
-  (reload/wrap-reload #'app))
+(def reloadable-app (reload/wrap-reload #'app))
+
+(defmulti default-db (fn [] (:db.backend conf/config)))
+(defmethod default-db "mongodb" [] (mongo/mongo))
+#_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
+(defmethod default-db "file" []
+  (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
   #_(future (m/start-server!))
-  (def ms (m/start-server!
-            #_(db/->DBDummy)
-            #_(mongo/mongo)
-            (filedb/->DBFile (clojure.java.io/resource "events.json"))
-            #_(riak/riak riak/s-bucket)))
-  (dosync (alter own-stream (fn [_] ms)))
-  (let [handler (reload/wrap-reload #'app)]
-    (println run-server)
-    (time (run-server handler {:port 3000}))))
+  (let [ms (m/start-server! (default-db))]
+    (dosync (alter own-stream (fn [_] ms)))
+    (let [handler (reload/wrap-reload #'app)]
+      (println run-server)
+      (time (run-server handler {:port 3000})))))
 
 #_(let [socket (ws/connect "ws://localhost:3000/ws" :on-receive #(prn 'received %))]
   (ws/send-msg socket "hello")

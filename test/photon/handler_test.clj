@@ -1,6 +1,6 @@
-(ns eventstore.handler-test
+(ns photon.handler-test
   (:require [clojure.test :refer :all]
             [ring.mock.request :as mock]
-            [eventstore.handler :refer :all]))
+            [photon.handler :refer :all]))
 
 

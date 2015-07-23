@@ -30,7 +30,7 @@
                  [incanter "1.5.6"]
                  [ring "1.4.0"]
                  [ring/ring-json "0.3.1"]
-                 #_[photon "0.1.0-SNAPSHOT"]
+                 [org.clojure/tools.namespace "0.2.11"]
                  [com.basho.riak/riak-client "2.0.1" :exclusions [com.sun/tools]]
                  [org.json/json "20141113"]
                  [midje "1.6.3"]

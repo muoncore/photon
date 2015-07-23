@@ -18,9 +18,10 @@ The endpoints and expected schemas to interact with `photon` can be found
 create file resources/config.properties with your environment settings:
 
 ```
+db.backend={file,mongodb,riak}
 microservice.name=photon
+file.path=/path/to/file.json
 amqp.url=amqp://username:password@localhost
-amqp.url.local=amqp://localhost
 mongodb.host=localhost
 riak.default_bucket=photon-eventstore-v1
 riak.node.1=riak1.yourdomain.com

@@ -11,6 +11,19 @@
             [clj-time.coerce :as cc]
             [photon.db :as db]))
 
+
+;; Global defs
+;;;;;;;;;;;;;;
+;; TODO: Try to minimise
+
+(def queries (ref {})) ;; TODO: Make persistent!
+(defonce publications (ref {}))
+(defonce global-channels (ref {}))
+
+
+;; Stream protocols and multimethods
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defprotocol ColdStream
   (clean! [this])
   (data-from [this stream-name date-string]))
@@ -30,7 +43,9 @@
                    (log/info (pr-str params))
                    (get params "stream-type" "hot")))
 
-(def queries (ref {}))
+
+;; Code handling
+;;;;;;;;;;;;;;;;
 
 (defmulti generate-function (fn [lang _] (name lang)))
 
@@ -65,9 +80,6 @@
     post-date))
 
 (defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
-
-(defonce publications (ref {}))
-(defonce global-channels (ref {}))
 
 (defn global-channel [async-stream]
   (dosync

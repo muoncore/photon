@@ -16,7 +16,9 @@
       (into {} (for [[k v] prop]
                  [(keyword k) v])))))
 
-(def default-config {:amqp.url "amqp://localhost"
+(def default-config {:db.backend "file"
+                     :amqp.url "amqp://localhost"
+                     :file.path "resources/events.json"
                      :microservice.name "photon"
                      :mongodb.host "localhost"
                      :riak.default_bucket "rxriak-events-v1"
@@ -24,10 +26,11 @@
                      :riak.node.2 "riak2.node.com"
                      :riak.node.3 "riak3.node.com"})
 
-(def config (try
-              (let [props (load-props "config")]
-                (log/info "Properties" (pr-str props))
-                (merge default-config props))
-              (catch Exception e
-                (log/error "Falling back to default config. Configuration was not loaded due to " e)
-                default-config)))
+(def config
+  (try
+    (let [props (load-props "config")]
+      (log/info "Properties" (pr-str props))
+      (merge default-config props))
+    (catch Exception e
+      (log/error "Falling back to default config. Configuration was not loaded due to " e)
+      default-config)))
