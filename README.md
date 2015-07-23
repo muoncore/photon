@@ -8,6 +8,11 @@ You will need [Leiningen][] 2.0.0 or above installed.
 
 [leiningen]: https://github.com/technomancy/leiningen
 
+## Muon schemas
+
+The endpoints and expected schemas to interact with `photon` can be found
+[here](docs/schemas.md).
+
 ## Create config file
 
 create file resources/config.properties with your environment settings:
@@ -44,8 +49,6 @@ To start a web server for the application, run:
 create a test photon client to interact with photon event store:
 
 lein new muon-clojure photon-test-client
-
-
 
 ## License
 
