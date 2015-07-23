@@ -47,9 +47,20 @@ To start a web server for the application, run:
 
 ## Testing
 
-create a test photon client to interact with photon event store:
+To run the test suite:
 
+```bash
+lein repl
+=> (use 'midje.sweet)
+=> (autotest)
+```
+
+
+Alternatively, create a test photon client to interact with photon event store:
+
+```bash
 lein new muon-clojure photon-test-client
+```
 
 ## License
 

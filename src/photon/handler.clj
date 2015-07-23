@@ -114,8 +114,7 @@
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
-  #_(future (m/start-server!))
-  (let [ms (m/start-server! (default-db))]
+  (let [ms (m/start-server! (:microservice.name conf/config) (default-db))]
     (dosync (alter own-stream (fn [_] ms)))
     (let [handler (reload/wrap-reload #'app)]
       (println run-server)

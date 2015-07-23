@@ -34,3 +34,4 @@
     (catch Exception e
       (log/error "Falling back to default config. Configuration was not loaded due to " e)
       default-config)))
+

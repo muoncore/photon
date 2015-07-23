@@ -9,11 +9,13 @@
             [clojure.data.json :as json]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
+            [clojure.tools.logging :as log]
             [photon.db :as db]))
 
 
 ;; Global defs
 ;;;;;;;;;;;;;;
+
 ;; TODO: Try to minimise
 
 (def queries (ref {})) ;; TODO: Make persistent!
@@ -41,7 +43,10 @@
 
 (defmulti stream (fn [_ params]
                    (log/info (pr-str params))
-                   (get params "stream-type" "hot")))
+                   (let [st (get params "stream-type"
+                                 (get params :stream-type "hot"))]
+                     (log/info "stream type:" st)
+                     st)))
 
 
 ;; Code handling
@@ -171,13 +176,14 @@
     (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
     (go (>! (:channel (global-channel this)) msg)
         (>! (:channel (publisher this)) msg))
-    (db/store db (:stream-name msg) (db/uuid) msg)
+    (db/store db msg)
     {:correct "true"}))
 
 (defmethod stream "cold" [a-stream params]
+  (log/info "cold-stream" (pr-str params))
   (let [ch (chan (buffer 1))
         full-s (data-from a-stream 
-                          (get params "stream-name" "events")
+                          (get params "stream-name" "__all__")
                           (extract-date params))
         full-s (if (contains? params :limit)
                  (take (:limit params) full-s)

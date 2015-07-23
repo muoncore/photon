@@ -43,8 +43,8 @@
       (print "BODY: " wrapper "\n")
       (client/put (riak-url this id) {:body wrapper :content-type :json})))
   (search [this id] (:body (client/get (riak-url this id))))
-  (store [this stream-name event-name payload]
-    (.persist riak stream-name event-name (json/write-str payload)))
+  (store [this payload]
+    (.persist riak "__all__" "event" (json/write-str payload)))
   (event [this id]
     (.getEvent riak id))
   (distinct-values [this k] ["events"])

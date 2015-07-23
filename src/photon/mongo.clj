@@ -27,11 +27,9 @@
   (distinct-values [this k]
     (m/with-mongo db
       (m/distinct-values collection k)))
-  (store [this stream-name event-name payload]
+  (store [this payload]
     (m/with-mongo db
-      (m/insert! collection {:stream-name stream-name
-                             :event-name event-name
-                             :payload payload})))
+      (m/insert! collection (merge payload {:_id (:local-id payload)}))))
   (event [this id]
     (m/with-mongo db
       (:event (db/fetch this id))))

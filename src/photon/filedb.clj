@@ -11,18 +11,18 @@
     (let [all (db/lazy-events this "__all__" 0)
           filtered (remove #(= id (:local-id %)) all)]
       (db/delete-all! this)
-      (dorun (map #(db/store this (:stream-name %) "" %) filtered))))
+      (dorun (map #(db/store this %) filtered))))
   (db/delete-all! [this]
     (.delete (java.io.File. file-name))
     (java.io.File. file-name))
   (db/put [this data]
     (db/delete! this (:local-id data))
-    (db/store this (:stream-name data) "" data))
+    (db/store this data))
   (db/search [this id]
     (let [all (db/lazy-events this "__all__" 0)
           filtered (filter #(= id (:local-id %)) all)]
       filtered))
-  (db/store [this stream-name event-name payload]
+  (db/store [this payload]
     (log/info "Payload" payload)
     (let [server-timestamp (:server-timestamp payload)
           new-payload (assoc (into {} payload) :server-timestamp
