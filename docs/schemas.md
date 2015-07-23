@@ -17,11 +17,11 @@
 
 ```json
 {"service-id" : "muon://origin",
- "local-id" : "any-uuid"
+ "local-id" : "any-uuid",
  "server-timestamp" : 1437646327886,
  "provenance" : {"service-id" : "muon://some-service",
                  "local-id" : "some-uuid",
-                 "relationship-type" : "caused-by"}
+                 "relationship-type" : "caused-by"},
  "schema-url" : "http://some.url/some.schema.json",
  "stream-name" : "target-stream",
  "payload" : {"any" : "object"}}
@@ -49,9 +49,9 @@
 
 ```json
 {"projection-name" : "any-name",
- "stream-name" : "any-stream or __all__"
+ "stream-name" : "any-stream or __all__",
  "language" : "javascript or clojure",
- "reduction" : "(fn [prev next] ...) or function(prev,next) {... return x;}"
+ "reduction" : "(fn [prev next] ...) or function(prev,next) {... return x;}",
  "initial-value" : value_of_first_prev}
 ```
 
@@ -76,7 +76,7 @@
 * Response:
 
 ```json
-{"projection-keys" : ["projection-1", "projection-2", ...]}
+{"projection-keys" : ["projection-1", "projection-2"]}
 ```
 
 ### Querying a specific projection
@@ -96,15 +96,15 @@
 
 ```json
 {"fn" : "projection-code",
- "last-error" : null_or_exception_message,
- "current-value" : last_computed_value,
- "avg-time" : average_time_spent_per_event,
+ "last-error" : null, //null or exception message
+ "current-value" : {}, // the last computed value of the reduction
+ "avg-time" : 0.0, // Average milliseconds spent per event processed
  "status" : "running or failed",
- "language" : projection_language,
- "processed" : number_of_events_processed_so_far,
- "last-event" : last_event_processed,
+ "language" : "javascript or clojure",
+ "processed" : 0, // Number of events processed so far
+ "last-event" : {}, // Last event processed
  "stream-name" : "stream or __all__",
- "projection-name" : projection_name}
+ "projection-name" : "name"}
 ```
 
 ## Streaming
@@ -119,7 +119,7 @@
 
 ```json
 {"stream-name" : "__all__ or a stream-name",
- "from" : first_millisecond_or_0,
+ "from" : 0, // Lower bound in milliseconds, default 0
  "stream-type" : "hot or cold or hot-cold, default is hot"}
 ```
 
