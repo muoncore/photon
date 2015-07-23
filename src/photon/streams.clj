@@ -26,15 +26,6 @@
 (defprotocol StreamManager
   (streams [this]))
 
-(defn parse-old-date [date-string]
-  (cc/to-long
-    (clj-time.format/parse
-      (clj-time.format/formatter
-        "EEE MMM dd yyyy HH:mm:ss zZ '(GMT)'")
-      (clojure.string/replace date-string #"BST|UTC" "GMT"))))
-
-
-
 (defmulti stream (fn [_ params]
                    (log/info (pr-str params))
                    (get params "stream-type" "hot")))
