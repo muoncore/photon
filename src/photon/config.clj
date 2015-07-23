@@ -16,16 +16,19 @@
       (into {} (for [[k v] prop]
                  [(keyword k) v])))))
 
+(def default-config {:amqp.url "amqp://localhost"
+                     :microservice.name "photon"
+                     :mongodb.host "localhost"
+                     :riak.default_bucket "rxriak-events-v1"
+                     :riak.node.1 "riak1.node.com"
+                     :riak.node.2 "riak2.node.com"
+                     :riak.node.3 "riak3.node.com"})
+
 (def config (try
               (let [props (load-props "config")]
                 (log/info "Properties" (pr-str props))
-                props)
+                (merge default-config props))
               (catch Exception e
                 (log/error "Configuration was not loaded due to " e)
                 (.printStackTrace e)
-                {:amqp.url "amqp://localhost"
-                 :mongodb.host "localhost"
-                 :riak.default_bucket "rxriak-events-v1"
-                 :riak.node.1 "riak1.node.com"
-                 :riak.node.2 "riak2.node.com"
-                 :riak.node.3 "riak3.node.com"})))
+                default-config)))
