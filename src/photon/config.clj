@@ -29,6 +29,5 @@
                 (log/info "Properties" (pr-str props))
                 (merge default-config props))
               (catch Exception e
-                (log/error "Configuration was not loaded due to " e)
-                (.printStackTrace e)
+                (log/error "Falling back to default config. Configuration was not loaded due to " e)
                 default-config)))
