@@ -28,7 +28,7 @@
   (let [res (first (filter #(= (name (:projection-name %)) projection-name)
                            (map deref (vals @streams/queries))))]
     (log/info "Result:" (pr-str res))
-    (log/info "Result:" (pr-str (muon-clojure.common/dekeywordize res)))
+    (log/info "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
     res))
 
 (defn proper-map [m]
