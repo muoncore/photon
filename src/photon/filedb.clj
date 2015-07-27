@@ -38,13 +38,16 @@
                    (db/lazy-events this "__all__" 0))))
   (db/lazy-events [this stream-name date]
     (log/info "Retrieving events from" stream-name)
-    (with-open [rdr (clojure.java.io/reader file-name)]
-      (filter (fn [ev]
-                (and
-                  (or (= "__all__" stream-name)
-                      (= :__all__ stream-name)
-                      (= stream-name (:stream-name ev)))
-                  (<= date (:server-timestamp ev))))
-              (map #(json/read-str % :key-fn keyword) (doall (line-seq rdr))))))
+    (try
+      (with-open [rdr (clojure.java.io/reader file-name)]
+        (filter (fn [ev]
+                  (and
+                    (or (= "__all__" stream-name)
+                        (= :__all__ stream-name)
+                        (= stream-name (:stream-name ev)))
+                    (<= date (:server-timestamp ev))))
+                (map #(json/read-str % :key-fn keyword) (doall (line-seq rdr)))))
+      (catch java.io.IOException e
+        '())))
   (db/lazy-events-page [this stream-name date page] []))
 
