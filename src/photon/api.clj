@@ -35,13 +35,12 @@
   (java.util.HashMap. (clojure.walk/stringify-keys m)))
 
 (defn projection-keys []
-  (proper-map
-    {:projection-keys
-     (map :projection-name
-          (map
-            (fn [v] (assoc v :fn (pr-str (:fn v))))
-            (map #(apply dissoc (deref %) [:_id])
-                 (vals @streams/queries))))}))
+  {:projection-keys
+   (map :projection-name
+        (map
+          (fn [v] (assoc v :fn (pr-str (:fn v))))
+          (map #(apply dissoc (deref %) [:_id])
+               (vals @streams/queries))))})
 
 (defn stream [stm stream-name]
   {:results
