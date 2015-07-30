@@ -1,9 +1,4 @@
-db.backend={file,mongodb,riak}
+db.backend={file}
 microservice.name=photon
-file.path=/muon/photon/data/file.json
+file.path=/muon/photon/data_base.json
 amqp.url=amqp://muon:microservices@muonhost
-#mongodb.host=localhost
-#riak.default_bucket=photon-eventstore-v1
-#riak.node.1=riak1.yourdomain.com
-#riak.node.2=riak2.yourdomain.com
-#riak.node.3=riak3.yourdomain.com
