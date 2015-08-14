@@ -2,11 +2,8 @@
   (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer sub
                                         sliding-buffer mult tap close! pub]
              :as async]
-            [serializable.fn :as sfn]
-            [clj-rhino :as js]
             [clojure.tools.logging :as log]
             [uap-clj.core :as uap]
-            [clojure.data.json :as json]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
             [clojure.tools.logging :as log]
@@ -18,7 +15,6 @@
 
 ;; TODO: Try to minimise
 
-(def queries (ref {})) ;; TODO: Make persistent!
 (defonce publications (ref {}))
 (defonce global-channels (ref {}))
 
@@ -34,8 +30,6 @@
   (next! [this]))
 
 (defprotocol EventProcessor
-  (register-query! [this projection-name stream-name lang f init])
-  (current-query-value [this projection-name])
   (process-event! [this ev]))
 
 (defprotocol StreamManager
@@ -48,43 +42,10 @@
                      (log/info "stream type:" st)
                      st)))
 
-
-;; Code handling
-;;;;;;;;;;;;;;;;
-
-(defmulti generate-function (fn [lang _] (name lang)))
-
-(defmethod generate-function "clojure" [lang f-string]
-  (let [code (eval (let [f (read-string f-string)]
-                     (if (= (first f) 'fn)
-                       (conj (rest f) 'serializable.fn/fn)
-                       f)))]
-    {:computable code
-     :persist f-string}))
-
-(defn generate-fun-with-return [scope fun]
-  (fn [& args]
-    (let [res (apply js/call-timeout scope fun 9999999 args)]
-      (try
-        (json/read-str res :key-fn keyword)
-        (catch Exception e res)))))
-
-(defmethod generate-function "javascript" [lang f]
-  (let [sc (js/new-safe-scope)
-        compiled-fun (js/compile-function sc f :filename (str (db/uuid) ".js"))
-        fun-with-return (generate-fun-with-return sc compiled-fun)]
-    {:computable fun-with-return
-     :persist f}))
-
-(extend org.bson.types.ObjectId js/RhinoConvertible
-  {:-to-rhino (fn [obj scope ctx] (str obj))})
-
 (defn extract-date [params]
   (let [pre-date (get params "from" 0)
         post-date (if (string? pre-date) (read-string pre-date) pre-date)]
     post-date))
-
-(defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
 
 (defn global-channel [async-stream]
   (dosync
@@ -120,57 +81,6 @@
   HotStream
   (next! [this] (go (<! (:channel (global-channel this)))))
   EventProcessor
-  (register-query! [this projection-name stream-name lang f init]
-    (let [s-name (if (nil? stream-name) "__all__" stream-name) 
-          function-descriptor (generate-function lang f)
-          function (:computable function-descriptor)
-          s (stream this {"from" "0" "stream-type" "hot-cold"
-                          "stream-name" s-name})
-          running-query (ref {:projection-name projection-name
-                              :fn (:persist function-descriptor)
-                              :stream-name s-name
-                              :language lang
-                              :current-value init
-                              :processed 0
-                              :last-event nil
-                              :last-error nil
-                              :avg-time 0
-                              :status :running})]
-      (dosync (alter queries assoc projection-name running-query))
-      (go
-        (loop [current-value init current-event (<! s)]
-          (if (nil? current-event)
-            (dosync (alter running-query assoc :status :finished))
-            (let [start-ts (System/currentTimeMillis)
-                  new-value (try
-                              (function current-value current-event)
-                              (catch Exception e
-                                (log/info (.getMessage e))
-                                (.printStackTrace e)
-                                e))
-                  current-time (- (System/currentTimeMillis) start-ts)]
-              (if (instance? Exception new-value)
-                (dosync
-                  (alter running-query
-                         merge {:last-event current-event
-                                :avg-time (next-avg
-                                            (:avg-time @running-query)
-                                            current-time
-                                            (:processed @running-query))
-                                :processed (inc (:processed @running-query))
-                                :last-error new-value 
-                                :status :failed}))                
-                (do
-                  (dosync
-                    (alter running-query
-                           merge {:last-event current-event
-                                  :avg-time (next-avg
-                                              (:avg-time @running-query)
-                                              current-time
-                                              (:processed @running-query))
-                                  :current-value new-value
-                                  :processed (inc (:processed @running-query))}))
-                  (recur new-value (<! s))))))))))
   (process-event! [this msg]
     ;; Think about the order of store+send to taps
     (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))

@@ -17,8 +17,6 @@
 
 (defn datetime [] (str (get-current-iso-8601-date)))
 
-(defn uuid [] (str (java.util.UUID/randomUUID)))
-
 (defprotocol DB
   (fetch [this id])
   (delete! [this id])

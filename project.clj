@@ -1,6 +1,6 @@
-(defproject photon "0.9.0"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+(defproject photon "1.1.0-SNAPSHOT"
+  :description "Photon is an event store with cold+hot event streaming"
+  :url "https://github.com/photonevents/photon/tree/master"
   :min-lein-version "2.0.0"
   :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
                  ["reactor" "http://repo.spring.io/libs-release"]]
@@ -33,13 +33,12 @@
                  [org.clojure/tools.namespace "0.2.11"]
                  [com.basho.riak/riak-client "2.0.1" :exclusions [com.sun/tools]]
                  [org.json/json "20141113"]
-                 [midje "1.6.3"]
                  [ring/ring-defaults "0.1.2"]
                  [midje "1.6.3"]
                  [uap-clj "1.0.1"]
-                 [io.muoncore/muon-core "0.35"]
-                 [io.muoncore/muon-transport-amqp "0.35"]
-                 [io.muoncore/muon-discovery-amqp "0.35"]
+                 [io.muoncore/muon-core "0.36"]
+                 [io.muoncore/muon-transport-amqp "0.36"]
+                 [io.muoncore/muon-discovery-amqp "0.36"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [stylefruits/gniazdo "0.4.0"]]
   :plugins [[lein-ring "0.9.6"]

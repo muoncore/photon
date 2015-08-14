@@ -2,6 +2,7 @@
   (:gen-class)
   (:use org.httpkit.server)
   (:require [photon.db :as db]
+            [photon.common :as common]
             [compojure.core :refer :all]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
@@ -31,63 +32,23 @@
     (on-receive channel (fn [data]
                           (send! channel data)))))
 
-(defn wrap-json [r]
-  (response/header (response/response (json/write-str r))
-                   "Content-Type" "application/json"))
-
-(extend Double json/JSONWriter
-  {:-write (fn [object out]
-             (cond (.isInfinite object)
-                   (.print out 9007199254740992.0)
-                   (.isNaN object)
-                   (.print out 0.0)
-                   :else
-                   (.print out object)))})
-
-(extend Exception json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (pr-str (.getMessage object))))})
-
-(extend clojure.lang.AFunction json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (pr-str object)))})
-
-(extend org.bson.types.ObjectId json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (str "\"" (.toString object) "\"")))})
-
-(extend clojure.lang.Ref json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (json/write-str @object)))})
-
-(def cold-latency 5000)
+#_(def cold-latency 5000)
 #_(def riak-streams (riak/riak "streams"))
 #_(def active-streams
     (ref (into #{} (map #_#(hash-map :stream (pr-str %))
                         #(json/read-str (first (:payload_s %)) :key-fn keyword)
                         (db/lazy-events riak-streams "streams" 0)))))
 
-(def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
+#_(def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
 (defonce own-stream (ref nil))
 
 (defroutes app-routes
   (GET "/streams" []
        (log/info @own-stream)
-       (wrap-json (streams/streams (:stm @own-stream))))
-  (GET "/projection-keys" []
-       (wrap-json (api/projection-keys)))
-  (GET "/projections" []
-       (wrap-json (api/projections)))
-  (GET "/projection/:projection-name" [projection-name]
-       (wrap-json (api/projection projection-name)))
+       (common/wrap-json (streams/streams (:stm @own-stream))))
   (GET "/stream/:stream-name" [stream-name]
-       (wrap-json (api/stream (:stm @own-stream) stream-name)))
+       (common/wrap-json (api/stream (:stm @own-stream) stream-name)))
   (GET "/ws" [] async-handler)
-  (GET "/thing" [] "Thing")
-  (GET "/thing2" [] "Thing4")
-  (GET "/first-projection" []
-       (wrap-json (api/projection)))
-  (POST "/projections" request (api/post-projection! (:stm @own-stream) (:body request)))
   (route/resources "/")
   (route/not-found "Not Found"))
 

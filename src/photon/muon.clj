@@ -29,14 +29,14 @@
     (mcc/stream-source this "stream" (fn [params] (streams/stream stm params))))
   mcs/MicroserviceQuery
   (expose-get [this]
-    (mcc/on-query this "projection" (fn [resource]
+    #_(mcc/on-query this "projection" (fn [resource]
                                       (log/info ":::: QUERY " (pr-str resource))
                                       (api/projection (:projection-name resource))))
-    (mcc/on-query this "projection-keys" (fn [resource]
+    #_(mcc/on-query this "projection-keys" (fn [resource]
                                            (api/projection-keys))))
   mcs/MicroserviceCommand
   (expose-post! [this]
-    (let [listener (fn [ev] (streams/process-event! stm (clojure.walk/keywordize-keys ev)))
+    #_(let [listener (fn [ev] (streams/process-event! stm (clojure.walk/keywordize-keys ev)))
           listener-projections
           (fn [resource]
             (let [params (clojure.walk/keywordize-keys resource)]
