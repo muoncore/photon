@@ -18,7 +18,8 @@
                           :new-projection false}))
 
 (defn clj->str [c]
-  (let [res (clojure.string/replace (with-out-str (fipp/pprint c {:width 80})) #"}nil" "}")]
+  (let [res (clojure.string/replace
+             (with-out-str (fipp/pprint c {:width 80})) #"}nil" "}")]
     (.log js/console res)
     res))
 
@@ -45,16 +46,20 @@
           (dom/input
             #js {:type "text" :ref "name"
                  :value (:projection-name data)
-                 :onChange (fn [ev]
-                             (om/update! data :projection-name (.-value (.-target ev))))}))
+                 :onChange
+                 (fn [ev]
+                   (om/update! data :projection-name
+                               (.-value (.-target ev))))}))
         (dom/div
           nil
           "Stream name"
           (dom/input
             #js {:type "text" :ref "name"
                  :value (:stream-name data)
-                 :onChange (fn [ev]
-                             (om/update! data :stream-name (.-value (.-target ev))))}))
+                 :onChange
+                 (fn [ev]
+                   (om/update! data :stream-name
+                               (.-value (.-target ev))))}))
         (dom/div nil "Language")
         (apply dom/div
                #js {:className "radio"}
@@ -63,7 +68,8 @@
                        (dom/input
                          #js {:type "checkbox"
                               :checked (= % (:language data))
-                              :onChange (fn [ev] (om/update! data :language %))})
+                              :onChange
+                              (fn [ev] (om/update! data :language %))})
                        %)
                     ["clojure" "javascript"]))
         (dom/div nil "Initial value")
@@ -74,9 +80,11 @@
                       #js {:contentEditable "true"
                            :ref "initial-value-box"
                            :className "clojure"
-                           :onBlur (fn [ev]
-                                     (om/update! data :initial-value (.-textContent (.-target ev)))
-                                     (update-box owner "initial-value-box"))}
+                           :onBlur
+                           (fn [ev]
+                             (om/update! data :initial-value
+                                         (.-textContent (.-target ev)))
+                             (update-box owner "initial-value-box"))}
                       (:initial-value data))))
         (dom/div nil "Code: content of (fn [prev item] ... )")
         (dom/pre
@@ -86,27 +94,31 @@
                       #js {:contentEditable "true"
                            :ref "code-box"
                            :className "clojure"
-                           :onBlur (fn [ev]
-                                     (om/update! data :reduction (.-textContent (.-target ev)))
-                                     (update-box owner "code-box"))}
+                           :onBlur
+                           (fn [ev]
+                             (om/update! data :reduction
+                                         (.-textContent (.-target ev)))
+                             (update-box owner "code-box"))}
                       (:reduction data))))
         (dom/div
           nil
           (dom/button
-            #js {:onClick (fn [_]
-                            (go
-                              (let [res
-                                    (:body
-                                      (<! (client/post
-                                            "/projections"
-                                            {:json-params
-                                             {:projection-name (:projection-name data)
-                                              :stream-name (:stream-name data)
-                                              :initial-value (:initial-value data)
-                                              :language (:language data)
-                                              :reduction (:reduction data)}})))]
-                                (update-projections! data))))}
-            "Register projection"))))))
+              #js {:onClick
+                   (fn [_]
+                     (go
+                       (let [res
+                             (:body
+                              (<! (client/post
+                                   "/projections"
+                                   {:json-params
+                                    (select-keys data
+                                                 [:projection-name
+                                                  :stream-name
+                                                  :initial-value
+                                                  :reduction
+                                                  :language])})))]
+                         (update-projections! data))))}
+              "Register projection"))))))
 
 (defn widget-projections [data owner]
   (reify
@@ -126,7 +138,8 @@
         (dom/button
           #js {:onClick
                (fn [_]
-                 (om/update! data :new-projection (not (:new-projection data))))}
+                 (om/update! data :new-projection
+                             (not (:new-projection data))))}
           "+ New Projection")
         (if (:new-projection data)
           (do
@@ -137,10 +150,13 @@
                        nil
                        (dom/a
                          #js {:href "#"
-                              :onClick (fn [ev]
-                                         (if (= (:current-projection data) %)
-                                           (om/update! data :current-projection nil)
-                                           (om/update! data :current-projection %)))}
+                              :onClick
+                              (fn [ev]
+                                (if (= (:current-projection data) %)
+                                  (om/update! data
+                                              :current-projection nil)
+                                  (om/update! data
+                                              :current-projection %)))}
                          (:projection-name %))
                        (if (= (:current-projection data) %)
                          (dom/pre
@@ -157,7 +173,9 @@
     om/IDidMount
     (did-mount [this]
       (go (let [response (:body (<! (client/get "/streams")))]
-            (om/update-state! owner #(assoc % :streams (:streams response))))))
+            (om/update-state!
+             owner
+             #(assoc % :streams (:streams response))))))
     om/IRenderState
     (render-state [_ state]
       (dom/div
@@ -171,10 +189,48 @@
                        nil
                        (dom/a
                          #js {:href "#"
-                              :onClick (fn [ev] ((:handler data)
-                                                 {:stream (:stream %)}))}
+                              :onClick (fn [ev]
+                                         ((:handler data)
+                                          {:stream (:stream %)}))}
                          (:stream %)))
                     (:streams state)))))))
+
+(defn event-list-item [params]
+  (reify
+    om/IRender
+    (render [_]
+      (let [event (:event params)
+            data (:data params)
+            payload (:payload event)
+            id (str (:service-id event) ":" (:local-id event))]
+        (dom/li
+            nil
+          (let [current? (= (:current data) id)]
+            (dom/div
+                nil
+              (dom/a
+                  #js {:href "#"
+                       :onClick
+                       (fn [ev] (if current?
+                                  (om/update! data :current nil)
+                                  (om/update! data :current id)))}
+                  id)
+              (if current?
+                (dom/pre
+                 nil
+                 (dom/code
+                  #js {:className "clojure"}
+                  (clj->str event)))))))))))
+
+(defn event-list [params owner]
+  (reify
+    om/IRender
+    (render [_]
+      (apply dom/ul
+          nil
+          (map #(om/build event-list-item {:data (:data params)
+                                           :event %})
+               (:events params))))))
 
 (defn widget-stream [data owner]
   (reify
@@ -183,8 +239,12 @@
       {:events []})
     om/IDidMount
     (did-mount [this]
-      (go (let [response (:body (<! (client/get (str "/stream/" (:stream data)))))]
-            (om/update-state! owner #(assoc % :events (:results response))))))
+      (go (let [response
+                (:body (<! (client/get
+                            (str "/stream/" (:stream data)))))]
+            (om/update-state!
+             owner
+             #(assoc % :events (:results response))))))
     om/IDidUpdate
     (did-update [_ _ _]
       (dorun (map #(.highlightBlock js/hljs %) ($ "code"))))
@@ -196,32 +256,8 @@
         (dom/h2
           nil
           (str "Events: " (:stream data)))
-        (apply dom/ul
-               nil
-               (map (fn [event]
-                      (let [payload (:payload event)
-                            id (str (:service-id event) ":" (:local-id event))]
-                        (dom/li
-                          nil
-                          (let [current? (= (:current data) id)]
-                            (dom/div
-                              nil
-                              (dom/a
-                                #js {:href "#"
-                                     :onClick
-                                     (fn [ev] (if current?
-                                                (om/update! data :current nil)
-                                                (om/update! data :current id)))}
-                                id)
-                              (if current?
-                                (dom/pre
-                                  nil
-                                  (dom/code
-                                    #js {:className "clojure"}
-                                    (clj->str event)
-                                    #_(clj->str (js->clj (.parse js/JSON payload)
-                                                         :keywordize-keys true))))))))))
-                    (:events state)))))))
+        (om/build event-list {:data data
+                              :events (:events state)})))))
 
 (defn full-page [data owner]
   (reify
