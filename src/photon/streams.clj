@@ -10,6 +10,7 @@
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
             [clojure.tools.logging :as log]
+            [muon-clojure.common :as mcc]
             [photon.db :as db]))
 
 
@@ -21,6 +22,7 @@
 (def queries (ref {})) ;; TODO: Make persistent!
 (defonce publications (ref {}))
 (defonce global-channels (ref {}))
+(defonce active-streams (ref {}))
 
 
 ;; Stream protocols and multimethods
@@ -39,6 +41,9 @@
   (process-event! [this ev]))
 
 (defprotocol StreamManager
+  (init-stream-manager! [this])
+  (update-streams! [this stream-name])
+  (create-stream-endpoint! [this stream-name])
   (streams [this]))
 
 (defmulti stream (fn [_ params]
@@ -102,17 +107,45 @@
       (if (nil? p)
         (let [c (chan 1)
               new-p {:channel c
-                     :p (pub c (fn [ev] (:stream-name ev)))}]
+                     :p (pub c (fn [ev] (get ev "stream-name")))}]
           (alter publications assoc async-stream new-p)
           new-p)
         p))))
 
-(defrecord AsyncStream [db]
+(defrecord AsyncStream [m db]
   StreamManager
-  (streams [this] {:streams
-                   (map #(hash-map :stream %)
-                        (conj (db/distinct-values db :stream-name)
-                              "__all__"))})
+  (init-stream-manager! [this]
+    (let [db-streams (db/distinct-values db :stream-name)]
+      (dorun (map #(update-streams! this %) db-streams)))
+    (dosync
+     (alter active-streams assoc-in
+            [this :virtual-streams] #{"__all__"})))
+  (update-streams! [this stream-name]
+    (dosync
+     (let [real-streams (into #{}
+                              (:real-streams
+                               (get @active-streams this)))]
+       (if (not (contains? real-streams stream-name))
+         (do
+           (create-stream-endpoint! this stream-name)
+           (alter active-streams
+                  (fn [old-active-streams]
+                    (assoc-in old-active-streams
+                              [this :real-streams]
+                              (conj real-streams stream-name)))))))))
+  (create-stream-endpoint! [this stream-name]
+    ;; TODO: Fix this mess
+    (mcc/stream-source {:m m} (str "stream/" stream-name)
+                       (fn [params]
+                         (stream this
+                                 (assoc params
+                                        "stream-name" stream-name)))))
+  (streams [this]
+    {:streams
+     (let [active-streams (get @active-streams this)]
+       (map #(hash-map :stream %)
+            (conj (:real-streams active-streams)
+                  (:virtual-streams active-streams))))})
   ColdStream
   (clean! [this] (db/delete-all! db))
   (data-from [this stream-name date-string]
@@ -174,6 +207,7 @@
   (process-event! [this msg]
     ;; Think about the order of store+send to taps
     (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
+    (update-streams! this (get msg "stream-name"))
     (go (>! (:channel (global-channel this)) msg)
         (>! (:channel (publisher this)) msg))
     (db/store db msg)
@@ -239,6 +273,8 @@
       (sub (:p (publisher a-stream)) stream-name ch))
     ch))
 
-(defn new-async-stream [db]
-  (->AsyncStream db))
+(defn new-async-stream [m db]
+  (let [as (->AsyncStream m db)]
+    (init-stream-manager! as)
+    as))
 

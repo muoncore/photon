@@ -8,7 +8,7 @@
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
 (def d (filedb/->DBFile (.getAbsolutePath temp-file)))
-(def s (streams/->AsyncStream d))
+(def s (streams/new-async-stream d))
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]
     (if (nil? elem)

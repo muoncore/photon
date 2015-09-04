@@ -101,7 +101,7 @@
 (def app
   (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
                                 {:keywords? true})
-          (wrap-websocket-handler ws-handler)))
+          #_(wrap-websocket-handler #'ws-handler)))
 
 (def reloadable-app (reload/wrap-reload #'app))
 
@@ -114,13 +114,15 @@
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
-  (let [ms (m/start-server! (:microservice.name conf/config) (default-db))]
+  (let [ms (m/start-server! (:microservice.name conf/config)
+                            (default-db))]
     (dosync (alter own-stream (fn [_] ms)))
     (let [handler (reload/wrap-reload #'app)]
       (println run-server)
       (time (run-server handler {:port 3000})))))
 
-#_(let [socket (ws/connect "ws://localhost:3000/ws" :on-receive #(prn 'received %))]
+#_(let [socket (ws/connect "ws://localhost:3000/ws"
+                         :on-receive #(prn 'received %))]
   (ws/send-msg socket "hello")
   (Thread/sleep 2000)
   (ws/close socket))
