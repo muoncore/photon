@@ -223,31 +223,39 @@
                   (clj->str event)))))))))))
 
 (defn event-list [params owner]
-  (reify
-    om/IRender
-    (render [_]
+  (let [fn-update
+        (fn [stream-name]
+          (go (let [response
+                    (:body (<! (client/get
+                                (str "/stream-contents/"
+                                     stream-name))))]
+                (om/update-state!
+                 owner
+                 #(assoc % :events (:results response))))))]
+   (reify
+    om/IInitState
+    (init-state [this]
+      {:events []})
+    om/IDidUpdate
+    (did-update [_ _ _]
+      (dorun (map #(.highlightBlock js/hljs %) ($ "code"))))
+    om/IWillReceiveProps
+    (will-receive-props [this next-props]
+      (om/update-state! owner (fn [_] {:events []}))
+      (fn-update (:stream next-props)))
+    om/IDidMount
+    (did-mount [this]
+      (fn-update (:stream params)))
+    om/IRenderState
+    (render-state [_ state]
       (apply dom/ul
           nil
           (map #(om/build event-list-item {:data (:data params)
                                            :event %})
-               (:events params))))))
+               (:events state)))))))
 
 (defn widget-stream [data owner]
   (reify
-    om/IInitState
-    (init-state [this]
-      {:events []})
-    om/IDidMount
-    (did-mount [this]
-      (go (let [response
-                (:body (<! (client/get
-                            (str "/stream/" (:stream data)))))]
-            (om/update-state!
-             owner
-             #(assoc % :events (:results response))))))
-    om/IDidUpdate
-    (did-update [_ _ _]
-      (dorun (map #(.highlightBlock js/hljs %) ($ "code"))))
     om/IRenderState
     (render-state [_ state]
       (.log js/console (:current data))
@@ -256,8 +264,8 @@
         (dom/h2
           nil
           (str "Events: " (:stream data)))
-        (om/build event-list {:data data
-                              :events (:events state)})))))
+        (om/build event-list {:stream (:stream data)
+                              :data data})))))
 
 (defn full-page [data owner]
   (reify
@@ -268,7 +276,7 @@
         (let [{:keys [ws-channel]} (<! (ws-ch "ws://localhost:3000/ws"))
               {:keys [message]} (<! ws-channel)]
           (om/update! data :chord-test message)
-          (js/console.log "Got message from server:" (pr-str message)))))
+          (.log js/console "Got message from server:" (pr-str message)))))
     om/IRender
     (render [_]
       (dom/div
