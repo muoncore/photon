@@ -144,8 +144,8 @@
     {:streams
      (let [active-streams (get @active-streams this)]
        (map #(hash-map :stream %)
-            (conj (:real-streams active-streams)
-                  (:virtual-streams active-streams))))})
+            (concat (:real-streams active-streams)
+                    (:virtual-streams active-streams))))})
   ColdStream
   (clean! [this] (db/delete-all! db))
   (data-from [this stream-name date-string]
