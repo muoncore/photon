@@ -1,4 +1,4 @@
-(defproject photon "0.9.0"
+(defproject photon "0.9.1"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
