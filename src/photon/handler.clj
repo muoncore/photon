@@ -80,8 +80,9 @@
        (wrap-json (api/projections)))
   (GET "/projection/:projection-name" [projection-name]
        (wrap-json (api/projection projection-name)))
-  (GET "/stream/:stream-name" [stream-name]
-       (wrap-json (api/stream (:stm @own-stream) stream-name)))
+  (GET "/stream-contents/:stream-name" [stream-name]
+       (wrap-json (api/stream (:stm @own-stream) stream-name
+                              :limit 50)))
   (GET "/ws" [] async-handler)
   (GET "/thing" [] "Thing")
   (GET "/thing2" [] "Thing4")

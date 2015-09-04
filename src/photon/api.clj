@@ -42,11 +42,15 @@
           (map #(apply dissoc (deref %) [:_id])
                (vals @streams/queries))))})
 
-(defn stream [stm stream-name]
-  {:results
-   (async/<!!
-     (async/reduce (fn [prev n] (concat prev [n])) []
-                   (streams/stream stm {"from" "0"
-                                        "stream-name" stream-name
-                                        "stream-type" "cold"})))})
+(defn stream [stm stream-name & args]
+  (let [m-args (apply hash-map args)
+        from (str (get m-args :from 0))
+        limit (get m-args :limit)]
+    {:results
+     (async/<!!
+      (async/reduce (fn [prev n] (concat prev [n])) []
+                    (streams/stream stm {"from" from
+                                         "stream-name" stream-name
+                                         :limit limit
+                                         "stream-type" "cold"})))}))
 

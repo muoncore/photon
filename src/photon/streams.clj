@@ -219,7 +219,8 @@
         full-s (data-from a-stream 
                           (get params "stream-name" "__all__")
                           (extract-date params))
-        full-s (if (contains? params :limit)
+        full-s (if (and (contains? params :limit)
+                        (not (nil? (:limit params))))
                  (take (:limit params) full-s)
                  full-s)]
     (go
