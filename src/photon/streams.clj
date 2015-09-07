@@ -71,8 +71,23 @@
   (fn [& args]
     (let [res (apply js/call-timeout scope fun 9999999 args)]
       (try
-        (json/read-str res :key-fn keyword)
-        (catch Exception e res)))))
+        (let [converted (clojure.walk/walk
+                         (fn [elem]
+                           (if (instance?
+                                org.mozilla.javascript.ConsString
+                                elem)
+                             (.toString elem)))
+                         identity
+                         (js/from-js res)
+                         #_(json/read-str res :key-fn keyword))]
+          (println "!!!!!!!!!!!!!!!!!! CONVERTED")
+          (clojure.pprint/pprint converted)
+          (println "!!!!!!!!!!!!!!!!!! CONVERTED")
+          converted)
+        (catch Exception e
+          (println (.getMessage e))
+          (.printStackTrace e)
+          res)))))
 
 (defmethod generate-function "javascript" [lang f]
   (let [sc (js/new-safe-scope)
