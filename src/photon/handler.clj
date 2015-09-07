@@ -24,6 +24,8 @@
             #_[photon.riak :as riak]
             [compojure.handler :refer [site]]))
 
+(defonce own-stream (ref nil))
+
 (defn async-handler [ring-request]
   (with-channel ring-request channel
     #_(send! channel {:status 200
@@ -56,6 +58,25 @@
           (recur 1000))
         (do
           (remove-watch streams/queries uuid)
+          (close! ws-channel)
+          (prn "closed."))))))
+
+(defn ws-streams-handler [{:keys [ws-channel] :as req}]
+  (let [uuid (java.util.UUID/randomUUID)
+        current-value (atom (streams/streams (:stm @own-stream)))]
+    (add-watch streams/active-streams uuid
+               (fn [k r os ns]
+                 (swap! current-value
+                        (fn [_]
+                          (streams/streams (:stm @own-stream))))))
+    (go-loop [t 0]
+      (if-let [{:keys [message]} (<! ws-channel)]
+        (do
+          (<! (timeout t))
+          (>! ws-channel @current-value)
+          (recur 1000))
+        (do
+          (remove-watch streams/active-streams uuid)
           (close! ws-channel)
           (prn "closed."))))))
 
@@ -96,7 +117,6 @@
                         (db/lazy-events riak-streams "streams" 0)))))
 
 (def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
-(defonce own-stream (ref nil))
 
 (defroutes app-routes
   (GET "/streams" []
@@ -112,6 +132,8 @@
        (wrap-json (api/stream (:stm @own-stream) stream-name
                               :limit 50)))
   (GET "/ws" [] (wrap-websocket-handler #'ws-handler))
+  (GET "/ws-streams" []
+       (wrap-websocket-handler #'ws-streams-handler))
   (GET "/ws-projections" []
        (wrap-websocket-handler #'ws-projections-handler))
   (GET "/thing" [] "Thing")

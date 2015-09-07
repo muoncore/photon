@@ -12,6 +12,8 @@
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
             [photon.db :as db]))
+;; TODO: Do something about the conflict between keywords and strings
+;;       for the keys (e.g. stream-name)
 
 
 ;; Global defs

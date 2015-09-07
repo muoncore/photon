@@ -121,9 +121,24 @@
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)]
-            (.log js/console (pr-str elem))
             (when-not (nil? elem)
               (om/update! data :projections (:message elem))
+              (>! ws-channel {:ok true})
+              (recur (<! ws-channel)))))
+        (.log js/console "Error:" (pr-str error))))))
+
+(defn subscribe-streams! [owner]
+  (go
+    (let [{:keys [ws-channel error]}
+          (<! (ws-ch "ws://localhost:3000/ws-streams"))]
+      (if-not error
+        (do
+          (>! ws-channel {:ok true})
+          (loop [elem (<! ws-channel)]
+            (when-not (nil? elem)
+              (om/update-state! owner
+                                #(assoc % :streams
+                                        (:streams (:message elem))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
@@ -182,10 +197,7 @@
     (init-state [this] data)
     om/IDidMount
     (did-mount [this]
-      (go (let [response (:body (<! (client/get "/streams")))]
-            (om/update-state!
-             owner
-             #(assoc % :streams (:streams response))))))
+      (subscribe-streams! owner))
     om/IRenderState
     (render-state [_ state]
       (dom/div
@@ -279,13 +291,6 @@
 
 (defn full-page [data owner]
   (reify
-    om/IDidMount
-    (did-mount [_]
-      (go
-        (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:3000/ws"))]
-          (if-not error
-            (om/update! data :ws-channel ws-channel)
-            (js/console.log "Error:" (pr-str error))))))
     om/IRender
     (render [_]
       (dom/div
@@ -293,6 +298,7 @@
         (:chord-test data)
         (om/build widget-streams {:handler (fn [ev]
                                              (om/update! data :stream (:stream ev)))
+                                  :data data
                                   :streams []})
         (if (not (nil? (:stream data)))
           (om/build widget-stream data))
