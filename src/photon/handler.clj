@@ -12,7 +12,8 @@
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
             [clojure.data.json :as json]
-            [clojure.core.async :as async :refer [go <! >! close!]]
+            [clojure.core.async :as async :refer [go-loop go timeout
+                                                  <! >! close!]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [photon.config :as conf]
@@ -29,7 +30,34 @@
                       :headers {"Content-Type" "text/plain"}
                       :body "Long polling?"})
     (on-receive channel (fn [data]
-                          (send! channel data)))))
+                          (send! channel (str "hello " data))))))
+
+(defn ws-handler [{:keys [ws-channel] :as req}]
+  (go-loop []
+    (if-let [{:keys [message]} (<! ws-channel)]
+      (do
+        (spit "/tmp/messages.txt" (str (pr-str {:message message}) "\n") :append true)
+        (prn {:message message})
+        (>! ws-channel (str "You said: " message))
+        (recur))
+      (prn "closed."))))
+
+(defn ws-projections-handler [{:keys [ws-channel] :as req}]
+  (let [uuid (java.util.UUID/randomUUID)
+        current-value (atom @streams/queries)]
+    (add-watch streams/queries uuid
+               (fn [k r os ns]
+                 (swap! current-value (fn [_] ns))))
+    (go-loop [t 0]
+      (if-let [{:keys [message]} (<! ws-channel)]
+        (do
+          (<! (timeout t))
+          (>! ws-channel (api/projections-with-val @current-value))
+          (recur 1000))
+        (do
+          (remove-watch streams/queries uuid)
+          (close! ws-channel)
+          (prn "closed."))))))
 
 (defn wrap-json [r]
   (response/header (response/response (json/write-str r))
@@ -83,7 +111,9 @@
   (GET "/stream-contents/:stream-name" [stream-name]
        (wrap-json (api/stream (:stm @own-stream) stream-name
                               :limit 50)))
-  (GET "/ws" [] async-handler)
+  (GET "/ws" [] (wrap-websocket-handler #'ws-handler))
+  (GET "/ws-projections" []
+       (wrap-websocket-handler #'ws-projections-handler))
   (GET "/thing" [] "Thing")
   (GET "/thing2" [] "Thing4")
   (GET "/first-projection" []
@@ -92,17 +122,9 @@
   (route/resources "/")
   (route/not-found "Not Found"))
 
-(defn ws-handler [{:keys [ws-channel] :as req}]
-  (go
-    (let [{:keys [message]} (<! ws-channel)]
-      (println "Message received:" message)
-      (>! ws-channel "Hello client from server!")
-      (close! ws-channel))))
-
 (def app
   (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
-                                {:keywords? true})
-          #_(wrap-websocket-handler #'ws-handler)))
+                                {:keywords? true})))
 
 (def reloadable-app (reload/wrap-reload #'app))
 

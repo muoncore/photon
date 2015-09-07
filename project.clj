@@ -37,6 +37,7 @@
                  [ring/ring-defaults "0.1.2"]
                  [midje "1.6.3"]
                  [uap-clj "1.0.1"]
+                 [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
                  [io.muoncore/muon-core "5.2.0"]
                  [io.muoncore/muon-transport-amqp "5.2.0"]
                  [io.muoncore/muon-discovery-amqp "5.2.0"]

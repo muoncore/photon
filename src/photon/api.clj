@@ -10,18 +10,21 @@
         language (:language body)
         code (:reduction body)
         initial-value (:initial-value body)]
-    (streams/register-query! stm (keyword projection-name)
+    (streams/register-query! stm projection-name
                              stream-name
                              (keyword language)
                              code
                              (read-string initial-value))
     "Ok"))
 
-(defn projections []
+(defn projections-with-val [projs]
   (map
     (fn [v] (assoc v :fn (pr-str (:fn v))))
     (map #(apply dissoc (deref %) [:_id])
-         (vals @streams/queries))))
+         (vals projs))))
+
+(defn projections []
+  (projections-with-val @streams/queries))
 
 (defn projection [projection-name]
   (log/info "Querying" projection-name)

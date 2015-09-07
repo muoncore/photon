@@ -1,5 +1,5 @@
 (ns photon.ui.frontend
-  (:require-macros [cljs.core.async.macros :refer [go]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:use [jayq.core :only [$ css html]])
   (:require [cljs-http.client :as client]
             [cljs.core.async :refer [<! >! put! close!]]
@@ -25,10 +25,6 @@
 
 (defn update-box [owner box-ref]
   (.highlightBlock js/hljs (om/get-node owner box-ref)))
-
-(defn update-projections! [data]
-  (go (let [response (:body (<! (client/get "/projections")))]
-        (om/update! data :projections response))))
 
 (defn widget-new-projection [data owner]
   (reify
@@ -106,19 +102,31 @@
               #js {:onClick
                    (fn [_]
                      (go
-                       (let [res
-                             (:body
-                              (<! (client/post
-                                   "/projections"
-                                   {:json-params
-                                    (select-keys data
-                                                 [:projection-name
-                                                  :stream-name
-                                                  :initial-value
-                                                  :reduction
-                                                  :language])})))]
-                         (update-projections! data))))}
+                       (<! (client/post
+                            "/projections"
+                            {:json-params
+                             (select-keys data
+                                          [:projection-name
+                                           :stream-name
+                                           :initial-value
+                                           :reduction
+                                           :language])}))))}
               "Register projection"))))))
+
+(defn subscribe-projections! [data]
+  (go
+    (let [{:keys [ws-channel error]}
+          (<! (ws-ch "ws://localhost:3000/ws-projections"))]
+      (if-not error
+        (do
+          (>! ws-channel {:ok true})
+          (loop [elem (<! ws-channel)]
+            (.log js/console (pr-str elem))
+            (when-not (nil? elem)
+              (om/update! data :projections (:message elem))
+              (>! ws-channel {:ok true})
+              (recur (<! ws-channel)))))
+        (.log js/console "Error:" (pr-str error))))))
 
 (defn widget-projections [data owner]
   (reify
@@ -127,7 +135,7 @@
       {})
     om/IDidMount
     (did-mount [this]
-      (update-projections! data))
+      (subscribe-projections! data))
     om/IRenderState
     (render-state [_ state]
       (dom/div
@@ -152,13 +160,15 @@
                          #js {:href "#"
                               :onClick
                               (fn [ev]
-                                (if (= (:current-projection data) %)
-                                  (om/update! data
-                                              :current-projection nil)
-                                  (om/update! data
-                                              :current-projection %)))}
+                                (if (= (:projection-name (:current-projection data))
+                                       (:projection-name %))
+                                  (om/update! data :current-projection
+                                              nil)
+                                  (om/update! data :current-projection
+                                              %)))}
                          (:projection-name %))
-                       (if (= (:current-projection data) %)
+                       (if (= (:projection-name (:current-projection data))
+                              (:projection-name %))
                          (dom/pre
                            nil
                            (dom/code
@@ -272,11 +282,10 @@
     om/IDidMount
     (did-mount [_]
       (go
-        (>! (ws-ch "ws://localhost:3000/ws") "message")
-        (let [{:keys [ws-channel]} (<! (ws-ch "ws://localhost:3000/ws"))
-              {:keys [message]} (<! ws-channel)]
-          (om/update! data :chord-test message)
-          (.log js/console "Got message from server:" (pr-str message)))))
+        (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:3000/ws"))]
+          (if-not error
+            (om/update! data :ws-channel ws-channel)
+            (js/console.log "Error:" (pr-str error))))))
     om/IRender
     (render [_]
       (dom/div
