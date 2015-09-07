@@ -135,11 +135,13 @@
                               (conj real-streams stream-name)))))))))
   (create-stream-endpoint! [this stream-name]
     ;; TODO: Fix this mess
-    (mcc/stream-source {:m m} (str "stream/" stream-name)
-                       (fn [params]
-                         (stream this
-                                 (assoc params
-                                        "stream-name" stream-name)))))
+    (if (not (nil? m))
+      (mcc/stream-source
+       {:m m} (str "stream/" stream-name)
+       (fn [params]
+         (stream this
+                 (assoc params
+                        "stream-name" stream-name))))))
   (streams [this]
     {:streams
      (let [active-streams (get @active-streams this)]

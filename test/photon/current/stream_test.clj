@@ -2,13 +2,14 @@
   (:require [photon.streams :as streams]
             [photon.db :as db]
             [photon.filedb :as filedb]
+            [muon-clojure.server :as mcs]
             [clojure.core.async :as async :refer [<!!]]
             [clojure.tools.logging :as log])
   (:use midje.sweet))
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
 (def d (filedb/->DBFile (.getAbsolutePath temp-file)))
-(def s (streams/new-async-stream d))
+(def s (streams/new-async-stream nil d))
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]
     (if (nil? elem)
