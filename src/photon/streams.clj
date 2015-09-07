@@ -120,7 +120,8 @@
       (if (nil? p)
         (let [c (chan 1)
               new-p {:channel c
-                     :p (pub c (fn [ev] (get ev "stream-name")))}]
+                     :p (pub c (fn [ev] (get ev "stream-name"
+                                             (get ev :stream-name))))}]
           (alter publications assoc async-stream new-p)
           new-p)
         p))))
@@ -153,8 +154,9 @@
        {:m m} (str "stream/" stream-name)
        (fn [params]
          (stream this
-                 (assoc params
-                        "stream-name" stream-name))))))
+                 (assoc (assoc params
+                               "stream-name" stream-name)
+                        :stream-name stream-name))))))
   (streams [this]
     {:streams
      (let [active-streams (get @active-streams this)]
@@ -222,7 +224,8 @@
   (process-event! [this msg]
     ;; Think about the order of store+send to taps
     (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
-    (update-streams! this (get msg "stream-name"))
+    (update-streams! this (get msg "stream-name"
+                               (get msg :stream-name)))
     (go (>! (:channel (global-channel this)) msg)
         (>! (:channel (publisher this)) msg))
     (db/store db msg)
@@ -232,7 +235,8 @@
   (log/info "cold-stream" (pr-str params))
   (let [ch (chan (buffer 1))
         full-s (data-from a-stream 
-                          (get params "stream-name" "__all__")
+                          (get params "stream-name"
+                               (get params :stream-name "__all__"))
                           (extract-date params))
         full-s (if (and (contains? params :limit)
                         (not (nil? (:limit params))))
@@ -257,7 +261,8 @@
   (log/info "Initialising hot-cold stream with params" (pr-str params))
   (let [date (extract-date params)
         ch (chan (buffer 1))
-        stream-name (get params "stream-name" "__all__")
+        stream-name (get params "stream-name"
+                         (get params :stream-name "__all__"))
         full-s (data-from a-stream
                           stream-name
                           (extract-date params))]
@@ -285,7 +290,8 @@
 
 (defmethod stream "hot" [a-stream params]
   (let [ch (chan 1)
-        stream-name (get params "stream-name" "__all__")]
+        stream-name (get params "stream-name"
+                         (get params :stream-name "__all__"))]
     (if (= stream-name "__all__")
       (tap (:mult-channel (global-channel a-stream)) ch)
       (sub (:p (publisher a-stream)) stream-name ch))
