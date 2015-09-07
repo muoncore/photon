@@ -269,8 +269,10 @@
         (if (nil? e)
           (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
           (let [rest-s (rest s)
-                new-s (concat s (if (empty? rest-s)
-                                  (data-from a-stream stream-name last-t) []))
+                new-s (if (empty? rest-s)
+                        (concat s
+                                (data-from a-stream stream-name last-t))
+                        s)
                 last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
             (if closed?
               (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
