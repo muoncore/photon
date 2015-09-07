@@ -76,13 +76,11 @@
                            (if (instance?
                                 org.mozilla.javascript.ConsString
                                 elem)
-                             (.toString elem)))
+                             (.toString elem)
+                             elem))
                          identity
                          (js/from-js res)
                          #_(json/read-str res :key-fn keyword))]
-          (println "!!!!!!!!!!!!!!!!!! CONVERTED")
-          (clojure.pprint/pprint converted)
-          (println "!!!!!!!!!!!!!!!!!! CONVERTED")
           converted)
         (catch Exception e
           (println (.getMessage e))
