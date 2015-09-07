@@ -53,7 +53,7 @@
                     (:amqp.url conf/config))))
   ([server-name db url]
    (log/info "Connecting to" url)
-   (let [m (mcs/muon url server-name ["photon" "helios"])
+   (let [m (mcs/muon url server-name ["photon" "eventstore"])
          ms (->PhotonMicroservice m (streams/new-async-stream m db))]
      (mcs/start-server! ms)
      ms)))
