@@ -156,7 +156,7 @@
        {:m m} (str "stream/" stream-name)
        (fn [params]
          (stream this
-                 (assoc (assoc params
+                 (assoc (assoc (into {} params)
                                "stream-name" stream-name)
                         :stream-name stream-name))))))
   (streams [this]
