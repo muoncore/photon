@@ -13,7 +13,8 @@
             [ring.middleware.json :as rjson]
             [clojure.data.json :as json]
             [clojure.core.async :as async :refer [go-loop go timeout
-                                                  <! >! close!]]
+                                                  <! >! close! chan
+                                                  sliding-buffer]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [photon.config :as conf]
@@ -45,19 +46,14 @@
       (prn "closed."))))
 
 (defn ws-projections-handler [{:keys [ws-channel] :as req}]
-  (let [uuid (java.util.UUID/randomUUID)
-        current-value (atom @streams/queries)]
-    (add-watch streams/queries uuid
-               (fn [k r os ns]
-                 (swap! current-value (fn [_] ns))))
-    (go-loop [t 0]
+  (go
+    (loop [t 0]
       (if-let [{:keys [message]} (<! ws-channel)]
         (do
           (<! (timeout t))
-          (>! ws-channel (api/projections-with-val @current-value))
+          (>! ws-channel (api/projections-with-val @streams/queries))
           (recur 1000))
         (do
-          (remove-watch streams/queries uuid)
           (close! ws-channel)
           (prn "closed."))))))
 

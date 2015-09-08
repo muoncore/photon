@@ -122,7 +122,9 @@
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
-              (om/update! data :projections (:message elem))
+              (if (contains? elem :error)
+                (.log js/console (pr-str elem))
+                (om/update! data :projections (:message elem)))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
