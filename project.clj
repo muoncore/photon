@@ -4,8 +4,8 @@
   :min-lein-version "2.0.0"
   :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
                  ["reactor" "http://repo.spring.io/libs-release"]]
-  :dependencies [[org.clojure/clojure "1.7.0-beta3"]
-                 [org.clojure/clojurescript "0.0-3269"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.clojure/clojurescript "1.7.122"]
                  [io.muoncore/muon-clojure "5.2.0"]
                  [org.marianoguerra/clj-rhino "0.2.2"]
                  [compojure "1.3.4"]
@@ -45,20 +45,26 @@
                  [stylefruits/gniazdo "0.4.0"]]
   :plugins [[lein-ring "0.9.6"]
             [lein-cljsbuild "1.0.5"]
-            [lein-figwheel "0.3.3"]
+            [lein-figwheel "0.3.9"]
             [cider/cider-nrepl "0.9.1"]
             [org.clojure/tools.nrepl "0.2.10"]]
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
   :java-source-paths ["java"]
-  :figwheel {:server-port 3500
+  :figwheel {:server-port 3000
              :load-warninged-code true
+             :open-file-command "mvim"
              :ring-handler photon.handler/reloadable-app}
   :cljsbuild {:builds [{:source-paths ["src-cljs"]
                         :figwheel true
                         :compiler {:main photon.ui.frontend
                                    :asset-path "js/out"
-                                   :output-to "resources/public/js/main.js"}}]}
+                                   :output-to "resources/public/js/main.js"
+                                   :output-dir    "resources/public/js/out"
+                                   :source-map    "resources/public/js/out.js.map"
+                                   :preamble      ["react/react.min.js"]
+                                   :optimizations :none
+                                   :pretty-print  true}}]}
   :docker {:image-name "myregistry.example.org/myimage"
            :dockerfile "target/dist/Dockerfile"
            :build-dir  "target"}
