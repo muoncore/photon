@@ -45,29 +45,26 @@
       (mcc/on-command this "events" listener)
       (mcc/on-command this "projections" listener-projections))))
 
+(MuonBuilder/addWriter
+ (reify AutoConfigurationWriter
+   (writeConfiguration [_ ac]
+    (.setDiscoveryUrl ac
+                      (if (nil? (:amqp.url conf/config))
+                        "amqp://localhost"
+                        (:amqp.url conf/config))))))
 
-
-(defn muonlocal [rabbit-url service-identifier tags]
-
+(defn muon-local [service-identifier tags]
   (let [builder (MuonBuilder.)]
     (.withServiceIdentifier builder service-identifier)
     (let [muon (.build builder)]
-        (dorun (map #(.addTag muon %) tags))
-        (.start muon)
-    muon)))
-
+      (dorun (map #(.addTag muon %) tags))
+      (.start muon)
+      muon)))
 
 (defn start-server! 
-  ([server-name db]
-   (println conf/config)
-   (start-server! server-name db
-                  (if (nil? (:amqp.url conf/config))
-                    "amqp://localhost"
-                    (:amqp.url conf/config))))
-  ([server-name db url]
-   (log/info "Connecting to" url)
-   (let [m (muonlocal url server-name ["photon" "eventstore"])
-         ms (->PhotonMicroservice m (streams/new-async-stream m db))]
-     (mcs/start-server! ms)
-     ms)))
+  [server-name db]
+  (let [m (muon-local server-name ["photon" "eventstore"])
+        ms (->PhotonMicroservice m (streams/new-async-stream m db))]
+    (mcs/start-server! ms)
+    ms))
 
