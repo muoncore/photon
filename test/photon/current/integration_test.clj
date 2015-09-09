@@ -15,7 +15,8 @@
 
 (let [d (filedb/->DBFile (java.io.File/createTempFile "muon" ".json"))
       ms (muon/start-server! "test-service" d)
-      m (cl/muon-client (:amqp.url conf/config) "client-test" "client" "test")
+      m (cl/muon-client (:amqp.url conf/config) "client-test"
+                        "client" "test")
       res (cl/with-muon m
             (cl/post-event "muon://test-service/events"
                            {"service-id","muon://chatter",

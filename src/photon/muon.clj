@@ -62,8 +62,7 @@
       (.start muon)
       muon)))
 
-(defn start-server! 
-  [server-name db]
+(defn start-server! [server-name db]
   (let [m (muon-local server-name ["photon" "eventstore"])
         stm (streams/new-async-stream m db)
         ms (->PhotonMicroservice m stm)]

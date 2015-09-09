@@ -23,6 +23,14 @@
     (map #(apply dissoc (deref %) [:_id])
          (vals projs))))
 
+(defn projection [projection-name]
+  (log/info "Querying" projection-name)
+  (let [res (first (filter #(= (name (:projection-name %)) projection-name)
+                           (map deref (vals @streams/queries))))]
+    (log/info "Result:" (pr-str res))
+    (log/info "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
+    res))
+
 (defn projections []
   (projections-with-val @streams/queries))
 
