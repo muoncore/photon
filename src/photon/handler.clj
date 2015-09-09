@@ -106,15 +106,25 @@
              (.print out (json/write-str @object)))})
 
 (def cold-latency 5000)
-#_(def riak-streams (riak/riak "streams"))
-#_(def active-streams
-    (ref (into #{} (map #_#(hash-map :stream (pr-str %))
-                        #(json/read-str (first (:payload_s %)) :key-fn keyword)
-                        (db/lazy-events riak-streams "streams" 0)))))
 
 (def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
 
+(defmulti default-db (fn [] (:db.backend conf/config)))
+(defmethod default-db "mongodb" [] (mongo/mongo))
+#_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
+(defmethod default-db "file" []
+  (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
+
+(defn figwheel-main []
+  (let [ms (m/start-server! (:microservice.name conf/config)
+                            (default-db))]
+    (dosync (alter own-stream (fn [_] ms)))))
+
 (defroutes app-routes
+  (GET "/startup" []
+       (when (nil? @own-stream)
+         (figwheel-main)
+         (wrap-json {:started "ok"})))
   (GET "/streams" []
        (log/info @own-stream)
        (wrap-json (streams/streams (:stm @own-stream))))
@@ -132,11 +142,9 @@
        (wrap-websocket-handler #'ws-streams-handler))
   (GET "/ws-projections" []
        (wrap-websocket-handler #'ws-projections-handler))
-  (GET "/thing" [] "Thing")
-  (GET "/thing2" [] "Thing4")
-  (GET "/first-projection" []
-       (wrap-json (api/projection)))
-  (POST "/projections" request (api/post-projection! (:stm @own-stream) (:body request)))
+  (POST "/projections" request (api/post-projection!
+                                (:stm @own-stream)
+                                (:body request)))
   (route/resources "/")
   (route/not-found "Not Found"))
 
@@ -145,12 +153,6 @@
                                 {:keywords? true})))
 
 (def reloadable-app (reload/wrap-reload #'app))
-
-(defmulti default-db (fn [] (:db.backend conf/config)))
-(defmethod default-db "mongodb" [] (mongo/mongo))
-#_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
-(defmethod default-db "file" []
-  (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
@@ -161,10 +163,4 @@
     (let [handler (reload/wrap-reload #'app)]
       (println run-server)
       (time (run-server handler {:port 3000})))))
-
-#_(let [socket (ws/connect "ws://localhost:3000/ws"
-                         :on-receive #(prn 'received %))]
-  (ws/send-msg socket "hello")
-  (Thread/sleep 2000)
-  (ws/close socket))
 

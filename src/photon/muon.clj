@@ -6,6 +6,7 @@
             [muon-clojure.rx :as rx]
             [clojure.data.json :as json]
             [clojure.java.data :as j]
+            [photon.default-projs :as dp]
             [photon.api :as api]
             [photon.config :as conf]
             [clojure.data.json :as json]
@@ -64,7 +65,9 @@
 (defn start-server! 
   [server-name db]
   (let [m (muon-local server-name ["photon" "eventstore"])
-        ms (->PhotonMicroservice m (streams/new-async-stream m db))]
+        stm (streams/new-async-stream m db)
+        ms (->PhotonMicroservice m stm)]
+    (dp/init-default-projs! stm)
     (mcs/start-server! ms)
     ms))
 
