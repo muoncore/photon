@@ -16,6 +16,7 @@
            (io.muoncore.extension.amqp AmqpTransportExtension)
            (io.muoncore.extension.amqp.discovery AmqpDiscovery)
            (org.reactivestreams Publisher)
+           (io.muoncore.config MuonBuilder)
            (java.util Map)))
 
 (defmulti decode-event #(.getContentType %))
@@ -44,6 +45,18 @@
       (mcc/on-command this "events" listener)
       (mcc/on-command this "projections" listener-projections))))
 
+
+
+(defn muonlocal [rabbit-url service-identifier tags]
+
+  (let [builder (MuonBuilder.)]
+    (.withServiceIdentifier builder service-identifier)
+    (let [muon (.build builder)]
+        (dorun (map #(.addTag muon %) tags))
+        (.start muon)
+    muon)))
+
+
 (defn start-server! 
   ([server-name db]
    (println conf/config)
@@ -53,7 +66,7 @@
                     (:amqp.url conf/config))))
   ([server-name db url]
    (log/info "Connecting to" url)
-   (let [m (mcs/muon url server-name ["photon" "eventstore"])
+   (let [m (muonlocal url server-name ["photon" "eventstore"])
          ms (->PhotonMicroservice m (streams/new-async-stream m db))]
      (mcs/start-server! ms)
      ms)))
