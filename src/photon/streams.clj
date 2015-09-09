@@ -25,6 +25,7 @@
 (defonce publications (ref {}))
 (defonce global-channels (ref {}))
 (defonce active-streams (ref {}))
+(defonce virtual-streams (ref {}))
 
 
 ;; Stream protocols and multimethods
@@ -46,6 +47,7 @@
   (init-stream-manager! [this])
   (update-streams! [this stream-name])
   (create-stream-endpoint! [this stream-name])
+  (create-virtual-stream-endpoint! [this stream-name])
   (streams [this]))
 
 (defmulti stream (fn [_ params]
@@ -149,6 +151,12 @@
                     (assoc-in old-active-streams
                               [this :real-streams]
                               (conj real-streams stream-name)))))))))
+  (create-virtual-stream-endpoint! [this stream-name]
+    (let [ch (chan (sliding-buffer 1))]
+      (dosync (alter virtual-streams assoc stream-name ch))
+      (mcc/stream-source
+       {:m m} (str "virtual/" stream-name)
+       (fn [params] ch))))
   (create-stream-endpoint! [this stream-name]
     ;; TODO: Fix this mess
     (if (not (nil? m))
@@ -173,9 +181,11 @@
   (next! [this] (go (<! (:channel (global-channel this)))))
   EventProcessor
   (register-query! [this projection-name stream-name lang f init]
+    (create-virtual-stream-endpoint! this projection-name)
     (let [s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
+          ch (get @virtual-streams projection-name)
           s (stream this {"from" "0" "stream-type" "hot-cold"
                           "stream-name" s-name})
           running-query (ref {:projection-name projection-name
@@ -201,37 +211,41 @@
                                 (.printStackTrace e)
                                 e))
                   current-time (- (System/currentTimeMillis) start-ts)]
+              (>! ch new-value)
               (if (instance? Exception new-value)
-                (dosync
-                  (alter running-query
-                         merge {:last-event current-event
-                                :avg-time (next-avg
+                (do
+                  (close! ch)
+                  (dosync
+                   (alter virtual-streams dissoc projection-name)
+                   (alter running-query
+                          merge {:last-event current-event
+                                 :avg-time (next-avg
                                             (:avg-time @running-query)
                                             current-time
                                             (:processed @running-query))
-                                :processed (inc (:processed @running-query))
-                                :last-error new-value 
-                                :status :failed}))                
+                                 :processed (inc (:processed @running-query))
+                                 :last-error new-value 
+                                 :status :failed})))
                 (do
                   (dosync
-                    (alter running-query
-                           merge {:last-event current-event
-                                  :avg-time (next-avg
-                                              (:avg-time @running-query)
-                                              current-time
-                                              (:processed @running-query))
-                                  :current-value new-value
-                                  :processed (inc (:processed @running-query))}))
+                   (alter running-query
+                          merge {:last-event current-event
+                                 :avg-time (next-avg
+                                            (:avg-time @running-query)
+                                            current-time
+                                            (:processed @running-query))
+                                 :current-value new-value
+                                 :processed (inc (:processed @running-query))}))
                   (recur new-value (<! s))))))))))
   (process-event! [this msg]
-    ;; Think about the order of store+send to taps
-    (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
-    (update-streams! this (get msg "stream-name"
-                               (get msg :stream-name)))
-    (go (>! (:channel (global-channel this)) msg)
-        (>! (:channel (publisher this)) msg))
-    (db/store db msg)
-    {:correct "true"}))
+                  ;; Think about the order of store+send to taps
+                  (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
+                  (update-streams! this (get msg "stream-name"
+                                             (get msg :stream-name)))
+                  (go (>! (:channel (global-channel this)) msg)
+                      (>! (:channel (publisher this)) msg))
+                  (db/store db msg)
+                  {:correct "true"}))
 
 (defmethod stream "cold" [a-stream params]
   (log/info "cold-stream" (pr-str params))
