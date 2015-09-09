@@ -16,7 +16,7 @@
            (io.muoncore.extension.amqp AmqpTransportExtension)
            (io.muoncore.extension.amqp.discovery AmqpDiscovery)
            (org.reactivestreams Publisher)
-           (io.muoncore.config MuonBuilder)
+           (io.muoncore.config MuonBuilder AutoConfigurationWriter)
            (java.util Map)))
 
 (defmulti decode-event #(.getContentType %))
