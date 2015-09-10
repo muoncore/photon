@@ -152,11 +152,14 @@
                               [this :real-streams]
                               (conj real-streams stream-name)))))))))
   (create-virtual-stream-endpoint! [this stream-name]
-    (let [ch (chan (sliding-buffer 1))]
+    (let [ch (chan (sliding-buffer 1))
+          ch-mult (mult ch)]
       (dosync (alter virtual-streams assoc stream-name ch))
       (mcc/stream-source
        {:m m} (str "projection/" stream-name)
-       (fn [params] ch))))
+       (fn [params]
+         (let [t-ch (chan)]
+           (tap ch-mult t-ch))))))
   (create-stream-endpoint! [this stream-name]
     ;; TODO: Fix this mess
     (if (not (nil? m))
