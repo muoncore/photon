@@ -1,6 +1,7 @@
 (ns photon.streams
   (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer sub
-                                        sliding-buffer mult tap close! pub]
+                                        sliding-buffer mult tap close! pub
+                                        put!]
              :as async]
             [serializable.fn :as sfn]
             [clj-rhino :as js]
@@ -154,7 +155,8 @@
   (create-virtual-stream-endpoint! [this stream-name]
     (let [ch (chan (sliding-buffer 1))
           ch-mult (mult ch)]
-      (dosync (alter virtual-streams assoc stream-name ch))
+      (dosync (alter virtual-streams assoc stream-name
+                     {:channel ch :mult-channel ch-mult}))
       (mcc/stream-source
        {:m m} (str "projection/" stream-name)
        (fn [params]
@@ -188,7 +190,7 @@
     (let [s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
-          ch (get @virtual-streams projection-name)
+          ch (:channel (get @virtual-streams projection-name))
           s (stream this {"from" "0" "stream-type" "hot-cold"
                           "stream-name" s-name})
           running-query (ref {:projection-name projection-name
@@ -213,33 +215,32 @@
                                 (log/info (.getMessage e))
                                 (.printStackTrace e)
                                 e))
-                  current-time (- (System/currentTimeMillis) start-ts)]
-              (>! ch new-value)
+                  current-time (- (System/currentTimeMillis) start-ts)
+                  to-merge
+                    (if (instance? Exception new-value)
+                      {:last-event current-event
+                       :avg-time (next-avg
+                                  (:avg-time @running-query)
+                                  current-time
+                                  (:processed @running-query))
+                       :processed (inc (:processed @running-query))
+                       :last-error new-value 
+                       :status :failed}
+                      {:last-event current-event
+                       :avg-time (next-avg
+                                  (:avg-time @running-query)
+                                  current-time
+                                  (:processed @running-query))
+                       :current-value new-value
+                       :processed (inc (:processed @running-query))})]
+              (dosync (alter running-query merge to-merge))
+              (>! ch @running-query)
               (if (instance? Exception new-value)
                 (do
                   (close! ch)
                   (dosync
-                   (alter virtual-streams dissoc projection-name)
-                   (alter running-query
-                          merge {:last-event current-event
-                                 :avg-time (next-avg
-                                            (:avg-time @running-query)
-                                            current-time
-                                            (:processed @running-query))
-                                 :processed (inc (:processed @running-query))
-                                 :last-error new-value 
-                                 :status :failed})))
-                (do
-                  (dosync
-                   (alter running-query
-                          merge {:last-event current-event
-                                 :avg-time (next-avg
-                                            (:avg-time @running-query)
-                                            current-time
-                                            (:processed @running-query))
-                                 :current-value new-value
-                                 :processed (inc (:processed @running-query))}))
-                  (recur new-value (<! s))))))))))
+                   (alter virtual-streams dissoc projection-name)))
+                (recur new-value (<! s)))))))))
   (process-event! [this msg]
                   ;; Think about the order of store+send to taps
                   (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))

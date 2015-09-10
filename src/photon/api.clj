@@ -15,7 +15,7 @@
                              (keyword language)
                              code
                              (read-string initial-value))
-    "Ok"))
+    {:correct true}))
 
 (defn projections-with-val [projs]
   (map

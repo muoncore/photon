@@ -58,21 +58,19 @@
           (prn "closed."))))))
 
 (defn ws-streams-handler [{:keys [ws-channel] :as req}]
-  (let [uuid (java.util.UUID/randomUUID)
+  (let [ch (streams/stream (:stm @own-stream)
+                           {"from" "0"
+                            "stream-name" "__streams__"
+                            "stream-type" "hot-cold"})
         current-value (atom (streams/streams (:stm @own-stream)))]
-    (add-watch streams/active-streams uuid
-               (fn [k r os ns]
-                 (swap! current-value
-                        (fn [_]
-                          (streams/streams (:stm @own-stream))))))
     (go-loop [t 0]
       (if-let [{:keys [message]} (<! ws-channel)]
         (do
           (<! (timeout t))
-          (>! ws-channel @current-value)
+          (>! ws-channel (<! ch))
           (recur 1000))
         (do
-          (remove-watch streams/active-streams uuid)
+          (close! ch)
           (close! ws-channel)
           (prn "closed."))))))
 
