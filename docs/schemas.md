@@ -67,13 +67,13 @@
  "stream-name" : "any-stream or __all__",
  "language" : "javascript or clojure",
  "reduction" : "(fn [prev next] ...) or function(prev,next) {... return x;}",
- "initial-value" : value_of_first_prev}
+ "initial-value" : "value_of_first_prev"}
 ```
 
 * Response:
 
 ```javascript
-"Ok"
+{"correct" : "true"}
 ```
 
 ### Querying active projections
