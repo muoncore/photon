@@ -155,7 +155,7 @@
     (let [ch (chan (sliding-buffer 1))]
       (dosync (alter virtual-streams assoc stream-name ch))
       (mcc/stream-source
-       {:m m} (str "virtual/" stream-name)
+       {:m m} (str "projection/" stream-name)
        (fn [params] ch))))
   (create-stream-endpoint! [this stream-name]
     ;; TODO: Fix this mess
