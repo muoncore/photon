@@ -22,6 +22,9 @@
     (.log js/console res)
     res))
 
+(defn proj->streams [reg]
+  (map #(assoc (val %) :stream (key %)) reg))
+
 (defn update-box [owner box-ref]
   (.highlightBlock js/hljs (om/get-node owner box-ref)))
 
@@ -129,18 +132,24 @@
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
 
-(defn subscribe-streams! [owner]
+(defn subscribe-streams! [data]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch "ws://localhost:3000/ws-streams"))]
+          (<! (ws-ch "ws://localhost:3000/ws-projections"))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
-              (om/update-state! owner
-                                #(assoc % :streams
-                                        (:streams (:message elem))))
+              (if (contains? elem :error)
+                (.log js/console (pr-str elem))
+                (let [streams-proj (first (filter
+                                           #(= (:projection-name %)
+                                               "__streams__")
+                                           (:message elem)))]
+                  (om/update-state! data
+                                    #(assoc % :streams
+                                            (proj->streams (:current-value streams-proj))))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
@@ -180,6 +189,7 @@
                 :processed "Events processed"
                 :last-event "Last event processed"
                 :stream-name "Target stream"
+                :total-events "Stream size"
                 :projection-name "Projection name"})
 
 (defn code-block [c owner]
@@ -293,9 +303,9 @@
   (reify
     om/IRender
     (render [_]
-      (dom/tr nil
-        (apply dom/td nil
-               (map #(if (= :stream (key %))
+      (apply dom/tr nil
+             (map #(dom/td nil
+                     (if (= :stream (key %))
                        (dom/a #js
                          {:href "#"
                           :onClick
@@ -303,15 +313,20 @@
                             (om/update! (:data data)
                                         :active-stream (val %)))}
                          (val %))
-                       (val %))
-                    (:stream data)))))))
+                       (val %)))
+                  (:stream data))))))
 
 (defn widget-streams [data owner]
   (reify
     om/IInitState
-    (init-state [this] data)
+    (init-state [this]
+      data)
     om/IDidMount
     (did-mount [this]
+      (go
+        (let [res (:body (<! (client/get "/streams")))]
+          (om/update-state! owner #(assoc % :streams
+                                          (proj->streams (:current-value res))))))
       (subscribe-streams! owner))
     om/IRenderState
     (render-state [_ state]
@@ -319,14 +334,14 @@
         (dom/h1 nil
           "Streams")
         (apply dom/table nil
-               (apply dom/th nil
-                      (map #(dom/td nil
+               (apply dom/tr nil
+                      (map #(dom/th nil
                               (k->header %))
                            (keys (first (:streams state)))))
                (map #(om/build row-stream {:data (:data data)
                                            :stream %})
                     (:streams state)))
-        (if (not (nil? (:active-stream (:data data))))
+        #_(if (not (nil? (:active-stream (:data data))))
           (om/build event-list
                     {:data (:data data)
                      :stream (:active-stream (:data data))}))))))

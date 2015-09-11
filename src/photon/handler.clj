@@ -120,12 +120,14 @@
 
 (defroutes app-routes
   (GET "/startup" []
-       (when (nil? @own-stream)
-         (figwheel-main)
-         (wrap-json {:started "ok"})))
+       (if (nil? @own-stream)
+         (do
+           (figwheel-main)
+           (wrap-json {:started "ok"}))
+         {:started "already-started"}))
   (GET "/streams" []
        (log/info @own-stream)
-       (wrap-json (streams/streams (:stm @own-stream))))
+       (wrap-json (api/projection "__streams__")))
   (GET "/projection-keys" []
        (wrap-json (api/projection-keys)))
   (GET "/projections" []
