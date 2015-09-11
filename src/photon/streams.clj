@@ -244,11 +244,14 @@
   (process-event! [this msg]
                   ;; Think about the order of store+send to taps
                   (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
-                  (update-streams! this (get msg "stream-name"
-                                             (get msg :stream-name)))
-                  (go (>! (:channel (global-channel this)) msg)
-                      (>! (:channel (publisher this)) msg))
-                  (db/store db msg)
+                  (let [stream-name (get msg "stream-name"
+                                         (get msg :stream-name))]
+                    (when (not= (:stream-name msg) "eventlog")
+                      (update-streams! this (get msg "stream-name"
+                                                 (get msg :stream-name)))
+                      (go (>! (:channel (global-channel this)) msg)
+                          (>! (:channel (publisher this)) msg))
+                      (db/store db msg))) 
                   {:correct "true"}))
 
 (defmethod stream "cold" [a-stream params]
