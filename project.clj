@@ -45,6 +45,7 @@
                  [stylefruits/gniazdo "0.4.0"]]
   :plugins [[lein-ring "0.9.6"]
             [lein-cljsbuild "1.0.5"]
+            [lein-midje "3.1.3"]
             [lein-figwheel "0.3.9"]
             [cider/cider-nrepl "0.9.1"]
             [org.clojure/tools.nrepl "0.2.10"]]
