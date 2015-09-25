@@ -1,0 +1,231 @@
+(ns photon.cassandra
+  (:require [clojure.data.json :as json]
+            [clojure.tools.logging :as log]
+            [photon.db :as db]
+            [clojure.set :refer [rename-keys]]
+            [clojurewerkz.cassaforte.client :as cc]
+            [clojurewerkz.cassaforte.cql    :as cql]
+            [dire.core :refer [with-handler!]])
+  (:use clojurewerkz.cassaforte.query)
+  (:import (java.nio.charset Charset)
+           (java.nio CharBuffer)))
+;; TODO: Optimise connection handling!
+
+#_(def kspace "photon")
+#_(def table "events")
+
+(def charset (Charset/forName "UTF-8"))
+(def encoder (.newEncoder charset))
+(def decoder (.newDecoder charset))
+
+(def cassandra-instances (ref {}))
+
+(def schema
+  {:sender           :varchar
+   :receiver         :varchar
+   :uuid             :varchar
+   :in_reply_to      :varchar
+   :server_timestamp :bigint
+   :schema_url       :varchar
+   :stream_name      :varchar
+   :protocol         :varchar
+   :encoding         :varchar
+   :payload          :blob
+   :primary-key      [:uuid]})
+
+(defn connection [ip]
+  (let [ref-conn (get @cassandra-instances ip)]
+    (if (nil? ref-conn)
+      (do
+        (let [conn (cc/connect [ip])]
+          (dosync (alter cassandra-instances assoc ip conn))
+          (println (pr-str @cassandra-instances))
+          conn))
+      ref-conn)))
+
+(defn clj->cassandra [cl]
+  (let [rm (rename-keys cl {:stream-name :stream_name
+                            :in-reply-to :in_reply_to
+                            :server-timestamp :server_timestamp
+                            :schema :schema_url})]
+    (assoc rm :payload (.encode encoder
+                                (CharBuffer/wrap
+                                 (json/write-str (:payload cl)))))))
+
+(defn cassandra->clj [cass]
+  (println (pr-str cass))
+  (let [rm (rename-keys cass {:stream_name :stream-name
+                              :in_reply_to :in-reply-to
+                              :server_timestamp :server-timestamp
+                              :schema_url :schema})
+        p (:payload cass)
+        old-position (.position p)
+        data (.toString (.decode decoder p))]
+    (.position p old-position)
+    (assoc rm :payload (json/read-str data :key-fn keyword))))
+
+(defrecord DBCassandra [conn-string kspace table]
+  db/DB
+  (db/fetch [this id]
+            (first
+             (map
+              cassandra->clj
+              (let [conn (connection conn-string)]
+                (cql/use-keyspace conn kspace)
+                (cc/prepared
+                 (cql/select conn table (where [[= :uuid id]])))))))
+  (db/delete! [this id]
+              (let [conn (connection conn-string)]
+                (cql/use-keyspace conn kspace)
+                (cc/prepared
+                 (cql/delete conn table (where [[= :uuid id]])))))
+  (db/delete-all! [this]
+                  (let [conn (connection conn-string)]
+                    (cql/use-keyspace conn kspace)
+                    (cql/drop-table conn table)))
+  (db/put [this data]
+          (let [conn (connection conn-string)]
+            (cql/use-keyspace conn kspace)
+            (cc/prepared
+             (cql/insert conn table (clj->cassandra data)))))
+  (db/search [this id]
+             (map
+              cassandra->clj
+              (let [conn (connection conn-string)]
+                (cql/use-keyspace conn kspace)
+                (cc/prepared
+                 (cql/select conn table {:uuid id})))))
+  (db/store [this payload]
+            (let [server-timestamp (:server-timestamp payload)
+                  new-payload (assoc (into {} payload) :server-timestamp
+                                     (if (nil? server-timestamp)
+                                       (bigint (System/currentTimeMillis))
+                                       (long server-timestamp)))
+                  conn (connection conn-string)]
+              (cql/use-keyspace conn kspace)
+              (cc/prepared
+               (cql/insert conn table (clj->cassandra new-payload)))))
+  (db/event [this id]
+            (db/fetch this id))
+  (db/distinct-values [this k]
+                      (into #{} (map #(get % k)
+                                     (db/lazy-events this "__all__" 0))))
+  (db/lazy-events [this stream-name date]
+                  (println "Retrieving events from" stream-name)
+                  (filter
+                   (fn [ev]
+                     (and
+                      (or (= "__all__" stream-name)
+                          (= :__all__ stream-name)
+                          (= stream-name (:stream-name ev)))
+                      (<= date (:server-timestamp ev))))
+                   (map
+                    cassandra->clj
+                    (let [conn (connection conn-string)]
+                      (cql/use-keyspace conn kspace)
+                      (cql/iterate-table conn table :uuid 100)))))
+  (db/lazy-events-page [this stream-name date page] []))
+
+
+
+(defn create-keyspace [c]
+  (let [conn (cc/connect ["127.0.0.1"])]
+    (cql/create-keyspace conn "cassaforte_keyspace"
+                         (with {:replication
+                                {:class "SimpleStrategy"
+                                 :replication_factor 1 }}))))
+
+(defn drop-keyspace []
+  (let [conn (cc/connect ["127.0.0.1"])]
+    (cql/drop-keyspace conn "cassaforte_keyspace")))
+
+(defn test-cassandra []
+  (drop-keyspace)
+  (create-keyspace)
+  (let [conn (cc/connect ["127.0.0.1"])]
+    (cql/use-keyspace conn "cassaforte_keyspace")
+    (println "Creating table...")
+    (cql/create-table conn "users"
+                      (column-definitions {:name :varchar
+                                           :age  :int
+                                           :data (map-type :varchar
+                                                           :blob)
+                                           :primary-key [:name]}))
+    (dorun (take 10
+                 (repeatedly
+                  #(cc/prepared (cql/insert
+                                 conn "users"
+                                 {:name (.toString (java.util.UUID/randomUUID))
+                                  :age (int (rand-int 100))})))))
+    (println "Done storing...")
+    (cql/iterate-table conn "users" :name 100)))
+
+(with-handler! #'cql/insert
+  com.datastax.driver.core.exceptions.InvalidQueryException
+  (fn [e conn table data]
+    (println "::insert::" (.getMessage e))
+    (cql/create-table conn table (column-definitions schema))
+    (cc/prepared (cql/insert conn table data))))
+
+(with-handler! #'cql/select
+  com.datastax.driver.core.exceptions.InvalidQueryException
+  (fn [e conn table query]
+    (println "::select::" (.getMessage e))
+    (cql/create-table conn table (column-definitions schema))
+    []))
+
+(with-handler! #'cql/use-keyspace
+  com.datastax.driver.core.exceptions.InvalidQueryException
+  (fn [_ conn k]
+    (cql/create-keyspace conn k
+                         (with {:replication
+                                {:class "SimpleStrategy"
+                                 :replication_factor 1}}))
+    (cql/use-keyspace conn k)))
+
+(with-handler! #'cql/drop-keyspace
+  com.datastax.driver.core.exceptions.InvalidQueryException
+  (fn [e & args]
+    (println "Dropping non-existing table")))
+
+#_(with-handler! #'cql/create-table
+  com.datastax.driver.core.exceptions.AlreadyExistsException
+  (fn [e & args]
+    (println "Already exists")))
+
+(with-handler! #'cql/create-keyspace
+  com.datastax.driver.core.exceptions.AlreadyExistsException
+  (fn [e & args]
+    (println "Already exists")))
+
+;; TODO: Move to tests
+#_(let [all (test-cassandra)]
+  (loop [elem (first all) s (rest all) i 0]
+    (if (or (nil? elem) (empty? s))
+      (println elem)
+      (do
+        (println i)
+        (println elem)
+        (recur (first s) (rest s) (inc i))))))
+
+#_(let [conn (cc/connect ["127.0.0.1"])]
+  (cql/drop-keyspace conn "photon"))
+#_(let [c (->DBCassandra "127.0.0.1" "photon" "events")]
+  (db/delete-all! c)
+  (db/fetch c "hello")
+  (db/delete! c "hello")
+  (db/put c {:sender           "varchar"
+             :receiver         "varchar"
+             :uuid             "varchar"
+             :in-reply-to      "varchar"
+             :server-timestamp (System/currentTimeMillis)
+             :schema_url       "varchar"
+             :protocol         "varchar"
+             :stream-name      "varchar"
+             :encoding         "varchar"
+             :payload          {:test :ok}})
+  (db/fetch c "varchar")
+  (db/search c "hello")
+  (println (db/lazy-events c "varchar" 0)))
+
+

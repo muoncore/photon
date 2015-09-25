@@ -37,6 +37,8 @@
                  [ring/ring-defaults "0.1.2"]
                  [midje "1.6.3"]
                  [uap-clj "1.0.1"]
+                 [clojurewerkz/cassaforte "2.0.0"]
+                 [dire "0.5.3"]
                  [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
                  [io.muoncore/muon-core "5.4.4"]
                  [io.muoncore/muon-transport-amqp "5.4.4"]
