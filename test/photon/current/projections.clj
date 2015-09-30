@@ -22,6 +22,8 @@
         sp => truthy)
   (fact "But there are no 'imaginary' projections"
         spn => falsey)
+  (println "HAHAHA")
+  (clojure.pprint/pprint sp)
   (fact "The streams projection indicates 0 events processed"
         (:processed sp) => 0.0)
   (post-one-event m s-name)

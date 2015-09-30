@@ -1,4 +1,5 @@
 db.backend=file
+db.backend=cassandra
 microservice.name=photon
 file.path=/muon/photon/data_base.json
 amqp.url=amqp://muon:microservices@muonhost

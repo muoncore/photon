@@ -6,7 +6,7 @@
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
-                 [io.muoncore/muon-clojure "5.2.0"]
+                 [io.muoncore/muon-clojure "5.3.2"]
                  [org.marianoguerra/clj-rhino "0.2.2"]
                  [compojure "1.3.4"]
                  [fipp "0.6.2"]

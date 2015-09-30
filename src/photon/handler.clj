@@ -18,6 +18,7 @@
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [photon.config :as conf]
+            [photon.cassandra :as cassandra]
             [photon.filedb :as filedb]
             [photon.api :as api]
             [photon.mongo :as mongo]
@@ -108,6 +109,10 @@
 (def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
 
 (defmulti default-db (fn [] (:db.backend conf/config)))
+(defmethod default-db "cassandra" []
+  (cassandra/->DBCassandra (get conf/config :cassandra.ip "127.0.0.1")
+                           (get conf/config :kspace "photon")
+                           (get conf/config :table "events")))
 (defmethod default-db "mongodb" [] (mongo/mongo))
 #_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
 (defmethod default-db "file" []

@@ -13,6 +13,7 @@
 
 #_(def kspace "photon")
 #_(def table "events")
+(def chunk-size 100)
 
 (def charset (Charset/forName "UTF-8"))
 (def encoder (.newEncoder charset))
@@ -21,17 +22,15 @@
 (def cassandra-instances (ref {}))
 
 (def schema
-  {:sender           :varchar
-   :receiver         :varchar
-   :uuid             :varchar
-   :in_reply_to      :varchar
+  {:service_id       :varchar
+   :local_id         :varchar
+   :provenance       (map-type :varchar :varchar)
+   :encoding         :varchar
    :server_timestamp :bigint
    :schema_url       :varchar
    :stream_name      :varchar
-   :protocol         :varchar
-   :encoding         :varchar
    :payload          :blob
-   :primary-key      [:uuid]})
+   :primary-key      [:local_id]})
 
 (defn connection [ip]
   (let [ref-conn (get @cassandra-instances ip)]
@@ -45,24 +44,31 @@
 
 (defn clj->cassandra [cl]
   (let [rm (rename-keys cl {:stream-name :stream_name
-                            :in-reply-to :in_reply_to
+                            :service-id :service_id
                             :server-timestamp :server_timestamp
+                            :local-id :local_id
                             :schema :schema_url})]
-    (assoc rm :payload (.encode encoder
-                                (CharBuffer/wrap
-                                 (json/write-str (:payload cl)))))))
+    (assoc (assoc rm :payload (.encode encoder
+                                       (CharBuffer/wrap
+                                        (json/write-str (:payload cl)))))
+           :server_timestamp (.longValue (:server_timestamp rm)))))
 
 (defn cassandra->clj [cass]
   (println (pr-str cass))
   (let [rm (rename-keys cass {:stream_name :stream-name
-                              :in_reply_to :in-reply-to
+                              :service_id :service-id
                               :server_timestamp :server-timestamp
+                              :local_id :local-id
                               :schema_url :schema})
-        p (:payload cass)
-        old-position (.position p)
-        data (.toString (.decode decoder p))]
-    (.position p old-position)
-    (assoc rm :payload (json/read-str data :key-fn keyword))))
+        p (:payload cass)]
+    (if (nil? p)
+      {}
+      (let [old-position (.position p)
+            data (.toString (.decode decoder p))
+            res (assoc rm :payload (json/read-str data :key-fn keyword))]
+        (.position p old-position)
+        (println (pr-str res))
+        res))))
 
 (defrecord DBCassandra [conn-string kspace table]
   db/DB
@@ -72,13 +78,11 @@
               cassandra->clj
               (let [conn (connection conn-string)]
                 (cql/use-keyspace conn kspace)
-                (cc/prepared
-                 (cql/select conn table (where [[= :uuid id]])))))))
+                (cql/select conn table (where [[= :uuid id]]))))))
   (db/delete! [this id]
               (let [conn (connection conn-string)]
                 (cql/use-keyspace conn kspace)
-                (cc/prepared
-                 (cql/delete conn table (where [[= :uuid id]])))))
+                (cql/delete conn table (where [[= :uuid id]]))))
   (db/delete-all! [this]
                   (let [conn (connection conn-string)]
                     (cql/use-keyspace conn kspace)
@@ -86,15 +90,13 @@
   (db/put [this data]
           (let [conn (connection conn-string)]
             (cql/use-keyspace conn kspace)
-            (cc/prepared
-             (cql/insert conn table (clj->cassandra data)))))
+            (cql/insert conn table (clj->cassandra data))))
   (db/search [this id]
              (map
               cassandra->clj
               (let [conn (connection conn-string)]
                 (cql/use-keyspace conn kspace)
-                (cc/prepared
-                 (cql/select conn table {:uuid id})))))
+                (cql/select conn table {:uuid id}))))
   (db/store [this payload]
             (let [server-timestamp (:server-timestamp payload)
                   new-payload (assoc (into {} payload) :server-timestamp
@@ -103,30 +105,30 @@
                                        (long server-timestamp)))
                   conn (connection conn-string)]
               (cql/use-keyspace conn kspace)
-              (cc/prepared
-               (cql/insert conn table (clj->cassandra new-payload)))))
+              (cql/insert conn table (clj->cassandra new-payload))))
   (db/event [this id]
             (db/fetch this id))
   (db/distinct-values [this k]
                       (into #{} (map #(get % k)
                                      (db/lazy-events this "__all__" 0))))
   (db/lazy-events [this stream-name date]
-                  (println "Retrieving events from" stream-name)
-                  (filter
-                   (fn [ev]
-                     (and
-                      (or (= "__all__" stream-name)
-                          (= :__all__ stream-name)
-                          (= stream-name (:stream-name ev)))
-                      (<= date (:server-timestamp ev))))
-                   (map
-                    cassandra->clj
-                    (let [conn (connection conn-string)]
-                      (cql/use-keyspace conn kspace)
-                      (cql/iterate-table conn table :uuid 100)))))
-  (db/lazy-events-page [this stream-name date page] []))
-
-
+    (println "Retrieving events from" stream-name)
+    (map
+     cassandra->clj
+     (filter
+      (fn [ev]
+        (and
+         (or (= "__all__" stream-name)
+             (= :__all__ stream-name)
+             (= stream-name (:stream_name ev)))
+         (<= date (:server_timestamp ev))))
+      (let [conn (connection conn-string)]
+        (cql/use-keyspace conn kspace)
+        (let [res (cql/iterate-table conn table
+                                     :local_id 1)]
+          (println "res has" (count res))
+          res)))))
+  (db/lazy-events-page [this stream-name date page]))
 
 (defn create-keyspace [c]
   (let [conn (cc/connect ["127.0.0.1"])]
@@ -162,21 +164,21 @@
 
 (with-handler! #'cql/insert
   com.datastax.driver.core.exceptions.InvalidQueryException
-  (fn [e conn table data]
-    (println "::insert::" (.getMessage e))
+  (fn [e conn table data & args]
+    (println "::insert::" (.getMessage e) "::" (pr-str table) "::" (pr-str data))
     (cql/create-table conn table (column-definitions schema))
-    (cc/prepared (cql/insert conn table data))))
+    (cql/insert conn table data)))
 
 (with-handler! #'cql/select
   com.datastax.driver.core.exceptions.InvalidQueryException
-  (fn [e conn table query]
+  (fn [e conn table query & args]
     (println "::select::" (.getMessage e))
     (cql/create-table conn table (column-definitions schema))
     []))
 
 (with-handler! #'cql/use-keyspace
   com.datastax.driver.core.exceptions.InvalidQueryException
-  (fn [_ conn k]
+  (fn [_ conn k & args]
     (cql/create-keyspace conn k
                          (with {:replication
                                 {:class "SimpleStrategy"
@@ -188,7 +190,7 @@
   (fn [e & args]
     (println "Dropping non-existing table")))
 
-#_(with-handler! #'cql/create-table
+(with-handler! #'cql/create-table
   com.datastax.driver.core.exceptions.AlreadyExistsException
   (fn [e & args]
     (println "Already exists")))

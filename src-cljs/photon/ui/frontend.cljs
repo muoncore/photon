@@ -220,11 +220,12 @@
             nil
           (dom/h1
            nil
-           "Projections")
-          (apply dom/table nil
+           "Projections1")
+          (apply dom/table #js
+                 {:className "table table-striped table-bordered table-hover table-heading"}
                  (apply dom/tr nil
-                        (map #(dom/th nil
-                                (k->header (key %)))
+                        (map #(dom/th #js {:style #js {:border "1px"}}
+                                      (k->header (key %)))
                              (filter-projection
                               (first (:projections data)))))
                  (map #(om/build projection-item {:data data

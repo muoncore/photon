@@ -2,7 +2,8 @@
   (:require [clojure.tools.logging :as log]))
 
 (defn load-props
-  "Receives a path and loads the Java properties for the file represented by the path inside the classpath (typically, a resource)."
+  "Receives a path and loads the Java properties for the file
+  represented by the path inside the classpath (typically, a resource)."
   [resource-name]
   (do
     (let [f (java.io.File. "./config.properties")
