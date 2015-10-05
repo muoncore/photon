@@ -186,24 +186,31 @@
   (next! [this] (go (<! (:channel (global-channel this)))))
   EventProcessor
   (register-query! [this projection-name stream-name lang f init]
+    (log/info "Registering projection" projection-name)
     (create-virtual-stream-endpoint! this projection-name)
+    (log/info "Created endpoint for" projection-name)
     (let [s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
           ch (:channel (get @virtual-streams projection-name))
+          _ (log/info "Retrieving stream for" projection-name)
           s (stream this {"from" "0" "stream-type" "hot-cold"
                           "stream-name" s-name})
+          _ (log/info "Retrieved stream for" projection-name)
           running-query (ref {:projection-name projection-name
                               :fn (:persist function-descriptor)
                               :stream-name s-name
                               :language lang
                               :current-value init
                               :processed 0
+                              :init-time (System/currentTimeMillis)
                               :last-event nil
                               :last-error nil
                               :avg-time 0
+                              :avg-global-time 0
                               :status :running})]
       (dosync (alter queries assoc projection-name running-query))
+      (log/info "Starting projection loop for" projection-name)
       (go
         (loop [current-value init current-event (<! s)]
           (if (nil? current-event)
@@ -216,23 +223,24 @@
                                 (.printStackTrace e)
                                 e))
                   current-time (- (System/currentTimeMillis) start-ts)
-                  to-merge
+                  to-merge-no-time
                     (if (instance? Exception new-value)
-                      {:last-event current-event
-                       :avg-time (next-avg
-                                  (:avg-time @running-query)
-                                  current-time
-                                  (:processed @running-query))
-                       :processed (inc (:processed @running-query))
-                       :last-error new-value 
+                      {:last-error new-value 
                        :status :failed}
-                      {:last-event current-event
-                       :avg-time (next-avg
-                                  (:avg-time @running-query)
-                                  current-time
-                                  (:processed @running-query))
-                       :current-value new-value
-                       :processed (inc (:processed @running-query))})]
+                      {:current-value new-value
+                       :status :running})
+                  to-merge
+                  (merge to-merge-no-time
+                         {:avg-global-time
+                          (double (/ (- (System/currentTimeMillis)
+                                        (:init-time @running-query))
+                                     (inc (:processed @running-query))))
+                          :avg-time (next-avg
+                                     (:avg-time @running-query)
+                                     current-time
+                                     (inc (:processed @running-query)))
+                          :processed (inc (:processed @running-query))
+                          :last-event current-event})]
               (dosync (alter running-query merge to-merge))
               (>! ch @running-query)
               (if (instance? Exception new-value)
@@ -240,10 +248,11 @@
                   (close! ch)
                   (dosync
                    (alter virtual-streams dissoc projection-name)))
-                (recur new-value (<! s)))))))))
+                (recur new-value (<! s)))))))
+      (log/info "All done for" projection-name)))
   (process-event! [this msg]
                   ;; Think about the order of store+send to taps
-                  (println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
+                  #_(println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
                   (let [stream-name (get msg "stream-name"
                                          (get msg :stream-name))]
                     (when (not= (:stream-name msg) "eventlog")
@@ -284,11 +293,13 @@
   (log/info "Initialising hot-cold stream with params" (pr-str params))
   (let [date (extract-date params)
         ch (chan (buffer 1))
+        _ (log/info "Getting stream-name and data")
         stream-name (get params "stream-name"
                          (get params :stream-name "__all__"))
         full-s (data-from a-stream
                           stream-name
-                          (extract-date params))]
+                          (extract-date params))
+        _ (log/info "Finished getting stream-name and data")]
     (go
       (loop [e (first full-s)
              s (rest full-s)

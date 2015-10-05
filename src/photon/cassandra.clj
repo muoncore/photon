@@ -30,7 +30,7 @@
    :schema_url       :varchar
    :stream_name      :varchar
    :payload          :blob
-   :primary-key      [:local_id]})
+   :primary-key      [:stream_name :server_timestamp :local_id]})
 
 (defn connection [ip]
   (let [ref-conn (get @cassandra-instances ip)]
@@ -54,7 +54,7 @@
            :server_timestamp (.longValue (:server_timestamp rm)))))
 
 (defn cassandra->clj [cass]
-  (println (pr-str cass))
+  #_(println (pr-str cass))
   (let [rm (rename-keys cass {:stream_name :stream-name
                               :service_id :service-id
                               :server_timestamp :server-timestamp
@@ -67,7 +67,7 @@
             data (.toString (.decode decoder p))
             res (assoc rm :payload (json/read-str data :key-fn keyword))]
         (.position p old-position)
-        (println (pr-str res))
+        #_(println (pr-str res))
         res))))
 
 (defrecord DBCassandra [conn-string kspace table]
@@ -109,10 +109,17 @@
   (db/event [this id]
             (db/fetch this id))
   (db/distinct-values [this k]
-                      (into #{} (map #(get % k)
-                                     (db/lazy-events this "__all__" 0))))
+    (let [conn (connection conn-string)
+          ck (get {:stream-name :stream_name
+                   :service-id :service_id
+                   :server-timestamp :server_timestamp
+                   :local-id :local_id
+                   :schema :schema_url}
+                  k k)]
+      (cql/use-keyspace conn kspace)
+      (cql/select conn table (columns (-> ck distinct* (as "dv"))))))
   (db/lazy-events [this stream-name date]
-    (println "Retrieving events from" stream-name)
+    (log/info "Retrieving events from" stream-name)
     (map
      cassandra->clj
      (filter
@@ -124,10 +131,7 @@
          (<= date (:server_timestamp ev))))
       (let [conn (connection conn-string)]
         (cql/use-keyspace conn kspace)
-        (let [res (cql/iterate-table conn table
-                                     :local_id 1)]
-          (println "res has" (count res))
-          res)))))
+        (cql/iterate-table conn table :local_id 1)))))
   (db/lazy-events-page [this stream-name date page]))
 
 (defn create-keyspace [c]
@@ -162,18 +166,24 @@
     (println "Done storing...")
     (cql/iterate-table conn "users" :name 100)))
 
+(defn init-table [conn table]
+  (cql/create-table conn table (column-definitions schema))
+  #_(cql/create-index conn table :stream_name)
+  (cql/create-index conn table :service_id)
+  #_(cql/create-index conn table :server_timestamp))
+
 (with-handler! #'cql/insert
   com.datastax.driver.core.exceptions.InvalidQueryException
   (fn [e conn table data & args]
     (println "::insert::" (.getMessage e) "::" (pr-str table) "::" (pr-str data))
-    (cql/create-table conn table (column-definitions schema))
+    (init-table conn table)
     (cql/insert conn table data)))
 
 (with-handler! #'cql/select
   com.datastax.driver.core.exceptions.InvalidQueryException
   (fn [e conn table query & args]
     (println "::select::" (.getMessage e))
-    (cql/create-table conn table (column-definitions schema))
+    (init-table conn table)
     []))
 
 (with-handler! #'cql/use-keyspace
@@ -200,6 +210,16 @@
   (fn [e & args]
     (println "Already exists")))
 
+(with-handler! #'cql/create-index
+  com.datastax.driver.core.exceptions.AlreadyExistsException
+  (fn [e & args]
+    (println "Already exists")))
+
+(with-handler! #'cql/create-index
+  com.datastax.driver.core.exceptions.InvalidQueryException
+  (fn [e & args]
+    (println "Already exists")))
+
 ;; TODO: Move to tests
 #_(let [all (test-cassandra)]
   (loop [elem (first all) s (rest all) i 0]
@@ -209,6 +229,12 @@
         (println i)
         (println elem)
         (recur (first s) (rest s) (inc i))))))
+
+#_(let [conn (cc/connect ["127.0.0.1"])]
+  (cql/use-keyspace conn :photon)
+  (cql/create-index conn :events :stream_name)
+  (cql/create-index conn :events :service_id)
+  (cql/create-index conn :events :server_timestamp))
 
 #_(let [conn (cc/connect ["127.0.0.1"])]
   (cql/drop-keyspace conn "photon"))

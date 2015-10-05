@@ -108,7 +108,9 @@
 
 (def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
 
-(defmulti default-db (fn [] (:db.backend conf/config)))
+(defmulti default-db (fn []
+                       (log/info "Configuring DB...")
+                       (:db.backend conf/config)))
 (defmethod default-db "cassandra" []
   (cassandra/->DBCassandra (get conf/config :cassandra.ip "127.0.0.1")
                            (get conf/config :kspace "photon")
@@ -162,9 +164,13 @@
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
-  (let [ms (m/start-server! (:microservice.name conf/config)
-                            (default-db))]
+  (log/info "Starting photon...")
+  (let [db (default-db)
+        _ (log/info "DB Configured...")
+        ms (m/start-server! (:microservice.name conf/config) db)]
+    (log/info "Server started, initialising streams...")
     (dosync (alter own-stream (fn [_] ms)))
+    (log/info "Initialising endpoints...")
     (let [handler (reload/wrap-reload #'app)]
       (println run-server)
       (time (run-server handler {:port 3000})))))

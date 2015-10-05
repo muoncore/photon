@@ -66,7 +66,9 @@
   (let [m (muon-local server-name ["photon" "eventstore"])
         stm (streams/new-async-stream m db)
         ms (->PhotonMicroservice m stm)]
+    (log/info "Loading default projections...")
     (dp/init-default-projs! stm)
+    (log/info "Projections loaded!")
     (mcs/start-server! ms)
     ms))
 
