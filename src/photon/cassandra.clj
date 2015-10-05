@@ -13,7 +13,7 @@
 
 #_(def kspace "photon")
 #_(def table "events")
-(def chunk-size 100)
+(def chunk-size 1000)
 
 (def charset (Charset/forName "UTF-8"))
 (def encoder (.newEncoder charset))
@@ -119,27 +119,38 @@
       (cql/use-keyspace conn kspace)
       (cql/select conn table (columns (-> ck distinct* (as "dv"))))))
   (db/lazy-events [this stream-name date]
-    (log/info "Retrieving events from" stream-name)
-    (map
-     cassandra->clj
-     (filter
-      (fn [ev]
-        (and
-         (or (= "__all__" stream-name)
-             (= :__all__ stream-name)
-             (= stream-name (:stream_name ev)))
-         (<= date (:server_timestamp ev))))
-      (let [conn (connection conn-string)]
-        (cql/use-keyspace conn kspace)
-        (cql/iterate-table conn table :local_id 1)))))
-  (db/lazy-events-page [this stream-name date page]))
+    (log/info "Retrieving events from" stream-name "from date" date)
+    (if (or (= "__all__" stream-name)
+            (= :__all__ stream-name))
+      (map
+       cassandra->clj
+       (filter
+        (fn [ev] (<= date (:server_timestamp ev)))
+        (let [conn (connection conn-string)]
+          (cql/use-keyspace conn kspace)
+          (cql/iterate-table conn table [] 1000))))
+      (db/lazy-events-page this stream-name date date)))
+  (db/lazy-events-page [this stream-name date page]
+    (let [conn (connection conn-string)]
+      (cql/use-keyspace conn kspace)
+      (let [res (cql/select conn table
+                            (where [[= :stream_name stream-name]
+                                    [> :server_timestamp page]])
+                            (order-by [:server_timestamp :asc])
+                            (limit chunk-size))
+            last-ts (:server_timestamp (last res))]
+        (if (empty? res)
+          []
+          (concat (map cassandra->clj res)
+                  (lazy-seq (db/lazy-events-page this stream-name
+                                                 date last-ts))))))))
 
 (defn create-keyspace [c]
   (let [conn (cc/connect ["127.0.0.1"])]
     (cql/create-keyspace conn "cassaforte_keyspace"
                          (with {:replication
                                 {:class "SimpleStrategy"
-                                 :replication_factor 1 }}))))
+                                 :replication_factor 1}}))))
 
 (defn drop-keyspace []
   (let [conn (cc/connect ["127.0.0.1"])]
