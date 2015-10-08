@@ -1,15 +1,16 @@
 (ns photon.streams
   (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer sub
                                         sliding-buffer mult tap close! pub
-                                        put!]
+                                        put! >!!]
              :as async]
             [serializable.fn :as sfn]
             [clj-rhino :as js]
             [clojure.tools.logging :as log]
             [uap-clj.core :as uap]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
+            [photon.config :as conf]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
             [photon.db :as db]))
@@ -40,7 +41,7 @@
   (next! [this]))
 
 (defprotocol EventProcessor
-  (register-query! [this projection-name stream-name lang f init])
+  (register-query! [this projection-descriptor])
   (current-query-value [this projection-name])
   (process-event! [this ev]))
 
@@ -85,7 +86,7 @@
                              elem))
                          identity
                          (js/from-js res)
-                         #_(json/read-str res :key-fn keyword))]
+                         #_(json/parse-string res true))]
           converted)
         (catch Exception e
           (println (.getMessage e))
@@ -185,34 +186,43 @@
   HotStream
   (next! [this] (go (<! (:channel (global-channel this)))))
   EventProcessor
-  (register-query! [this projection-name stream-name lang f init]
-    (log/info "Registering projection" projection-name)
-    (create-virtual-stream-endpoint! this projection-name)
-    (log/info "Created endpoint for" projection-name)
-    (let [s-name (if (nil? stream-name) "__all__" stream-name) 
+  (register-query! [this projection-descriptor]
+    (let [projection-name (:projection-name projection-descriptor)
+          _ (create-virtual-stream-endpoint! this projection-name)
+          stream-name (:stream-name projection-descriptor)
+          lang (:language projection-descriptor)
+          f (:reduction projection-descriptor)
+          init (:initial-value projection-descriptor)
+          s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
           ch (:channel (get @virtual-streams projection-name))
           _ (log/info "Retrieving stream for" projection-name)
-          s (stream this {"from" "0" "stream-type" "hot-cold"
+          new-descriptor (merge {:projection-name projection-name
+                                 :fn (:persist function-descriptor)
+                                 :stream-name s-name
+                                 :language lang
+                                 :current-value init
+                                 :processed 0
+                                 :init-time (System/currentTimeMillis)
+                                 :last-event nil
+                                 :last-error nil
+                                 :avg-time 0
+                                 :avg-global-time 0
+                                 :status :running}
+                                projection-descriptor)
+          last-ts (str (inc (get (:last-event new-descriptor)
+                                 :server-timestamp -1)))
+          s (stream this {"from" last-ts
+                          "stream-type" "hot-cold"
                           "stream-name" s-name})
           _ (log/info "Retrieved stream for" projection-name)
-          running-query (ref {:projection-name projection-name
-                              :fn (:persist function-descriptor)
-                              :stream-name s-name
-                              :language lang
-                              :current-value init
-                              :processed 0
-                              :init-time (System/currentTimeMillis)
-                              :last-event nil
-                              :last-error nil
-                              :avg-time 0
-                              :avg-global-time 0
-                              :status :running})]
+          running-query (ref new-descriptor)]
       (dosync (alter queries assoc projection-name running-query))
       (log/info "Starting projection loop for" projection-name)
       (go
-        (loop [current-value init current-event (<! s)]
+        (loop [current-value (:current-value new-descriptor)
+               current-event (<! s)]
           (if (nil? current-event)
             (dosync (alter running-query assoc :status :finished))
             (let [start-ts (System/currentTimeMillis)
@@ -225,7 +235,11 @@
                   current-time (- (System/currentTimeMillis) start-ts)
                   to-merge-no-time
                     (if (instance? Exception new-value)
-                      {:last-error new-value 
+                      {:last-error
+                       (str (.getMessage new-value) "\n"
+                            (clojure.string/join
+                             "\n"
+                             (map str (.getStackTrace new-value))))
                        :status :failed}
                       {:current-value new-value
                        :status :running})
@@ -242,6 +256,9 @@
                           :processed (inc (:processed @running-query))
                           :last-event current-event})]
               (dosync (alter running-query merge to-merge))
+              #_(spit (str (:projections.path conf/config)
+                         "/" projection-name ".projection")
+                    (pr-str @running-query) :append false) 
               (>! ch @running-query)
               (if (instance? Exception new-value)
                 (do
@@ -254,13 +271,26 @@
                   ;; Think about the order of store+send to taps
                   #_(println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
                   (let [stream-name (get msg "stream-name"
-                                         (get msg :stream-name))]
+                                         (get msg :stream-name))
+                        server-timestamp (:server-timestamp msg)
+                        now (bigint (System/currentTimeMillis))
+                        new-timestamp (if (nil? server-timestamp)
+                                        now
+                                        (long server-timestamp))
+                        new-msg (merge msg
+                                       {:server-timestamp
+                                        new-timestamp
+                                        :photon-timestamp now
+                                        :order-id
+                                        (+ (* 1000000 new-timestamp)
+                                           (rem (System/nanoTime)
+                                                1000000))})]
                     (when (not= (:stream-name msg) "eventlog")
                       (update-streams! this (get msg "stream-name"
                                                  (get msg :stream-name)))
-                      (go (>! (:channel (global-channel this)) msg)
-                          (>! (:channel (publisher this)) msg))
-                      (db/store db msg))) 
+                      (>!! (:channel (global-channel this)) new-msg)
+                      (>!! (:channel (publisher this)) new-msg)
+                      (db/store db new-msg))) 
                   {:correct "true"}))
 
 (defmethod stream "cold" [a-stream params]

@@ -19,6 +19,7 @@
 
 (def default-config {:db.backend "file"
                      :amqp.url "amqp://localhost"
+                     :projections.path "/tmp/"
                      :file.path "resources/events.json"
                      :microservice.name "photon"
                      :mongodb.host "localhost"

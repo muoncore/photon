@@ -1,7 +1,7 @@
 (ns photon.dummy.data
   (:require [photon.db :as db]
             [clj-http.client :as client]
-            [clojure.data.json :as json]))
+            [cheshire.core :as json]))
 
 (defn generate-dummy-data []
   (let [total 1000
@@ -31,5 +31,5 @@
                     :stream-name "chatter"
                     :server-timestamp (+ 1420070400000 (* idx (/ 604800000 total)))})
                  data)]
-    (dorun (map #(spit "/tmp/events.json" (str (json/write-str %) "\n") :append true) events))))
+    (dorun (map #(spit "/tmp/events.json" (str (json/generate-string %) "\n") :append true) events))))
 

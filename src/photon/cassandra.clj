@@ -1,5 +1,5 @@
 (ns photon.cassandra
-  (:require [clojure.data.json :as json]
+  (:require [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [photon.db :as db]
             [clojure.set :refer [rename-keys]]
@@ -17,8 +17,6 @@
 
 (def charset (Charset/forName "UTF-8"))
 (def encoder (.newEncoder charset))
-(def decoder (.newDecoder charset))
-
 (def cassandra-instances (ref {}))
 
 (def schema
@@ -29,8 +27,16 @@
    :server_timestamp :bigint
    :schema_url       :varchar
    :stream_name      :varchar
+   :photon_timestamp :bigint
+   :order_id         :bigint
    :payload          :blob
-   :primary-key      [:stream_name :server_timestamp :local_id]})
+   :primary-key      [:stream_name :order_id]})
+
+(def schema-times
+  {:server_timestamp :bigint
+   :stream_name      :varchar
+   :order_id         :bigint
+   :primary-key      [:stream_name :server_timestamp :order_id]})
 
 (defn connection [ip]
   (let [ref-conn (get @cassandra-instances ip)]
@@ -45,18 +51,22 @@
 (defn clj->cassandra [cl]
   (let [rm (rename-keys cl {:stream-name :stream_name
                             :service-id :service_id
+                            :order-id :order_id
                             :server-timestamp :server_timestamp
+                            :photon-timestamp :photon_timestamp
                             :local-id :local_id
                             :schema :schema_url})]
     (assoc (assoc rm :payload (.encode encoder
                                        (CharBuffer/wrap
-                                        (json/write-str (:payload cl)))))
+                                        (json/generate-string (:payload cl)))))
            :server_timestamp (.longValue (:server_timestamp rm)))))
 
 (defn cassandra->clj [cass]
   #_(println (pr-str cass))
   (let [rm (rename-keys cass {:stream_name :stream-name
                               :service_id :service-id
+                              :photon_timestamp :photon-timestamp
+                              :order_id :order-id
                               :server_timestamp :server-timestamp
                               :local_id :local-id
                               :schema_url :schema})
@@ -64,11 +74,22 @@
     (if (nil? p)
       {}
       (let [old-position (.position p)
+            decoder (.newDecoder charset)
             data (.toString (.decode decoder p))
-            res (assoc rm :payload (json/read-str data :key-fn keyword))]
+            res (assoc rm :payload (json/parse-string data true))]
         (.position p old-position)
         #_(println (pr-str res))
         res))))
+
+(defn ordered-combination
+  [sort-fn seqs]
+  (if (every? empty? seqs)
+    '()
+    (let [sorted (sort-by #(sort-fn (first %)) seqs)
+          chosen (first sorted)
+          new-seqs (concat [(rest chosen)] (rest sorted))]
+      (concat [(first chosen)]
+              (lazy-seq (ordered-combination sort-fn new-seqs))))))
 
 (defrecord DBCassandra [conn-string kspace table]
   db/DB
@@ -88,9 +109,7 @@
                     (cql/use-keyspace conn kspace)
                     (cql/drop-table conn table)))
   (db/put [this data]
-          (let [conn (connection conn-string)]
-            (cql/use-keyspace conn kspace)
-            (cql/insert conn table (clj->cassandra data))))
+          (db/store this data))
   (db/search [this id]
              (map
               cassandra->clj
@@ -98,52 +117,62 @@
                 (cql/use-keyspace conn kspace)
                 (cql/select conn table {:uuid id}))))
   (db/store [this payload]
-            (let [server-timestamp (:server-timestamp payload)
-                  new-payload (assoc (into {} payload) :server-timestamp
-                                     (if (nil? server-timestamp)
-                                       (bigint (System/currentTimeMillis))
-                                       (long server-timestamp)))
-                  conn (connection conn-string)]
+            (let [conn (connection conn-string)]
               (cql/use-keyspace conn kspace)
-              (cql/insert conn table (clj->cassandra new-payload))))
+              (cql/insert conn table (clj->cassandra payload))
+              (cql/insert
+               conn (keyword (str (name table) "_times"))
+               {:server_timestamp (:server-timestamp payload)
+                :stream_name (:stream-name payload)
+                :order_id (:order-id payload)})))
   (db/event [this id]
             (db/fetch this id))
   (db/distinct-values [this k]
     (let [conn (connection conn-string)
           ck (get {:stream-name :stream_name
                    :service-id :service_id
+                   :order-id :order_id
                    :server-timestamp :server_timestamp
+                   :photon-timestamp :photon_timestamp
                    :local-id :local_id
                    :schema :schema_url}
                   k k)]
       (cql/use-keyspace conn kspace)
-      (cql/select conn table (columns (-> ck distinct* (as "dv"))))))
+      (map :dv (cql/select conn table
+                           (columns (-> ck distinct* (as "dv")))))))
   (db/lazy-events [this stream-name date]
     (log/info "Retrieving events from" stream-name "from date" date)
     (if (or (= "__all__" stream-name)
             (= :__all__ stream-name))
-      (map
-       cassandra->clj
-       (filter
-        (fn [ev] (<= date (:server_timestamp ev)))
-        (let [conn (connection conn-string)]
-          (cql/use-keyspace conn kspace)
-          (cql/iterate-table conn table [] 1000))))
-      (db/lazy-events-page this stream-name date date)))
+      (let [sts (db/distinct-values this :stream-name)]
+        (ordered-combination :server-timestamp
+                             (map #(db/lazy-events this % date) sts)))
+      (let [conn (connection conn-string)]
+        (cql/use-keyspace conn kspace)
+        (let [res (cql/select conn (keyword (str (name table) "_times"))
+                              (where [[= :stream_name stream-name]
+                                      [>= :server_timestamp date]])
+                              (order-by [:server_timestamp :asc])
+                              (limit 1))
+              first-ts (:order_id (first res))]
+          (println first-ts)
+          (if (empty? res)
+            []
+            (db/lazy-events-page this stream-name date first-ts))))))
   (db/lazy-events-page [this stream-name date page]
     (let [conn (connection conn-string)]
       (cql/use-keyspace conn kspace)
       (let [res (cql/select conn table
                             (where [[= :stream_name stream-name]
-                                    [> :server_timestamp page]])
-                            (order-by [:server_timestamp :asc])
-                            (limit chunk-size))
-            last-ts (:server_timestamp (last res))]
+                                    [>= :order_id page]])
+                            (order-by [:order_id :asc])
+                            (limit chunk-size))]
         (if (empty? res)
           []
-          (concat (map cassandra->clj res)
-                  (lazy-seq (db/lazy-events-page this stream-name
-                                                 date last-ts))))))))
+          (let [last-ts (inc (:order_id (last res)))]
+            (concat (map cassandra->clj res)
+                    (lazy-seq (db/lazy-events-page
+                               this stream-name date last-ts)))))))))
 
 (defn create-keyspace [c]
   (let [conn (cc/connect ["127.0.0.1"])]
@@ -179,8 +208,11 @@
 
 (defn init-table [conn table]
   (cql/create-table conn table (column-definitions schema))
+  (cql/create-table conn (keyword (str (name table) "_times"))
+                    (column-definitions schema-times))
   #_(cql/create-index conn table :stream_name)
   (cql/create-index conn table :service_id)
+  (cql/create-index conn table :local_id)
   #_(cql/create-index conn table :server_timestamp))
 
 (with-handler! #'cql/insert

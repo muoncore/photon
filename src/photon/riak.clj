@@ -1,6 +1,6 @@
 (ns photon.riak
   (:require [clj-http.client :as client]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [clj-time.core :as time]
             [photon.db :as db]
             [photon.config :as conf]
@@ -31,20 +31,21 @@
     (client/delete (riak-url this id)))
   (delete-all! [this]
     (let [body (:body (client/get (str (bucket-url this) "?keys=true")))
-          js (json/read-str body :key-fn keyword)
+          js (json/parse-string body true)
           k (first (:keys js))]
       (dorun (map #(try (db/delete! this %) (catch Exception e (log/debug (.getMessage e)))) (:keys js)))))
   (put [this data]
     (let [id (db/uuid)
-          wrapper (json/write-str {:id_s id
-                                   :created_dt (db/datetime)
-                                   :data_s (json/write-str data)})]
+          wrapper (json/generate-string
+                   {:id_s id
+                    :created_dt (db/datetime)
+                    :data_s (json/generate-string data)})]
       (print (str "PUT "  (riak-url this id) "\n"))
       (print "BODY: " wrapper "\n")
       (client/put (riak-url this id) {:body wrapper :content-type :json})))
   (search [this id] (:body (client/get (riak-url this id))))
   (store [this payload]
-    (.persist riak "__all__" "event" (json/write-str payload)))
+    (.persist riak "__all__" "event" (json/generate-string payload)))
   (event [this id]
     (.getEvent riak id))
   (distinct-values [this k] ["events"])

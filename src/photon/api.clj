@@ -10,11 +10,13 @@
         language (:language body)
         code (:reduction body)
         initial-value (:initial-value body)]
-    (streams/register-query! stm projection-name
-                             stream-name
-                             (keyword language)
-                             code
-                             (read-string initial-value))
+    (streams/register-query!
+     stm
+     {:projection-name projection-name
+      :stream-name stream-name
+      :language (keyword language)
+      :reduction code
+      :initial-value (read-string initial-value)})
     {:correct true}))
 
 (defn projections-with-val [projs]
@@ -27,8 +29,8 @@
   (log/info "Querying" projection-name)
   (let [res (first (filter #(= (name (:projection-name %)) projection-name)
                            (map deref (vals @streams/queries))))]
-    (log/info "Result:" (pr-str res))
-    (log/info "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
+    #_(log/info "Result:" (pr-str res))
+    #_(log/info "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
     res))
 
 (defn projections []

@@ -11,10 +11,11 @@
             [photon.streams :as streams]
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [clojure.core.async :as async :refer [go-loop go timeout
                                                   <! >! close! chan
                                                   sliding-buffer]]
+            [cheshire.generate :refer [add-encoder]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [photon.config :as conf]
@@ -76,33 +77,33 @@
           (prn "closed."))))))
 
 (defn wrap-json [r]
-  (response/header (response/response (json/write-str r))
+  (response/header (response/response (json/generate-string r))
                    "Content-Type" "application/json"))
 
-(extend Double json/JSONWriter
-  {:-write (fn [object out]
-             (cond (.isInfinite object)
-                   (.print out 9007199254740992.0)
-                   (.isNaN object)
-                   (.print out 0.0)
-                   :else
-                   (.print out object)))})
+(add-encoder Double
+             (fn [object out]
+               (cond (.isInfinite object)
+                     (.writeString out (str 9007199254740992.0))
+                     (.isNaN object)
+                     (.writeString out (str 0.0))
+                     :else
+                     (.writeString out (str object)))))
 
-(extend Exception json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (pr-str (.getMessage object))))})
+(add-encoder Exception
+             (fn [object out]
+               (.writeString out (pr-str (.getMessage object)))))
 
-(extend clojure.lang.AFunction json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (pr-str object)))})
+(add-encoder clojure.lang.AFunction
+             (fn [object out]
+               (.writeString out (pr-str object))))
 
-(extend org.bson.types.ObjectId json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (str "\"" (.toString object) "\"")))})
+(add-encoder org.bson.types.ObjectId
+             (fn [object out]
+               (.writeString out (str "\"" (.toString object) "\""))))
 
-(extend clojure.lang.Ref json/JSONWriter
-  {:-write (fn [object out]
-             (.print out (json/write-str @object)))})
+(add-encoder clojure.lang.Ref
+             (fn [object out]
+               (.writeString out (json/generate-string @object))))
 
 (def cold-latency 5000)
 

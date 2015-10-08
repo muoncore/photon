@@ -1,5 +1,5 @@
 (ns photon.filedb
-  (:require [clojure.data.json :as json]
+  (:require [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [photon.db :as db]))
 
@@ -30,7 +30,7 @@
                                        (System/currentTimeMillis)
                                        (long server-timestamp)))]
               (with-open [w (clojure.java.io/writer file-name :append true)]
-                (.write w (str (json/write-str new-payload) "\n")))))
+                (.write w (str (json/generate-string new-payload) "\n")))))
   (db/event [this id]
             (db/fetch this id))
   (db/distinct-values [this k]
@@ -47,7 +47,7 @@
                                       (= :__all__ stream-name)
                                       (= stream-name (:stream-name ev)))
                                   (<= date (:server-timestamp ev))))
-                               (map #(json/read-str % :key-fn keyword)
+                               (map #(json/parse-string % true)
                                     (line-seq rdr)))))
       (catch java.io.IOException e
         '())))

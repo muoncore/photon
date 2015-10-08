@@ -2,22 +2,23 @@
   (:require [clj-http.client :as client]
             [somnium.congomongo :as m]
             [clojure.pprint :as pp]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [clojure.data.xml :as xml]))
 
 (defn import-old-photon! []
   (m/with-mongo (m/make-connection "photon" :host "localhost" :port 27017)
     (loop [url "http://10.90.228.85:2113/streams/events_production"]
       (println "Loading" url "...")
-      (let [content (json/read-str (:body (client/get url {:accept :json}))
-                                   :key-fn keyword)
+      (let [content (json/parse-string (:body (client/get url {:accept :json}))
+                                       true)
             next-url (:uri (first (filter #(= (:relation %) "next") (:links content))))
             entries (:entries content)
             links (map (fn [entry]
                          (:uri (first (:links entry))))
                        entries)
-            events (map #(let [js (json/read-str (:body (client/get % {:accept :json}))
-                                                 :key-fn keyword)]
+            events (map #(let [js (json/parse-string
+                                   (:body (client/get % {:accept :json}))
+                                   true)]
                            (if (map? js)
                              js
                              (spit "/tmp/offending.txt"

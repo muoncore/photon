@@ -6,7 +6,7 @@
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
-                 [io.muoncore/muon-clojure "5.3.2"]
+                 [io.muoncore/muon-clojure "5.3.6"]
                  [org.marianoguerra/clj-rhino "0.2.2"]
                  [compojure "1.3.4"]
                  [fipp "0.6.2"]
@@ -18,7 +18,7 @@
                  [clj-http "1.1.2"]
                  [cljs-http "0.1.35"]
                  [org.clojure/java.data "0.1.1"]
-                 [org.clojure/data.json "0.2.6"]
+                 [cheshire "5.5.0"]
                  ;; TODO: Remove when gniazdo and lein-ring use the same Jetty
                  [org.eclipse.jetty/jetty-server "9.3.0.M1"]
                  [org.clojure/data.xml "0.0.8"]
@@ -54,6 +54,7 @@
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
   :java-source-paths ["java"]
+  :jvm-opts ["-Xmx4g"]
   :figwheel {:server-port 3000
              :load-warninged-code true
              :open-file-command "mvim"

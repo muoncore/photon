@@ -1,13 +1,13 @@
 (ns photon.db
-  (:require [clojure.data.json :as json]))
+  (:require [cheshire.core :as json]))
 
 (defn jo->map [jo]
   (let [ks (iterator-seq (.keys jo))
         obj (zipmap (map keyword ks) (map #(.get jo %) ks))]
-    (assoc obj :payload (json/read-str
+    (assoc obj :payload (json/parse-string
                           (clojure.string/replace (:payload_s obj)
                                                   #"'" "\"")
-                          :key-fn keyword))))
+                          true))))
 
 (defn get-current-iso-8601-date
   "Returns current ISO 8601 compliant date."
