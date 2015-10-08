@@ -155,9 +155,15 @@
         (.log js/console "Error:" (pr-str error))))))
 
 (defn filter-projection [proj]
-  (select-keys proj [:stream
-                     :avg-time :status :language :processed
-                     :stream-name :projection-name]))
+  (assoc
+   (select-keys proj [:stream
+                      :avg-time :status :language :processed
+                      :stream-name :projection-name])
+   :url (let [current (.-href (.-location js/window))
+              root (clojure.string/join
+                    "/"
+                    (drop-last (clojure.string/split current #"/")))]
+          (str root "/projection/" (:projection-name proj)))))
 
 (defn projection-item [params owner]
   (reify
@@ -167,6 +173,9 @@
         (apply dom/tr nil
                      (map #(dom/td nil
                              (condp = (key %)
+                               :url
+                              (dom/a #js
+                                 {:href (val %)} (val %)) 
                                :projection-name
                                (dom/a #js
                                  {:href "#"
@@ -185,6 +194,7 @@
                 :current-value "Current value"
                 :avg-time "Avg. time/event"
                 :status "Status"
+                :url "Data link"
                 :language "Language"
                 :processed "Events processed"
                 :last-event "Last event processed"

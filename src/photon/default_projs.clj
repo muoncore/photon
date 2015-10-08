@@ -15,10 +15,18 @@
 
 (def all-events
   (sfn/fn [p n]
-    (let [ignored ["/favicon.ico" "/fonts/" "/learn.json"]
+    (let [hash-amount 100
+          ignored ["/favicon.ico" "/fonts/" "/learn.json"
+                   "/images/learn.json" "/apple-touch-icon.png"
+                   "/browserconfig.xml"
+                   "/views-react//remarkable-react.jsx"
+                   "/apple-touch-icon-precomposed.png"]
           payload (:payload n)
-          user (:session_id payload)]
-      (if (and (not (nil? user)) (= "get-html" (:commandName payload)))
+          user-agent (:user-agent (:headers payload))
+          user (mod (hash (:session_id payload)) hash-amount)]
+      (if (and (not (nil? user)) (= "get-html" (:commandName payload))
+               (not (nil? user-agent))
+               (not (.startsWith user-agent "Apache")))
         (let [matrix (:matrix p)
               origin (get (:user-last p) user)
               destination (:url payload)
@@ -36,19 +44,51 @@
                :user-last (assoc (:user-last p) user destination)})))
         p))))
 
+(def browser-count
+  (sfn/fn [p n]
+    (let [hash-amount 100
+          payload (:payload n)
+          session-id (:session_id payload)
+          user-agent (:user-agent (:headers payload))
+          user (:user payload)]
+      (if (or (nil? session-id) (nil? user-agent)
+              (= 0 (.indexOf user-agent "curl"))
+              (= 0 (.indexOf user-agent "node-superagent")))
+        p
+        (assoc-in p [user-agent session-id :user] user)))))
+
 (def default-projections
-  [{:projection-name "__streams__"
+  [#_{:projection-name "__streams__"
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
     :initial-value {}}
-   #_{:projection-name "all-events"
-    :stream-name "cambio"
+   #_#_#_{:projection-name "__streams2__"
+    :stream-name "__all__"
     :language :clojure
-    :reduction (pr-str all-events)
-    :initial-value {:user-last {}
-                    :matrix {}}}
-   ])
+    :reduction (pr-str stream-fn)
+    :initial-value {}}
+   {:projection-name "__streams3__"
+    :stream-name "__all__"
+    :language :clojure
+    :reduction (pr-str stream-fn)
+    :initial-value {}}
+   {:projection-name "__streams4__"
+    :stream-name "__all__"
+    :language :clojure
+    :reduction (pr-str stream-fn)
+    :initial-value {}}
+   {:projection-name "all-events"
+      :stream-name "cambio"
+      :language :clojure
+      :reduction (pr-str all-events)
+      :initial-value {:user-last {}
+                      :matrix {}}}
+   #_{:projection-name "browser-count"
+      :stream-name "cambio"
+      :language :clojure
+      :reduction (pr-str all-events)
+      :initial-value {}}])
 
 (defn init-projection! [proj-file]
   (read-string (slurp proj-file)))

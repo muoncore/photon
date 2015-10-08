@@ -54,6 +54,8 @@
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
   :java-source-paths ["java"]
+  :warn-on-reflection true
+  #_:jvm-opts ["-Xmx4g" "-agentpath:/Users/sergio/Downloads/YourKit_Java_Profiler_2015_build_15074.app/Contents/Resources/bin/mac/libyjpagent.jnilib"]
   :jvm-opts ["-Xmx4g"]
   :figwheel {:server-port 3000
              :load-warninged-code true

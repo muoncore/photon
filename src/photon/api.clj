@@ -22,7 +22,7 @@
 (defn projections-with-val [projs]
   (map
     (fn [v] (assoc v :fn (pr-str (:fn v))))
-    (map #(apply dissoc (deref %) [:_id])
+    (map #(apply dissoc (deref %) [:_id :current-value])
          (vals projs))))
 
 (defn projection [projection-name]
