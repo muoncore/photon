@@ -1,7 +1,10 @@
 (ns photon.filedb
   (:require [cheshire.core :as json]
             [clojure.tools.logging :as log]
-            [photon.db :as db]))
+            [photon.db :as db])
+  (:import (java.io File)))
+
+(defn new-file [^String s] (File. s))
 
 (defrecord DBFile [file-name]
   db/DB
@@ -13,8 +16,8 @@
                 (db/delete-all! this)
                 (dorun (map #(db/store this %) filtered))))
   (db/delete-all! [this]
-                  (.delete (java.io.File. file-name))
-                  (java.io.File. file-name))
+                  (.delete (new-file file-name))
+                  (new-file file-name))
   (db/put [this data]
           (db/delete! this (:local-id data))
           (db/store this data))

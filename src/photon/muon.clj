@@ -18,9 +18,9 @@
            (io.muoncore.config MuonBuilder AutoConfigurationWriter)
            (java.util Map)))
 
-(defmulti decode-event #(.getContentType %))
+(defmulti decode-event (fn [^MuonResourceEvent e] (.getContentType e)))
 
-(defmethod decode-event "application/json" [queryEvent]
+(defmethod decode-event "application/json" [^MuonResourceEvent queryEvent]
   (into {} (.getDecodedContent queryEvent)))
 
 (defrecord PhotonMicroservice [m stm]

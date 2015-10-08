@@ -1,7 +1,8 @@
 (ns photon.db
-  (:require [cheshire.core :as json]))
+  (:require [cheshire.core :as json])
+  (:import (org.json JSONObject)))
 
-(defn jo->map [jo]
+(defn jo->map [^JSONObject jo]
   (let [ks (iterator-seq (.keys jo))
         obj (zipmap (map keyword ks) (map #(.get jo %) ks))]
     (assoc obj :payload (json/parse-string

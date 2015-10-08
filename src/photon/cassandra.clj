@@ -7,8 +7,9 @@
             [clojurewerkz.cassaforte.cql    :as cql]
             [dire.core :refer [with-handler!]])
   (:use clojurewerkz.cassaforte.query)
-  (:import (java.nio.charset Charset)
-           (java.nio CharBuffer)))
+  (:import (java.nio.charset Charset CharsetEncoder CharsetDecoder)
+           (java.nio CharBuffer Buffer)
+           (java.math BigInteger)))
 ;; TODO: Optimise connection handling!
 
 #_(def kspace "photon")
@@ -16,7 +17,8 @@
 (def chunk-size 1000)
 
 (def charset (Charset/forName "UTF-8"))
-(def encoder (.newEncoder charset))
+(def encoder ((fn [^Charset charset] (.newEncoder charset)) charset))
+(defn decoder [^Charset charset] (.newDecoder charset))
 (def cassandra-instances (ref {}))
 
 (def schema
@@ -48,6 +50,11 @@
           conn))
       ref-conn)))
 
+(defn encode [^CharsetEncoder encoder ^String s]
+  (.encode encoder (CharBuffer/wrap s)))
+
+(defn long-value [^BigInteger bi] (.longValue bi))
+
 (defn clj->cassandra [cl]
   (let [rm (rename-keys cl {:stream-name :stream_name
                             :service-id :service_id
@@ -56,10 +63,16 @@
                             :photon-timestamp :photon_timestamp
                             :local-id :local_id
                             :schema :schema_url})]
-    (assoc (assoc rm :payload (.encode encoder
-                                       (CharBuffer/wrap
-                                        (json/generate-string (:payload cl)))))
-           :server_timestamp (.longValue (:server_timestamp rm)))))
+    (assoc
+     (assoc rm :payload
+            (encode encoder (json/generate-string (:payload cl))))
+     :server_timestamp (long-value (:server_timestamp rm)))))
+
+(defn position [^Buffer b] (.position b))
+(defn set-position! [^Buffer b ^Integer i] (.position b i))
+(defn decode [^CharsetDecoder encoder ^Buffer b]
+  (.decode encoder b))
+(defn buffer->string [^CharBuffer cb] (.toString cb))
 
 (defn cassandra->clj [cass]
   #_(println (pr-str cass))
@@ -73,11 +86,11 @@
         p (:payload cass)]
     (if (nil? p)
       {}
-      (let [old-position (.position p)
-            decoder (.newDecoder charset)
-            data (.toString (.decode decoder p))
+      (let [old-position (position p)
+            decoder (decoder charset)
+            data (buffer->string (decode decoder p))
             res (assoc rm :payload (json/parse-string data true))]
-        (.position p old-position)
+        (set-position! p old-position)
         #_(println (pr-str res))
         res))))
 
@@ -199,10 +212,10 @@
                                            :primary-key [:name]}))
     (dorun (take 10
                  (repeatedly
-                  #(cc/prepared (cql/insert
-                                 conn "users"
-                                 {:name (.toString (java.util.UUID/randomUUID))
-                                  :age (int (rand-int 100))})))))
+                  #(cql/insert
+                    conn "users"
+                    {:name (.toString (java.util.UUID/randomUUID))
+                     :age (int (rand-int 100))}))))
     (println "Done storing...")
     (cql/iterate-table conn "users" :name 100)))
 
@@ -215,17 +228,20 @@
   (cql/create-index conn table :local_id)
   #_(cql/create-index conn table :server_timestamp))
 
+(defn exception->message [^Throwable t] (.getMessage t))
+
 (with-handler! #'cql/insert
   com.datastax.driver.core.exceptions.InvalidQueryException
   (fn [e conn table data & args]
-    (println "::insert::" (.getMessage e) "::" (pr-str table) "::" (pr-str data))
+    (println "::insert::" (exception->message e) "::"
+             (pr-str table) "::" (pr-str data))
     (init-table conn table)
     (cql/insert conn table data)))
 
 (with-handler! #'cql/select
   com.datastax.driver.core.exceptions.InvalidQueryException
   (fn [e conn table query & args]
-    (println "::select::" (.getMessage e))
+    (println "::select::" (exception->message e))
     (init-table conn table)
     []))
 

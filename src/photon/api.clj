@@ -1,7 +1,8 @@
 (ns photon.api
   (:require [photon.streams :as streams]
             [clojure.tools.logging :as log]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async])
+  (:import (java.util Map)))
 
 (defn post-projection! [stm request]
   (let [body request
@@ -36,8 +37,11 @@
 (defn projections []
   (projections-with-val @streams/queries))
 
+(defn map->hashmap [^Map m]
+  (java.util.HashMap. m))
+
 (defn proper-map [m]
-  (java.util.HashMap. (clojure.walk/stringify-keys m)))
+  (map->hashmap (clojure.walk/stringify-keys m)))
 
 (defn projection-keys []
   {:projection-keys

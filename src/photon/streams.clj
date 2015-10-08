@@ -13,7 +13,8 @@
             [photon.config :as conf]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
-            [photon.db :as db]))
+            [photon.db :as db])
+  (:import (org.mozilla.javascript ConsString)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
 
@@ -73,6 +74,9 @@
     {:computable code
      :persist f-string}))
 
+(defn cons-string->string [^ConsString elem]
+  (.toString elem))
+
 (defn generate-fun-with-return [scope fun]
   (fn [& args]
     (let [res (apply js/call-timeout scope fun 9999999 args)]
@@ -80,9 +84,9 @@
         (let [converted (clojure.walk/walk
                          (fn [elem]
                            (if (instance?
-                                org.mozilla.javascript.ConsString
+                                ConsString
                                 elem)
-                             (.toString elem)
+                             (cons-string->string elem)
                              elem))
                          identity
                          (js/from-js res)
@@ -131,6 +135,8 @@
           (alter publications assoc async-stream new-p)
           new-p)
         p))))
+(defn exception->message [^Throwable t] (.getMessage t))
+(defn exception->stack-trace [^Throwable t] (.getStackTrace t))
 
 (defrecord AsyncStream [m db]
   StreamManager
@@ -236,10 +242,10 @@
                   to-merge-no-time
                     (if (instance? Exception new-value)
                       {:last-error
-                       (str (.getMessage new-value) "\n"
+                       (str (exception->message new-value) "\n"
                             (clojure.string/join
                              "\n"
-                             (map str (.getStackTrace new-value))))
+                             (map str (exception->stack-trace new-value))))
                        :status :failed}
                       {:current-value new-value
                        :status :running})

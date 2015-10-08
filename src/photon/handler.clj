@@ -25,7 +25,10 @@
             [photon.mongo :as mongo]
             [chord.http-kit :refer [wrap-websocket-handler]]
             #_[photon.riak :as riak]
-            [compojure.handler :refer [site]]))
+            [compojure.handler :refer [site]])
+  (:import (com.fasterxml.jackson.core JsonGenerator)
+           (clojure.lang AFunction Ref)
+           (org.bson.types ObjectId)))
 
 (defonce own-stream (ref nil))
 
@@ -81,7 +84,7 @@
                    "Content-Type" "application/json"))
 
 (add-encoder Double
-             (fn [object out]
+             (fn [^Double object ^JsonGenerator out]
                (cond (.isInfinite object)
                      (.writeString out (str 9007199254740992.0))
                      (.isNaN object)
@@ -90,19 +93,19 @@
                      (.writeString out (str object)))))
 
 (add-encoder Exception
-             (fn [object out]
+             (fn [^Exception object ^JsonGenerator out]
                (.writeString out (pr-str (.getMessage object)))))
 
-(add-encoder clojure.lang.AFunction
-             (fn [object out]
+(add-encoder AFunction
+             (fn [^AFunction object ^JsonGenerator out]
                (.writeString out (pr-str object))))
 
-(add-encoder org.bson.types.ObjectId
-             (fn [object out]
+(add-encoder ObjectId
+             (fn [^ObjectId object ^JsonGenerator out]
                (.writeString out (str "\"" (.toString object) "\""))))
 
-(add-encoder clojure.lang.Ref
-             (fn [object out]
+(add-encoder Ref
+             (fn [^Ref object ^JsonGenerator out]
                (.writeString out (json/generate-string @object))))
 
 (def cold-latency 5000)
