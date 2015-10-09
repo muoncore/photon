@@ -54,9 +54,20 @@
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
   :java-source-paths ["java"]
-  :warn-on-reflection true
-  #_#_:jvm-opts ["-Xmx4g" "-agentpath:/Users/sergio/Downloads/YourKit_Java_Profiler_2015_build_15074.app/Contents/Resources/bin/mac/libyjpagent.jnilib"]
-  :jvm-opts ["-Xmx4g"]
+  #_#_:warn-on-reflection true
+  :jvm-opts [#_"-Xmx4g"
+             #_"-XX:+PrintGCDetails"
+             #_"-agentpath:/Users/sergio/Downloads/YourKit_Java_Profiler_2015_build_15074.app/Contents/Resources/bin/mac/libyjpagent.jnilib"
+             "-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
+             "-XX:+UseParNewGC" "-XX:ParallelCMSThreads=4"
+             "-XX:+ExplicitGCInvokesConcurrent"
+             "-XX:+CMSParallelRemarkEnabled"
+             "-XX:-CMSIncrementalPacing"
+             "-XX:+UseCMSInitiatingOccupancyOnly"
+             "-XX:CMSIncrementalDutyCycle=100"
+             "-XX:CMSInitiatingOccupancyFraction=90"
+             "-XX:CMSIncrementalSafetyFactor=10"
+             "-XX:+CMSClassUnloadingEnabled" "-XX:+DoEscapeAnalysis"]
   :figwheel {:server-port 3000
              :load-warninged-code true
              :open-file-command "mvim"

@@ -1,7 +1,8 @@
 (ns photon.streams
-  (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer sub
-                                        sliding-buffer mult tap close! pub
-                                        put! >!!]
+  (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer
+                                        sliding-buffer mult tap close!
+                                        put! >!! mix admix onto-chan
+                                        pub sub alts! pipeline]
              :as async]
             [serializable.fn :as sfn]
             [clj-rhino :as js]
@@ -29,6 +30,8 @@
 (defonce global-channels (ref {}))
 (defonce active-streams (ref {}))
 (defonce virtual-streams (ref {}))
+(defonce projection-channel (chan))
+(defonce projection-mix (mix projection-channel))
 
 
 ;; Stream protocols and multimethods
@@ -135,8 +138,65 @@
           (alter publications assoc async-stream new-p)
           new-p)
         p))))
+
 (defn exception->message [^Throwable t] (.getMessage t))
 (defn exception->stack-trace [^Throwable t] (.getStackTrace t))
+
+(defn projection-step! [running-query current-event function ch]
+  (dosync
+   (let [current-value (:current-value @running-query)]
+     (if (nil? current-event)
+       (alter running-query assoc :status :finished)
+       (let [start-ts (System/currentTimeMillis)
+             new-value (try
+                         (function current-value current-event)
+                         (catch Exception e
+                           (log/info (.getMessage e))
+                           (.printStackTrace e)
+                           e))
+             current-time (- (System/currentTimeMillis) start-ts)
+             to-merge-no-time
+             (if (instance? Exception new-value)
+               {:last-error
+                (str (exception->message new-value) "\n"
+                     (clojure.string/join
+                      "\n"
+                      (map str (exception->stack-trace new-value))))
+                :status :failed}
+               {:current-value new-value
+                :status :running})
+             to-merge
+             (merge to-merge-no-time
+                    {:avg-global-time
+                     (double (/ (- (System/currentTimeMillis)
+                                   (:init-time @running-query))
+                                (inc (:processed @running-query))))
+                     :avg-time (next-avg
+                                (:avg-time @running-query)
+                                current-time
+                                (inc (:processed @running-query)))
+                     :processed (inc (:processed @running-query))
+                     :last-event current-event})]
+         (alter running-query merge to-merge)
+         #_(spit (str (:projections.path conf/config)
+                      "/" projection-name ".projection")
+                 (pr-str @running-query) :append false) 
+         (go (>! ch @running-query))
+         (if (instance? Exception new-value)
+           (do
+             (close! ch)
+             (alter virtual-streams
+                    dissoc (:projection-name @running-query)))))))))
+
+(defn schedule [current-proj]
+  (projection-step! (:running-query current-proj)
+                    (:element current-proj)
+                    (:function current-proj)
+                    (:channel current-proj))
+  true)
+
+(pipeline (:parallel.projections conf/config) (chan (sliding-buffer 1))
+          (map schedule) projection-channel)
 
 (defrecord AsyncStream [m db]
   StreamManager
@@ -223,55 +283,17 @@
                           "stream-type" "hot-cold"
                           "stream-name" s-name})
           _ (log/info "Retrieved stream for" projection-name)
-          running-query (ref new-descriptor)]
-      (dosync (alter queries assoc projection-name running-query))
+          running-query (ref new-descriptor)
+          to-mix (clojure.core.async/map
+                  (fn [element]
+                    {:running-query running-query
+                     :element element
+                     :function function
+                     :channel ch})
+                  [s])]
       (log/info "Starting projection loop for" projection-name)
-      (go
-        (loop [current-value (:current-value new-descriptor)
-               current-event (<! s)]
-          (if (nil? current-event)
-            (dosync (alter running-query assoc :status :finished))
-            (let [start-ts (System/currentTimeMillis)
-                  new-value (try
-                              (function current-value current-event)
-                              (catch Exception e
-                                (log/info (.getMessage e))
-                                (.printStackTrace e)
-                                e))
-                  current-time (- (System/currentTimeMillis) start-ts)
-                  to-merge-no-time
-                    (if (instance? Exception new-value)
-                      {:last-error
-                       (str (exception->message new-value) "\n"
-                            (clojure.string/join
-                             "\n"
-                             (map str (exception->stack-trace new-value))))
-                       :status :failed}
-                      {:current-value new-value
-                       :status :running})
-                  to-merge
-                  (merge to-merge-no-time
-                         {:avg-global-time
-                          (double (/ (- (System/currentTimeMillis)
-                                        (:init-time @running-query))
-                                     (inc (:processed @running-query))))
-                          :avg-time (next-avg
-                                     (:avg-time @running-query)
-                                     current-time
-                                     (inc (:processed @running-query)))
-                          :processed (inc (:processed @running-query))
-                          :last-event current-event})]
-              (dosync (alter running-query merge to-merge))
-              #_(spit (str (:projections.path conf/config)
-                         "/" projection-name ".projection")
-                    (pr-str @running-query) :append false) 
-              (>! ch @running-query)
-              (if (instance? Exception new-value)
-                (do
-                  (close! ch)
-                  (dosync
-                   (alter virtual-streams dissoc projection-name)))
-                (recur new-value (<! s)))))))
+      (dosync (alter queries assoc projection-name running-query))
+      (admix projection-mix to-mix)
       (log/info "All done for" projection-name)))
   (process-event! [this msg]
                   ;; Think about the order of store+send to taps
@@ -301,27 +323,30 @@
 
 (defmethod stream "cold" [a-stream params]
   (log/info "cold-stream" (pr-str params))
-  (let [ch (chan (buffer 1))
-        full-s (data-from a-stream 
-                          (get params "stream-name"
-                               (get params :stream-name "__all__"))
-                          (extract-date params))
-        full-s (if (and (contains? params :limit)
-                        (not (nil? (:limit params))))
-                 (take (:limit params) full-s)
-                 full-s)]
+  (let [ch (chan (buffer 1))]
     (go
       (log/info "Opening stream...")
-      (loop [e (first full-s) s (rest full-s) closed? false]
-        (if (nil? e)
-          (do
-            (close! ch)
-            (log/info ":::::::::::::::::::: Stream depleted, closing"))
-          (if closed?
-            (log/info ":::::::::::::::::::: Stream closed!")
+      (loop [full-s
+             (let [df (data-from
+                       a-stream 
+                       (get params "stream-name"
+                            (get params :stream-name "__all__"))
+                       (extract-date params))]
+               (if (and (contains? params :limit)
+                        (not (nil? (:limit params))))
+                 (take (:limit params) df)
+                 df))
+             closed? false]
+        (let [e (first full-s) s (rest full-s)]
+          (if (nil? e)
             (do
-              (let [closed? (not (>! ch e))]
-                (recur (first s) (rest s) closed?))))))
+              (close! ch)
+              (log/info ":::::::::::::::::::: Stream depleted, closing"))
+            (if closed?
+              (log/info ":::::::::::::::::::: Stream closed!")
+              (do
+                (let [closed? (not (>! ch e))]
+                  (recur s closed?)))))))
       (log/info "::: Cold stream over"))
     ch))
 
@@ -332,16 +357,14 @@
         _ (log/info "Getting stream-name and data")
         stream-name (get params "stream-name"
                          (get params :stream-name "__all__"))
-        full-s (data-from a-stream
-                          stream-name
-                          (extract-date params))
         _ (log/info "Finished getting stream-name and data")]
     (go
-      (loop [e (first full-s)
-             s (rest full-s)
+      (loop [full-s (data-from a-stream stream-name
+                               (extract-date params))
              closed? false
              last-t (System/currentTimeMillis)]
-        (if (nil? e)
+        (let [e (first full-s) s (rest full-s)]
+         (if (nil? e)
           (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
           (let [rest-s (rest s)
                 new-s (if (empty? rest-s)
@@ -352,7 +375,7 @@
             (if closed?
               (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
               (let [closed? (not (>! ch e))]
-                (recur (first new-s) (rest new-s) closed? last-t))))))
+                (recur (cons (first new-s) (rest new-s)) closed? last-t)))))))
       (if (= stream-name "__all__")
         (tap (:mult-channel (global-channel a-stream)) ch)
         (sub (:p (publisher a-stream)) stream-name ch)))

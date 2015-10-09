@@ -14,7 +14,7 @@
 
 #_(def kspace "photon")
 #_(def table "events")
-(def chunk-size 1000)
+(def chunk-size 100)
 
 (def charset (Charset/forName "UTF-8"))
 (def encoder ((fn [^Charset charset] (.newEncoder charset)) charset))
@@ -100,9 +100,9 @@
     '()
     (let [sorted (sort-by #(sort-fn (first %)) seqs)
           chosen (first sorted)
-          new-seqs (concat [(rest chosen)] (rest sorted))]
-      (concat [(first chosen)]
-              (lazy-seq (ordered-combination sort-fn new-seqs))))))
+          new-seqs (cons (rest chosen) (rest sorted))]
+      (cons (first chosen)
+            (lazy-seq (ordered-combination sort-fn new-seqs))))))
 
 (defrecord DBCassandra [conn-string kspace table]
   db/DB
@@ -168,7 +168,6 @@
                               (order-by [:server_timestamp :asc])
                               (limit 1))
               first-ts (:order_id (first res))]
-          (println first-ts)
           (if (empty? res)
             []
             (db/lazy-events-page this stream-name date first-ts))))))

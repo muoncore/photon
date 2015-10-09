@@ -83,16 +83,16 @@
     :reduction (pr-str stream-fn)
     :initial-value {}}
    {:projection-name "all-events"
-      :stream-name "cambio"
-      :language :clojure
-      :reduction (pr-str all-events)
-      :initial-value {:user-last {}
-                      :matrix {}}}
+    :stream-name "cambio"
+    :language :clojure
+    :reduction (pr-str all-events)
+    :initial-value {:user-last {}
+                    :matrix {}}}
    {:projection-name "browser-count"
-      :stream-name "cambio"
-      :language :clojure
-      :reduction (pr-str all-events)
-      :initial-value {}}])
+    :stream-name "cambio"
+    :language :clojure
+    :reduction (pr-str all-events)
+    :initial-value {}}])
 
 (defn init-projection! [proj-file]
   (read-string (slurp proj-file)))
