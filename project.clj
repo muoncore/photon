@@ -58,6 +58,7 @@
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"
              #_"-agentpath:/Users/sergio/Downloads/YourKit_Java_Profiler_2015_build_15074.app/Contents/Resources/bin/mac/libyjpagent.jnilib"
+             #_"server"
              "-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
              "-XX:+UseParNewGC" "-XX:ParallelCMSThreads=4"
              "-XX:+ExplicitGCInvokesConcurrent"

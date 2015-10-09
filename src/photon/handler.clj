@@ -156,6 +156,11 @@
   (POST "/projections" request (api/post-projection!
                                 (:stm @own-stream)
                                 (:body request)))
+  (POST "/event" request (api/post-event!
+                          (:stm @own-stream)
+                          (json/parse-string (:body request) true)))
+  (POST "/event/:stream-name" request
+        (api/post-event! (:stm @own-stream) (:body request)))
   (route/resources "/")
   (route/not-found "Not Found"))
 

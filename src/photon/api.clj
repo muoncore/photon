@@ -20,6 +20,9 @@
       :initial-value (read-string initial-value)})
     {:correct true}))
 
+(defn post-event! [stm ev]
+  (streams/process-event! stm ev))
+
 (defn projections-with-val [projs]
   (map
     (fn [v] (assoc v :fn (pr-str (:fn v))))

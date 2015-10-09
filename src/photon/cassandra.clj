@@ -66,7 +66,7 @@
     (assoc
      (assoc rm :payload
             (encode encoder (json/generate-string (:payload cl))))
-     :server_timestamp (long-value (:server_timestamp rm)))))
+     :server_timestamp (long-value (biginteger (:server_timestamp rm))))))
 
 (defn position [^Buffer b] (.position b))
 (defn set-position! [^Buffer b ^Integer i] (.position b i))
@@ -232,10 +232,12 @@
 (with-handler! #'cql/insert
   com.datastax.driver.core.exceptions.InvalidQueryException
   (fn [e conn table data & args]
-    (println "::insert::" (exception->message e) "::"
-             (pr-str table) "::" (pr-str data))
-    (init-table conn table)
-    (cql/insert conn table data)))
+    (let [msg (exception->message e)]
+      (println "::insert::" msg "::" (pr-str table) "::" (pr-str data))
+      (when-not ((fn [^String s ^String b] (.startsWith s b))
+                 msg "Unknown identifier")
+        (init-table conn table)
+        (cql/insert conn table data)))))
 
 (with-handler! #'cql/select
   com.datastax.driver.core.exceptions.InvalidQueryException

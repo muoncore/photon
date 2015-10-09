@@ -16,7 +16,7 @@
 
 (def all-events
   (sfn/fn [p n]
-    (let [hash-amount 100
+    (let [hash-amount 5000
           ignored ["/favicon.ico" "/fonts/" "/learn.json"
                    "/images/learn.json" "/apple-touch-icon.png"
                    "/browserconfig.xml"
@@ -42,10 +42,53 @@
                     matrix
                     (let [by-origin (get matrix origin {})
                           new-d (merge-with + by-origin {destination 1})]
-                      (assoc matrix origin new-d)))]
+                      (assoc matrix origin new-d)))
+                  new-keys (into [] (conj (into #{} (:keys p))
+                                          destination))]
               {:matrix new-matrix
+               :keys new-keys
                :user-last (assoc (:user-last p) user destination)})))
         p))))
+
+(def login-failed
+  (sfn/fn [p n]
+    (let [payload (:payload n)
+          session-id (:session_id payload)]
+      (if (nil? session-id)
+        p
+        (if (= (:commandName payload) "login-failed")
+          (into []
+                (conj (into #{} p)
+                      (clojure.string/lower-case
+                       (:username (:payload payload)))))
+          p)))))
+
+(def registered-vs-logged
+  (sfn/fn [p n]
+    (let [aggregation-unit 3600000
+          data (:payload n)
+          event-name (:commandName data)
+          entity-id (:entityId data)
+          url (:url data)
+          payload (:payload data)
+          username (:username payload)
+          server-timestamp (:server-timestamp n)]
+      (if (and (not (nil? payload)) (not (nil? server-timestamp))
+               (not (nil? username)) (= event-name "login-success"))
+        (let [interval (int (/ server-timestamp aggregation-unit))]
+          (update-in p [interval] #(merge-with + % {username 1})))
+        p))))
+
+(def session-duration
+  (sfn/fn [p n]
+    (let [data (:payload n)
+          session-id (:session_id data)
+          server-timestamp (:server-timestamp n)]
+      (if (nil? session-id)
+        p
+        (if (contains? (:sessions p) session-id)
+          (assoc-in p [:sessions session-id :end] server-timestamp)
+          (assoc-in p [:sessions session-id :start] server-timestamp))))))
 
 (def browser-count
   (sfn/fn [p n]
@@ -54,12 +97,13 @@
           session-id (:session_id payload)
           user-agent (:user-agent (:headers payload))
           index-of (fn [^String s ^String b] (.indexOf s b))
-          user (:user payload)]
+          user (:username (:payload payload))]
       (if (or (nil? session-id) (nil? user-agent)
               (= 0 (index-of user-agent "curl"))
+              (= 0 (index-of user-agent "Apache-HttpClient"))
               (= 0 (index-of user-agent "node-superagent")))
         p
-        (assoc-in p [user-agent session-id :user] user)))))
+        (assoc-in p [:agents user-agent session-id :user] user)))))
 
 (def default-projections
   [{:projection-name "__streams__"
@@ -67,31 +111,47 @@
     :language :clojure
     :reduction (pr-str stream-fn)
     :initial-value {}}
-   {:projection-name "__streams2__"
+   #_{:projection-name "__streams2__"
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
     :initial-value {}}
-   {:projection-name "__streams3__"
+   #_{:projection-name "__streams3__"
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
     :initial-value {}}
-   {:projection-name "__streams4__"
+   #_{:projection-name "__streams4__"
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
     :initial-value {}}
+   {:projection-name "login-failed"
+    :stream-name "cambio"
+    :language :clojure
+    :reduction (pr-str login-failed)
+    :initial-value []}
    {:projection-name "all-events"
     :stream-name "cambio"
     :language :clojure
     :reduction (pr-str all-events)
     :initial-value {:user-last {}
+                    :keys []
                     :matrix {}}}
    {:projection-name "browser-count"
     :stream-name "cambio"
     :language :clojure
-    :reduction (pr-str all-events)
+    :reduction (pr-str browser-count)
+    :initial-value {:agents {}}}
+   {:projection-name "registered-vs-logged"
+    :stream-name "cambio"
+    :language :clojure
+    :reduction (pr-str registered-vs-logged)
+    :initial-value {}}
+   {:projection-name "session-duration"
+    :stream-name "cambio"
+    :language :clojure
+    :reduction (pr-str session-duration)
     :initial-value {}}])
 
 (defn init-projection! [proj-file]

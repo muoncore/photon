@@ -36,7 +36,9 @@
                                            (api/projection-keys))))
   mcs/MicroserviceCommand
   (expose-post! [this]
-    (let [listener (fn [ev] (streams/process-event! stm (clojure.walk/keywordize-keys ev)))
+    (let [listener (fn [ev] (api/post-event!
+                             stm
+                             (clojure.walk/keywordize-keys ev)))
           listener-projections
           (fn [resource]
             (let [params (clojure.walk/keywordize-keys resource)]
