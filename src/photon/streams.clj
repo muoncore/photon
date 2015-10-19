@@ -195,8 +195,8 @@
                     (:channel current-proj))
   true)
 
-(pipeline (:parallel.projections conf/config) (chan (sliding-buffer 1))
-          (map schedule) projection-channel)
+(pipeline (read-string (str (:parallel.projections conf/config)))
+          (chan (sliding-buffer 1)) (map schedule) projection-channel)
 
 (defrecord AsyncStream [m db]
   StreamManager
