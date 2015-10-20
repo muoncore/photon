@@ -106,13 +106,15 @@
 
 (defrecord DBCassandra [conn-string kspace table]
   db/DB
-  (db/fetch [this id]
+  (db/fetch [this stream-name id]
+            (println "Fetching " stream-name " " id)
             (first
              (map
               cassandra->clj
               (let [conn (connection conn-string)]
                 (cql/use-keyspace conn kspace)
-                (cql/select conn table (where [[= :uuid id]]))))))
+                (cql/select conn table (where [[= :stream_name stream-name]
+                                               [= :order_id (bigint id)]]))))))
   (db/delete! [this id]
               (let [conn (connection conn-string)]
                 (cql/use-keyspace conn kspace)
@@ -138,8 +140,6 @@
                {:server_timestamp (:server-timestamp payload)
                 :stream_name (:stream-name payload)
                 :order_id (:order-id payload)})))
-  (db/event [this id]
-            (db/fetch this id))
   (db/distinct-values [this k]
     (let [conn (connection conn-string)
           ck (get {:stream-name :stream_name

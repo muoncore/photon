@@ -56,7 +56,10 @@
       (if-let [{:keys [message]} (<! ws-channel)]
         (do
           (<! (timeout t))
-          (>! ws-channel (api/projections-with-val @streams/queries))
+          (>! ws-channel
+              (if (contains? message :projection-name)
+                (api/projection (:projection-name message))
+                (api/projections-without-val @streams/queries)))
           (recur 1000))
         (do
           (close! ws-channel)
@@ -153,6 +156,9 @@
        (wrap-websocket-handler #'ws-streams-handler))
   (GET "/ws-projections" []
        (wrap-websocket-handler #'ws-projections-handler))
+  (GET "/event/:stream-name/:order-id" [stream-name order-id]
+       (wrap-json (api/event (:stm @own-stream) stream-name
+                             (read-string order-id))))
   (POST "/projections" request (api/post-projection!
                                 (:stm @own-stream)
                                 (:body request)))
