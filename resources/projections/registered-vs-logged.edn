@@ -1,0 +1,37 @@
+{:projection-name "registered-vs-logged",
+ :stream-name "cambio",
+ :language :clojure,
+ :reduction
+ (serializable.fn/fn
+  [p n]
+  (let
+   [aggregation-unit
+    3600000
+    data
+    (:payload n)
+    event-name
+    (:commandName data)
+    entity-id
+    (:entityId data)
+    url
+    (:url data)
+    payload
+    (:payload data)
+    username
+    (:username payload)
+    server-timestamp
+    (:server-timestamp n)]
+   (if
+    (and
+     (not (nil? payload))
+     (not (nil? server-timestamp))
+     (not (nil? username))
+     (= event-name "login-success"))
+    (let
+     [interval (int (/ server-timestamp aggregation-unit))]
+     (update-in
+      p
+      [interval]
+      (fn* [p1__716#] (merge-with + p1__716# {username 1}))))
+    p))),
+ :initial-value {}}

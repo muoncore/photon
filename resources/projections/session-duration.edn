@@ -1,0 +1,21 @@
+{:projection-name "session-duration",
+ :stream-name "cambio",
+ :language :clojure,
+ :reduction
+ (serializable.fn/fn
+  [p n]
+  (let
+   [data
+    (:payload n)
+    session-id
+    (:session_id data)
+    server-timestamp
+    (:server-timestamp n)]
+   (if
+    (nil? session-id)
+    p
+    (if
+     (contains? (:sessions p) session-id)
+     (assoc-in p [:sessions session-id :end] server-timestamp)
+     (assoc-in p [:sessions session-id :start] server-timestamp))))),
+ :initial-value {}}

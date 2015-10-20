@@ -1,0 +1,29 @@
+{:projection-name "browser-count",
+ :stream-name "cambio",
+ :language :clojure,
+ :reduction
+ (serializable.fn/fn
+  [p n]
+  (let
+   [hash-amount
+    100
+    payload
+    (:payload n)
+    session-id
+    (:session_id payload)
+    user-agent
+    (:user-agent (:headers payload))
+    index-of
+    (fn [s b] (.indexOf s b))
+    user
+    (:username (:payload payload))]
+   (if
+    (or
+     (nil? session-id)
+     (nil? user-agent)
+     (= 0 (index-of user-agent "curl"))
+     (= 0 (index-of user-agent "Apache-HttpClient"))
+     (= 0 (index-of user-agent "node-superagent")))
+    p
+    (assoc-in p [:agents user-agent session-id :user] user)))),
+ :initial-value {:agents {}}}
