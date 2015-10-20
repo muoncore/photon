@@ -21,9 +21,10 @@
   {:parallel.projections (str (.availableProcessors
                                (Runtime/getRuntime)))
    :db.backend "file"
+   :cassandra.ip "127.0.0.1"
    :amqp.url "amqp://localhost"
    :projections.path "/tmp/"
-   :file.path "resources/events.json"
+   :file.path "/tmp/photon/"
    :microservice.name "photon"
    :mongodb.host "localhost"
    :riak.default_bucket "rxriak-events-v1"

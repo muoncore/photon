@@ -18,15 +18,15 @@ The endpoints and expected schemas to interact with `photon` can be found
 create file resources/config.properties with your environment settings:
 
 ```
-# Microservice identifier:
+# Microservice identifier (default = photon):
 microservice.name=photon
-# AMQP endpoint:
+# AMQP endpoint (default = amqp://localhost):
 amqp.url=amqp://username:password@localhost
-# Number of cores assigned for parallel stream processing:
-# (Default = number of cores on your machine)
+# Number of cores assigned for parallel stream processing
+# (default = number of cores on your machine):
 parallel.projections=8
-# Local folder with projections, in EDN format, to pre-load on start:
-# (Optional)
+# Local folder with projections, in EDN format, to pre-load on start
+# (default = /tmp/photon):
 file.path=/path/to/edn-files/
 # DB backend plugin to use, several options currently available:
 db.backend={file,mongodb,riak,cassandra}
