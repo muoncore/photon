@@ -39,6 +39,7 @@
 
 (defprotocol ColdStream
   (clean! [this])
+  (event [this stream-name order-id])
   (data-from [this stream-name date-string]))
 
 (defprotocol HotStream
@@ -246,6 +247,7 @@
             (concat (:real-streams active-streams)
                     (:virtual-streams active-streams))))})
   ColdStream
+  (event [this stream-name order-id] (db/fetch db stream-name order-id))
   (clean! [this] (db/delete-all! db))
   (data-from [this stream-name date-string]
     (db/lazy-events db stream-name date-string))

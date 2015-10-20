@@ -21,26 +21,24 @@
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
 (defprotocol DB
-  (fetch [this id])
+  (fetch [this stream-name order-id])
   (delete! [this id])
   (delete-all! [this])
   (put [this data])
   (search [this id])
   (store [this payload])
-  (event [this id])
   (distinct-values [this k])
   (lazy-events [this stream-name date])
   (lazy-events-page [this stream-name date page]))
 
 (defrecord DBDummy []
   DB
-  (fetch [this id] {})
+  (fetch [this stream-name id] {})
   (delete! [this id])
   (delete-all! [this])
   (put [this data])
   (search [this id] [])
   (store [this payload])
-  (event [this id] {})
   (distinct-values [this k] [])
   (lazy-events [this stream-name date] [])
   (lazy-events-page [this stream-name date page] []))

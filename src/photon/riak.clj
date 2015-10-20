@@ -24,7 +24,7 @@
 
 (defrecord RiakDB [riak nodes bucket]
   db/DB
-  (fetch [this id]
+  (fetch [this stream-name id]
     (:body (client/get (riak-url this id))))
   (delete! [this id]
     (log/info "Deleting" id)
@@ -46,8 +46,6 @@
   (search [this id] (:body (client/get (riak-url this id))))
   (store [this payload]
     (.persist riak "__all__" "event" (json/generate-string payload)))
-  (event [this id]
-    (.getEvent riak id))
   (distinct-values [this k] ["events"])
   (lazy-events [this stream-name date]
     (db/lazy-events-page this stream-name date 1)) 

@@ -8,8 +8,8 @@
 
 (defrecord DBFile [file-name]
   db/DB
-  (db/fetch [this id]
-            (first (db/search this id)))
+  (db/fetch [this stream-name order-id]
+            (first (db/search this order-id)))
   (db/delete! [this id]
               (let [all (db/lazy-events this "__all__" 0)
                     filtered (remove #(= id (:local-id %)) all)]
@@ -34,8 +34,6 @@
                                        (long server-timestamp)))]
               (with-open [w (clojure.java.io/writer file-name :append true)]
                 (.write w (str (json/generate-string new-payload) "\n")))))
-  (db/event [this id]
-            (db/fetch this id))
   (db/distinct-values [this k]
                       (into #{} (map #(get % k)
                                      (db/lazy-events this "__all__" 0))))

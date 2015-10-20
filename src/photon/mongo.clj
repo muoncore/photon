@@ -11,9 +11,10 @@
 
 (defrecord LocalMongoDB [db collection]
   db/DB
-  (fetch [this id]
+  (fetch [this stream-name id]
     (m/with-mongo db
-      (m/fetch-one collection :where {:_id id})))
+      (m/fetch-one collection :where {:stream-name stream-name
+                                      :_id id})))
   (delete! [this id]
     (m/with-mongo db
       (m/destroy! collection {:_id id})))
@@ -23,16 +24,13 @@
   (put [this data]
     (m/with-mongo db
       (m/insert! collection data)))
-  (search [this id] (db/fetch this id))
+  (search [this id] (db/fetch this {:$exists true} id))
   (distinct-values [this k]
     (m/with-mongo db
       (m/distinct-values collection k)))
   (store [this payload]
     (m/with-mongo db
       (m/insert! collection (merge payload {:_id (:local-id payload)}))))
-  (event [this id]
-    (m/with-mongo db
-      (:event (db/fetch this id))))
   (lazy-events [this stream-name date]
     (db/lazy-events-page this stream-name date 0)) 
   (lazy-events-page [this stream-name date page]
