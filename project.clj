@@ -37,7 +37,7 @@
                  [ring/ring-defaults "0.1.2"]
                  [midje "1.6.3"]
                  [uap-clj "1.0.1"]
-                 [tranchis/cassaforte "2.1.0-beta3-SNAPSHOT"]
+                 [tranchis/cassaforte "2.1.0-beta3"]
                  [dire "0.5.3"]
                  [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
                  [io.muoncore/muon-core "5.4.4"]
@@ -53,6 +53,7 @@
             [org.clojure/tools.nrepl "0.2.10"]]
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
+  :aot :all
   :java-source-paths ["java"]
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
