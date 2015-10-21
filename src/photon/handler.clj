@@ -134,8 +134,9 @@
                             (default-db))]
     (dosync (alter own-stream (fn [_] ms)))))
 
-(defroutes app-routes
-  (GET "/startup" []
+(capi/defroutes* app-routes
+  (capi/GET* "/startup" []
+       :no-doc true
        (if (nil? @own-stream)
          (do
            (figwheel-main)
@@ -159,9 +160,9 @@
   (POST "/projections" request (api/post-projection!
                                 (:stm @own-stream)
                                 (:body request)))
-  (POST "/event" request (api/post-event!
-                          (:stm @own-stream)
-                          (json/parse-string (:body request) true)))
+  (capi/POST* "/event" request (api/post-event!
+                                (:stm @own-stream)
+                                (json/parse-string (:body request) true)))
   (POST "/event/:stream-name" request
         (api/post-event! (:stm @own-stream) (:body request)))
   (route/not-found "Not Found"))
@@ -176,7 +177,9 @@
 (capi/defapi app
   (capi/swagger-ui)
   (capi/swagger-docs)
-  (GET "/ui" [] (response/resource-response "index.html" {:root "public/ui"}))
+  (capi/GET* "/ui" []
+       :no-doc true
+       (response/resource-response "index.html" {:root "public/ui"}))
   (route/resources "/")
   (context "/ws" []
            (routes (rjson/wrap-json-body (pms/wrap-params (site ws-routes))
