@@ -9,9 +9,11 @@
             [gniazdo.core :as ws]
             [ring.middleware.reload :as reload]
             [photon.streams :as streams]
+            [schema.core :as s]
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
             [cheshire.core :as json]
+            [compojure.api.sweet :as capi]
             [clojure.core.async :as async :refer [go-loop go timeout
                                                   <! >! close! chan
                                                   sliding-buffer]]
@@ -151,11 +153,6 @@
   (GET "/stream-contents/:stream-name" [stream-name]
        (wrap-json (api/stream (:stm @own-stream) stream-name
                               :limit 50)))
-  (GET "/ws" [] (wrap-websocket-handler #'ws-handler))
-  (GET "/ws-streams" []
-       (wrap-websocket-handler #'ws-streams-handler))
-  (GET "/ws-projections" []
-       (wrap-websocket-handler #'ws-projections-handler))
   (GET "/event/:stream-name/:order-id" [stream-name order-id]
        (wrap-json (api/event (:stm @own-stream) stream-name
                              (read-string order-id))))
@@ -167,12 +164,26 @@
                           (json/parse-string (:body request) true)))
   (POST "/event/:stream-name" request
         (api/post-event! (:stm @own-stream) (:body request)))
-  (route/resources "/")
   (route/not-found "Not Found"))
 
-(def app
-  (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
-                                {:keywords? true})))
+(defroutes ws-routes
+  (GET "/ws" [] (wrap-websocket-handler #'ws-handler))
+  (GET "/ws-streams" []
+       (wrap-websocket-handler #'ws-streams-handler))
+  (GET "/ws-projections" []
+       (wrap-websocket-handler #'ws-projections-handler)))
+
+(capi/defapi app
+  (capi/swagger-ui)
+  (capi/swagger-docs)
+  (GET "/ui" [] (response/resource-response "index.html" {:root "public/ui"}))
+  (route/resources "/")
+  (context "/ws" []
+           (routes (rjson/wrap-json-body (pms/wrap-params (site ws-routes))
+                                         {:keywords? true})))
+  (context "/api" []
+           (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
+                                         {:keywords? true}))))
 
 (def reloadable-app (reload/wrap-reload #'app))
 

@@ -6,17 +6,32 @@
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
-                 [io.muoncore/muon-clojure "5.3.6"]
+                 [io.muoncore/muon-clojure "5.3.6"
+                  :exclusions [com.cognitect/transit-clj
+                               com.cognitect/transit-cljs]]
                  [org.marianoguerra/clj-rhino "0.2.2"]
-                 [compojure "1.3.4"]
+                 [metosin/schema-tools "0.6.1"]
+                 [metosin/ring-swagger "0.21.0"
+                  :exclusions [prismatic/schema
+                               metosin/schema-tools]]
+                 [tranchis/compojure-api "0.24.0"
+                  :exclusions [metosin/schema-tools
+                               prismatic/plumbing
+                               com.cognitect/transit-clj
+                               org.clojure/test.check]]
+                 [metosin/ring-swagger-ui "2.1.3"]
+                 [compojure "1.4.0"]
                  [fipp "0.6.2"]
                  [congomongo "0.4.4"]
                  [jarohen/chord "0.6.0"]
                  [org.clojure/tools.logging "0.3.1"]
                  [tailrecursion/cljson "1.0.7"]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
-                 [clj-http "1.1.2"]
-                 [cljs-http "0.1.35"]
+                 [clj-http "1.1.2"
+                  :exclusions [com.cognitect/transit-clj
+                               com.cognitect/transit-cljs]]
+                 [cljs-http "0.1.35"
+                  :exclusions [com.cognitect/transit-cljs]]
                  [org.clojure/java.data "0.1.1"]
                  [cheshire "5.5.0"]
                  ;; TODO: Remove when gniazdo and lein-ring use the same Jetty
@@ -26,12 +41,14 @@
                  [http-kit "2.1.18"]
                  [jayq "2.5.4"]
                  [org.omcljs/om "0.8.8"]
-                 [clj-time "0.9.0"]
+                 [clj-time "0.11.0"]
                  [incanter "1.5.6"]
                  [ring "1.4.0"]
                  [ring/ring-json "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [com.basho.riak/riak-client "2.0.1" :exclusions [com.sun/tools]]
+                 [com.basho.riak/riak-client "2.0.1"
+                  :exclusions [com.sun/tools
+                               com.fasterxml.jackson.core/jackson-databind]]
                  [org.json/json "20141113"]
                  [midje "1.6.3"]
                  [ring/ring-defaults "0.1.2"]
@@ -44,13 +61,19 @@
                  [io.muoncore/muon-transport-amqp "5.4.4"]
                  [io.muoncore/muon-discovery-amqp "5.4.4"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [org.codehaus.plexus/plexus-utils "3.0"]
                  [stylefruits/gniazdo "0.4.0"]]
-  :plugins [[lein-ring "0.9.6"]
-            [lein-cljsbuild "1.0.5"]
+  :plugins [[lein-ring "0.9.6"
+             :exclusions [org.clojure/clojure]]
+            [lein-cljsbuild "1.0.5"
+             :exclusions [org.clojure/clojure]]
             [lein-midje "3.1.3"]
-            [lein-figwheel "0.3.9"]
-            [cider/cider-nrepl "0.9.1"]
-            [org.clojure/tools.nrepl "0.2.10"]]
+            [lein-figwheel "0.4.1"
+             :exclusions [org.codehaus.plexus/plexus-utils]]
+            [cider/cider-nrepl "0.9.1"
+             :exclusions [org.clojure/tools.nrepl]]
+            [org.clojure/tools.nrepl "0.2.11"
+             :exclusions [org.clojure/clojure]]]
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
   :aot :all
@@ -77,10 +100,10 @@
   :cljsbuild {:builds [{:source-paths ["src-cljs"]
                         :figwheel true
                         :compiler {:main photon.ui.frontend
-                                   :asset-path "js/out"
-                                   :output-to "resources/public/js/main.js"
-                                   :output-dir    "resources/public/js/out"
-                                   :source-map    "resources/public/js/out.js.map"
+                                   :asset-path "ui/js/out"
+                                   :output-to "resources/public/ui/js/main.js"
+                                   :output-dir    "resources/public/ui/js/out"
+                                   :source-map    "resources/public/ui/js/out.js.map"
                                    :preamble      ["react/react.min.js"]
                                    :optimizations :none
                                    :pretty-print  true}}]}
