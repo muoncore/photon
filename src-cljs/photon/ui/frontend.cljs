@@ -127,7 +127,8 @@
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (.log js/console (pr-str elem))
-                (om/update! data :projections (:message elem)))
+                (om/update! data :projections
+                            (:projections (:message elem))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))

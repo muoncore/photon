@@ -26,7 +26,7 @@
                                    :stream-name "__all__"
                                    :stream-type "cold"
                                    :from 0))]
-  (fact "Post works correctly" res => {:correct "true"})
+  (fact "Post works correctly" res => {:correct true})
   (fact "One event on stream" (elem-count ch) => 1)
   (dorun (take 10 (repeatedly
                    (fn []

@@ -2,7 +2,7 @@
   (:gen-class)
   (:use org.httpkit.server)
   (:require [photon.db :as db]
-            [compojure.core :refer :all]
+            [compojure.core :as cc]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
             [photon.muon :as m]
@@ -10,10 +10,12 @@
             [ring.middleware.reload :as reload]
             [photon.streams :as streams]
             [schema.core :as s]
+            [ring.util.http-response :refer :all]
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
             [cheshire.core :as json]
-            [compojure.api.sweet :as capi]
+            [compojure.api.sweet :refer :all]
+            [ring.swagger.json-schema-dirty :refer :all]
             [clojure.core.async :as async :refer [go-loop go timeout
                                                   <! >! close! chan
                                                   sliding-buffer]]
@@ -134,59 +136,98 @@
                             (default-db))]
     (dosync (alter own-stream (fn [_] ms)))))
 
-(capi/defroutes* app-routes
-  (capi/GET* "/startup" []
-       :no-doc true
-       (if (nil? @own-stream)
-         (do
-           (figwheel-main)
-           (wrap-json {:started "ok"}))
-         {:started "already-started"}))
-  (GET "/streams" []
-       (log/info @own-stream)
-       (wrap-json (api/projection "__streams__")))
-  (GET "/projection-keys" []
-       (wrap-json (api/projection-keys)))
-  (GET "/projections" []
-       (wrap-json (api/projections)))
-  (GET "/projection/:projection-name" [projection-name]
-       (wrap-json (api/projection projection-name)))
-  (GET "/stream-contents/:stream-name" [stream-name]
-       (wrap-json (api/stream (:stm @own-stream) stream-name
-                              :limit 50)))
-  (GET "/event/:stream-name/:order-id" [stream-name order-id]
-       (wrap-json (api/event (:stm @own-stream) stream-name
-                             (read-string order-id))))
-  (POST "/projections" request (api/post-projection!
-                                (:stm @own-stream)
-                                (:body request)))
-  (capi/POST* "/event" request (api/post-event!
-                                (:stm @own-stream)
-                                (json/parse-string (:body request) true)))
-  (POST "/event/:stream-name" request
-        (api/post-event! (:stm @own-stream) (:body request)))
+(defroutes* app-routes
+  (GET* "/startup" []
+        :no-doc true
+        (if (nil? @own-stream)
+          (do
+            (figwheel-main)
+            (wrap-json {:started "ok"}))
+          {:started "already-started"}))
+  (GET* "/streams" []
+        :return api/StreamInfoMap
+        :summary "Obtain a list of active streams
+                  and their current size"
+        (log/info @own-stream)
+        (ok (api/streams)))
+  (GET* "/projection-keys" []
+        :return api/ProjectionKeyMap
+        :summary "Obtain a list of the names (IDs)
+                  of the current active projections"
+        (ok (api/projection-keys)))
+  (GET* "/projections" []
+        :return api/ProjectionList
+        :summary "Obtain a list of the states of the current active
+                  projections without their computed reduction values"
+        (ok (api/projections)))
+  (GET* "/projection/:projection-name" [projection-name]
+        :path-params [projection-name :- s/Str]
+        :return api/ProjectionResponse
+        :summary "Obtain the current status of a given projection,
+                  including the latest computed reduction value"
+        (let [pres (api/projection projection-name)]
+          (if (nil? pres)
+            (not-found)
+            (ok pres))))
+  (GET* "/stream-contents/:stream-name" [stream-name]
+        :path-params [stream-name :- s/Str]
+        :return api/StreamContentsResponse
+        :summary "Obtain a list (maximum of 50) of events contained
+                  in a given stream"
+        (ok (api/stream (:stm @own-stream) stream-name
+                        :limit 50)))
+  (GET* "/event/:stream-name/:order-id" [stream-name order-id]
+        :path-params [stream-name :- s/Str order-id :- s/Str]
+        :return api/EventResponse
+        :summary "Obtain the event identified by a given stream name
+                  and an order ID"
+        (let [res (api/event (:stm @own-stream) stream-name
+                             (read-string order-id))]
+          (if (nil? res) (not-found) (ok res))))
+  (POST* "/projection" request
+         :body [body api/ProjectionTemplate]
+         :return api/PostResponse
+         :summary "Add a projection"
+         (ok (api/post-projection! (:stm @own-stream) (:body request))))
+  (POST* "/event" request
+         :body [body api/EventTemplate]
+         :return api/PostResponse
+         :summary "Add an event"
+         (let [res (try
+                     (api/post-event! (:stm @own-stream) (:body request))
+                     (catch Exception e
+                       ;; TODO: Verify whether this is still needed
+                       (println (.getMessage e))
+                       (api/post-event!
+                        (:stm @own-stream)
+                        (json/parse-string (:body request) true))))]
+           (println res)
+           (ok res)))
+  (POST* "/event/:stream-name" request
+         :no-doc true
+         (api/post-event! (:stm @own-stream) (:body request)))
   (route/not-found "Not Found"))
 
-(defroutes ws-routes
-  (GET "/ws" [] (wrap-websocket-handler #'ws-handler))
-  (GET "/ws-streams" []
+(cc/defroutes ws-routes
+  (GET* "/ws" [] (wrap-websocket-handler #'ws-handler))
+  (GET* "/ws-streams" []
        (wrap-websocket-handler #'ws-streams-handler))
-  (GET "/ws-projections" []
+  (GET* "/ws-projections" []
        (wrap-websocket-handler #'ws-projections-handler)))
 
-(capi/defapi app
-  (capi/swagger-ui)
-  (capi/swagger-docs)
-  (capi/GET* "/ui" []
-       :no-doc true
-       (response/resource-response "index.html" {:root "public/ui"}))
+(defapi app
+  (swagger-ui)
+  (swagger-docs)
+  (GET* "/ui" []
+        :no-doc true
+        (response/resource-response "index.html" {:root "public/ui"}))
   (route/resources "/")
-  (context "/ws" []
-           (routes (rjson/wrap-json-body (pms/wrap-params (site ws-routes))
-                                         {:keywords? true})))
-  (context "/api" []
-           (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
-                                         {:keywords? true}))))
+  (context* "/ws" []
+            (routes (rjson/wrap-json-body (pms/wrap-params (site ws-routes))
+                                          {:keywords? true})))
+  (context* "/api" []
+            (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
+                                          {:keywords? true}))))
 
 (def reloadable-app (reload/wrap-reload #'app))
 

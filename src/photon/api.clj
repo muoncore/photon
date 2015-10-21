@@ -1,9 +1,114 @@
 (ns photon.api
   (:require [photon.streams :as streams]
+            [schema.core :as s]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async])
   (:import (java.util Map)))
 
+;; Schemas
+(s/defschema StreamInfo
+  {:stream-name s/Str
+   :total-events Long})
+
+(s/defschema StreamInfoMap
+  {:streams [StreamInfo]})
+
+(s/defschema ProjectionKeyMap
+  {:projection-keys [s/Str]})
+
+(s/defschema ReductionValue
+  ;; TODO: Improve
+  s/Any)
+
+(s/def Encoding
+  ;; TODO: Improve
+  s/Str)
+
+(s/def Provenance
+  ;; TODO: Improve
+  {})
+
+(s/defschema Event
+  {(s/optional-key :encoding) (s/maybe Encoding)
+   (s/optional-key :schema) (s/maybe s/Str)
+   :payload s/Any
+   :service-id (s/maybe s/Str) ;; TODO: Re-check this
+   :photon-timestamp Long
+   :local-id s/Str
+   :order-id Long
+   (s/optional-key :provenance) (s/maybe Provenance)
+   :stream-name s/Str
+   :server-timestamp Long})
+
+(s/defschema FreeSchema
+  {})
+
+(s/defschema EventTemplate
+  {(s/optional-key :encoding) (s/maybe Encoding)
+   (s/optional-key :schema) (s/maybe s/Str)
+   :payload (s/maybe FreeSchema)
+   :service-id (s/maybe s/Str) ;; TODO: Re-check this
+   :local-id s/Str
+   (s/optional-key :provenance) (s/maybe Provenance)
+   :stream-name s/Str
+   :server-timestamp Long})
+
+(s/defschema ReductionFunction
+  ;; TODO: Improve
+  s/Any)
+
+(s/defschema StreamContentsResponse
+  {:results [Event]})
+
+(s/defschema ProjectionTemplate
+  {:language (s/maybe (s/enum :clojure :javascript))
+   :reduction s/Str
+   :initial-value s/Str
+   :stream-name s/Str
+   :projection-name s/Str})
+
+(s/defschema ProjectionValue
+  {:fn s/Str
+   :last-error (s/maybe s/Str)
+   :current-value (s/maybe ReductionValue)
+   :init-time Long
+   :status (s/enum :running :failed)
+   :language (s/maybe (s/enum :clojure :javascript))
+   :initial-value ReductionValue
+   :processed Long
+   :last-event Event
+   :reduction ReductionFunction
+   :stream-name s/Str
+   :avg-time Double
+   :avg-global-time Double
+   :projection-name s/Str})
+
+(s/defschema Projection
+  {:fn s/Str
+   :last-error (s/maybe s/Str)
+   :init-time Long
+   :status (s/enum :running :failed)
+   :language (s/maybe (s/enum :clojure :javascript))
+   :initial-value ReductionValue
+   :processed Long
+   :last-event Event
+   :reduction ReductionFunction
+   :stream-name s/Str
+   :avg-time Double
+   :avg-global-time Double
+   :projection-name s/Str})
+
+(s/defschema ProjectionList
+  {:projections [Projection]})
+
+(s/defschema EventResponse (s/maybe Event))
+
+(s/defschema PostResponse (s/maybe {:correct (s/enum true)}))
+
+(s/defschema ProjectionResponse
+  (s/maybe ProjectionValue))
+
+;; Methods
 (defn event [stm stream-name order-id]
   (streams/event stm stream-name order-id))
 
@@ -27,10 +132,11 @@
   (streams/process-event! stm ev))
 
 (defn filtered-projections [projs filter-keys]
-  (map
-   (fn [v] (assoc v :fn (pr-str (:fn v))))
-   (map #(apply dissoc (deref %) filter-keys)
-        (vals projs))))
+  {:projections
+   (map
+    (fn [v] (assoc v :fn (pr-str (:fn v))))
+    (map #(apply dissoc (deref %) filter-keys)
+         (vals projs)))})
 
 (defn projections-without-val [projs]
   (filtered-projections projs [:_id :current-value]))
@@ -45,6 +151,13 @@
     #_(log/info "Result:" (pr-str res))
     #_(log/info "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
     res))
+
+(defn streams []
+  {:streams
+   (into [] (map
+             #(hash-map :stream-name (key %)
+                        :total-events (:total-events (val %)))
+             (:current-value (projection "__streams__"))))})
 
 (defn projections []
   (projections-without-val @streams/queries))
@@ -72,7 +185,6 @@
                            (streams/stream stm {"from" from
                                                 "stream-name" stream-name
                                                 :limit limit
-                                                "stream-type" "cold"})))
-        res-compat (map #(update-in % [:order-id] str) res)]
-    {:results res-compat}))
+                                                "stream-type" "cold"})))]
+    {:results res}))
 

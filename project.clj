@@ -10,6 +10,7 @@
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs]]
                  [org.marianoguerra/clj-rhino "0.2.2"]
+                 [prismatic/schema "1.0.1"]
                  [metosin/schema-tools "0.6.1"]
                  [metosin/ring-swagger "0.21.0"
                   :exclusions [prismatic/schema
