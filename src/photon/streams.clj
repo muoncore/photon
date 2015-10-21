@@ -312,16 +312,16 @@
                                         new-timestamp
                                         :photon-timestamp now
                                         :order-id
-                                        (+ (* 1000000 new-timestamp)
+                                        (+ (* 1000 new-timestamp)
                                            (rem (System/nanoTime)
-                                                1000000))})]
+                                                1000))})]
                     (when (not= (:stream-name msg) "eventlog")
                       (update-streams! this (get msg "stream-name"
                                                  (get msg :stream-name)))
                       (>!! (:channel (global-channel this)) new-msg)
                       (>!! (:channel (publisher this)) new-msg)
                       (db/store db new-msg))) 
-                  {:correct "true"}))
+                  {:correct true}))
 
 (defmethod stream "cold" [a-stream params]
   (log/info "cold-stream" (pr-str params))
