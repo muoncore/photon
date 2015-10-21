@@ -1,8 +1,8 @@
 resources/config.properties
 eventstore.iml
 .idea/
-resources/public/js/main.js
-resources/public/js/out/
+resources/public/ui/js/main.js
+resources/public/ui/js/out/
 main.js
 figwheel_server.log
 pom.xml
