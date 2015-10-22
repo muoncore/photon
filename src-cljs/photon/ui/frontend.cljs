@@ -15,6 +15,13 @@
                           :reduction ""
                           :projections []
                           :new-projection false}))
+(defonce localhost (let [href (.-href (.-location js/window))]
+                     (clojure.string/join
+                      "/"
+                      (drop-last (clojure.string/split href #"/")))))
+(defonce ws-localhost (let [tokens (clojure.string/split localhost #":")]
+                        (clojure.string/join
+                         ":" (conj (rest tokens) "ws"))))
 
 (defn clj->str [c]
   (let [res (clojure.string/replace
@@ -119,7 +126,7 @@
 (defn subscribe-projections! [data]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch "ws://localhost:3000/ws/ws-projections"))]
+          (<! (ws-ch (str ws-localhost "/ws/ws-projections")))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
@@ -136,7 +143,7 @@
 (defn subscribe-streams! [data]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch "ws://localhost:3000/ws/ws-projections"))]
+          (<! (ws-ch (str ws-localhost "/ws/ws-projections")))]
       (if-not error
         (do
           (>! ws-channel {:projection-name "__streams__"})
@@ -157,11 +164,7 @@
    (select-keys proj [:stream
                       :avg-time :status :language :processed
                       :stream-name :projection-name])
-   :url (let [current (.-href (.-location js/window))
-              root (clojure.string/join
-                    "/"
-                    (drop-last (clojure.string/split current #"/")))]
-          (str root "/api/projection/" (:projection-name proj)))))
+   :url (str localhost "/api/projection/" (:projection-name proj))))
 
 (defn projection-item [params owner]
   (reify
@@ -288,12 +291,8 @@
 (defn strip-event [event]
   (assoc (dissoc event :payload :provenance :order-id)
          :payload-size (count (pr-str (:payload event)))
-         :url (let [current (.-href (.-location js/window))
-                    root (clojure.string/join
-                          "/"
-                          (drop-last (clojure.string/split current #"/")))]
-                (str root "/api/event/" (:stream-name event)
-                     "/" (:order-id event)))))
+         :url (str localhost "/api/event/" (:stream-name event)
+                   "/" (:order-id event))))
 
 (defn event-list [params owner]
   (reify
