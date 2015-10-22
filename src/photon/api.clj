@@ -21,12 +21,12 @@
   s/Any)
 
 (s/def Encoding
-  ;; TODO: Improve
-  s/Str)
+  ;; TODO: Extend
+  (s/enum "application/json"))
 
 (s/def Provenance
   ;; TODO: Improve
-  {})
+  {s/Keyword s/Any})
 
 (s/defschema Event
   {(s/optional-key :encoding) (s/maybe Encoding)
@@ -41,7 +41,7 @@
    :server-timestamp Long})
 
 (s/defschema FreeSchema
-  {})
+  {s/Keyword s/Any})
 
 (s/defschema EventTemplate
   {(s/optional-key :encoding) (s/maybe Encoding)
