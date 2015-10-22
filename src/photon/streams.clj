@@ -225,14 +225,15 @@
           ch-mult (mult ch)]
       (dosync (alter virtual-streams assoc stream-name
                      {:channel ch :mult-channel ch-mult}))
-      (mcc/stream-source
-       {:m m} (str "projection/" stream-name)
-       (fn [params]
-         (let [t-ch (chan)]
-           (tap ch-mult t-ch))))))
+      (when (not (nil? m)) ;; TODO: Abstract this somehow
+        (mcc/stream-source
+         {:m m} (str "projection/" stream-name)
+         (fn [params]
+           (let [t-ch (chan)]
+             (tap ch-mult t-ch)))))))
   (create-stream-endpoint! [this stream-name]
     ;; TODO: Fix this mess
-    (if (not (nil? m))
+    (when (not (nil? m))
       (mcc/stream-source
        {:m m} (str "stream/" stream-name)
        (fn [params]
