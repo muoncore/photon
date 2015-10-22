@@ -228,8 +228,6 @@
             (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
                                           {:keywords? true}))))
 
-(def reloadable-app (reload/wrap-reload #'app))
-
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
