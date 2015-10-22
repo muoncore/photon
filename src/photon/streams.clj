@@ -11,10 +11,10 @@
             [cheshire.core :as json]
             [somnium.congomongo :as m]
             [clj-time.coerce :as cc]
-            [photon.config :as conf]
+            [photon.config.core :as conf]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
-            [photon.db :as db])
+            [photon.db.core :as db])
   (:import (org.mozilla.javascript ConsString)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)

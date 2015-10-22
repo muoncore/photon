@@ -2,9 +2,9 @@
   (:require [muon-clojure.client :as cl]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async :refer [go-loop <! <!!]]
-            [photon.config :as conf]
+            [photon.config.core :as conf]
             [photon.filedb :as filedb]
-            [photon.db :as db]
+            [photon.db.core :as db]
             [photon.muon :as muon]
             [photon.current.common :refer :all])
   (:use midje.sweet))

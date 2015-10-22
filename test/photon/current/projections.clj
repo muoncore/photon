@@ -1,7 +1,7 @@
 (ns photon.current.projections
   (:require [muon-clojure.client :as cl]
             [photon.muon :as muon]
-            [photon.config :as conf]
+            [photon.config.core :as conf]
             [clojure.core.async :refer [<!!]]
             [photon.current.common :refer :all])
   (:use midje.sweet))

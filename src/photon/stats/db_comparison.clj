@@ -1,8 +1,8 @@
 (ns photon.stats.db-comparison
   (:require [muon-clojure.client :as cl]
             [photon.cassandra :as cassandra]
-            [photon.config :as conf]
-            [photon.db :as db]
+            [photon.config.core :as conf]
+            [photon.db.core :as db]
             [clojure.core.async :refer [<!!]]
             [photon.filedb :as filedb]
             [photon.muon :as muon]))

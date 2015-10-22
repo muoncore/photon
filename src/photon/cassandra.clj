@@ -1,7 +1,7 @@
 (ns photon.cassandra
   (:require [cheshire.core :as json]
             [clojure.tools.logging :as log]
-            [photon.db :as db]
+            [photon.db.core :as db]
             [clojure.set :refer [rename-keys]]
             [clojurewerkz.cassaforte.client :as cc]
             [clojurewerkz.cassaforte.cql    :as cql]
@@ -106,6 +106,7 @@
 
 (defrecord DBCassandra [conn-string kspace table]
   db/DB
+  (db/driver-name [this] "cassandra")
   (db/fetch [this stream-name id]
             (println "Fetching " stream-name " " id)
             (first

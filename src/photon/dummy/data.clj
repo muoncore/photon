@@ -1,5 +1,5 @@
 (ns photon.dummy.data
-  (:require [photon.db :as db]
+  (:require [photon.db.core :as db]
             [clj-http.client :as client]
             [cheshire.core :as json]))
 

@@ -1,4 +1,4 @@
-(defproject photon "0.9.1"
+(defproject tranchis/photon "0.9.1"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
@@ -6,6 +6,9 @@
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
+                 [tranchis/photon-db "0.9.6"]
+                 [tranchis/photon-config "0.9.6"]
+                 [tranchis/photon-riak "0.9.5"]
                  [io.muoncore/muon-clojure "5.3.6"
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs]]
@@ -47,9 +50,6 @@
                  [ring "1.4.0"]
                  [ring/ring-json "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [com.basho.riak/riak-client "2.0.1"
-                  :exclusions [com.sun/tools
-                               com.fasterxml.jackson.core/jackson-databind]]
                  [org.json/json "20141113"]
                  [midje "1.6.3"]
                  [ring/ring-defaults "0.1.2"]
@@ -78,7 +78,6 @@
   :ring {:handler photon} ;; jetty
   :main photon.handler ;; http-kit
   :aot :all
-  :java-source-paths ["java"]
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"

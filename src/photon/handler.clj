@@ -1,7 +1,7 @@
 (ns photon.handler
   (:gen-class)
   (:use org.httpkit.server)
-  (:require [photon.db :as db]
+  (:require [photon.db.core :as db]
             [compojure.core :as cc]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
@@ -22,13 +22,12 @@
             [cheshire.generate :refer [add-encoder]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
-            [photon.config :as conf]
+            [photon.config.core :as conf]
             [photon.cassandra :as cassandra]
             [photon.filedb :as filedb]
             [photon.api :as api]
             [photon.mongo :as mongo]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            #_[photon.riak :as riak]
             [compojure.handler :refer [site]])
   (:import (com.fasterxml.jackson.core JsonGenerator)
            (clojure.lang AFunction Ref)

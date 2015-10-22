@@ -1,6 +1,6 @@
 (ns photon.current.stream-test
   (:require [photon.streams :as streams]
-            [photon.db :as db]
+            [photon.db.core :as db]
             [photon.filedb :as filedb]
             [muon-clojure.server :as mcs]
             [clojure.core.async :as async :refer [<!!]]

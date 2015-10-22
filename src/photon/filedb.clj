@@ -1,13 +1,14 @@
 (ns photon.filedb
   (:require [cheshire.core :as json]
             [clojure.tools.logging :as log]
-            [photon.db :as db])
+            [photon.db.core :as db])
   (:import (java.io File)))
 
 (defn new-file [^String s] (File. s))
 
 (defrecord DBFile [file-name]
   db/DB
+  (db/driver-name [this] "file")
   (db/fetch [this stream-name order-id]
             (first (db/search this order-id)))
   (db/delete! [this id]

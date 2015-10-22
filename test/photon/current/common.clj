@@ -1,7 +1,7 @@
 (ns photon.current.common
   (:require [muon-clojure.client :as cl]
             [photon.cassandra :as cassandra]
-            [photon.db :as db]
+            [photon.db.core :as db]
             [photon.filedb :as filedb]
             [photon.muon :as muon]))
 
