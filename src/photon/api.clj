@@ -38,7 +38,7 @@
    :order-id Long
    (s/optional-key :provenance) (s/maybe Provenance)
    :stream-name s/Str
-   (s/optional-key :server-timestamp) Long})
+   :server-timestamp Long})
 
 (s/defschema FreeSchema
   {s/Keyword s/Any})
@@ -51,7 +51,7 @@
    :local-id s/Str
    (s/optional-key :provenance) (s/maybe Provenance)
    :stream-name s/Str
-   :server-timestamp Long})
+   (s/optional-key :server-timestamp) Long})
 
 (s/defschema ReductionFunction
   ;; TODO: Improve
