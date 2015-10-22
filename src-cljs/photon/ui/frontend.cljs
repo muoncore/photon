@@ -106,7 +106,7 @@
                      (fn [_]
                        (go
                          (<! (client/post
-                              "/api/projections"
+                              "/api/projection"
                               {:json-params
                                (select-keys data
                                             [:projection-name
