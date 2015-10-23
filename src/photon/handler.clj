@@ -118,23 +118,7 @@
 (def cold-latency 5000)
 
 #_(def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
-
-(defmulti default-db (fn []
-                       (log/info "Configuring DB...")
-                       (:db.backend conf/config)))
-(defmethod default-db "cassandra" []
-  (cassandra/->DBCassandra (get conf/config :cassandra.ip "127.0.0.1")
-                           (get conf/config :kspace "photon")
-                           (get conf/config :table "events")))
-(defmethod default-db "mongodb" [] (mongo/mongo))
-#_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
-#_(defmethod default-db "file" []
-    (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
-
-(defn figwheel-main []
-  (let [ms (m/start-server! (:microservice.name conf/config)
-                            (default-db))]
-    (dosync (alter own-stream (fn [_] ms)))))
+(declare figwheel-main)
 
 (defroutes* app-routes
   (GET* "/startup" []
@@ -236,25 +220,57 @@
         nns (clojure.string/replace nn #"_" "-")]
     nns))
 
-((defn load-db-plugins!
-   ([jf]
-    (let [files (filenames-in-jar jf)
-          matches (filter #(and (.startsWith % "photon/db/")
-                                (.endsWith % ".clj"))
-                          files)
-          codes (map #(.getInputStream jf (.getEntry jf %)) matches)]
-      (dorun (map #(log/info "Loading" % "in" (.getName jf) "...") matches))
-      #_(dorun (map read-string (map slurp codes)))
-      (dorun (map #(require (symbol (file->ns %))) matches))))
-   ([]
-    (log/info "Finding backend plugin implementations...")
-    (let [jarfiles (classpath-jarfiles)]
-      (dorun (map load-db-plugins! jarfiles))))))
+(defn load-db-plugins!
+  ([jf]
+   (let [files (filenames-in-jar jf)
+         matches (filter #(and (.startsWith % "photon/db/")
+                               (.endsWith % ".clj"))
+                         files)
+         codes (map #(.getInputStream jf (.getEntry jf %)) matches)]
+     (dorun (map #(log/info "Loading" % "in" (.getName jf) "...") matches))
+     #_(dorun (map read-string (map slurp codes)))
+     (dorun (map #(require (symbol (file->ns %))) matches))))
+  ([]
+   (log/info "Finding backend plugin implementations...")
+   (let [jarfiles (classpath-jarfiles)]
+     (dorun (map load-db-plugins! jarfiles)))))
+
+#_(defmulti default-db (fn []
+                       (log/info "Configuring DB...")
+                       (:db.backend conf/config)))
+#_(defmethod default-db "cassandra" []
+  (cassandra/->DBCassandra (get conf/config :cassandra.ip "127.0.0.1")
+                           (get conf/config :kspace "photon")
+                           (get conf/config :table "events")))
+#_(defmethod default-db "mongodb" [] (mongo/mongo))
+#_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
+#_(defmethod default-db "file" []
+    (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
+
+(defn find-implementation [impls n]
+  (first (filter #(= n (db/driver-name (%))) impls)))
+
+(defn default-db []
+  (let [target (:db.backend conf/config)
+        impls (db/implementations)
+        chosen (find-implementation impls target)]
+    (if (nil? chosen)
+      (do
+        (log/error "Backend plugin for" target
+                   "not found, falling back to dummy")
+        ((find-implementation impls "dummy")))
+      (chosen))))
+
+(defn figwheel-main []
+  (let [ms (m/start-server! (:microservice.name conf/config)
+                            (default-db))]
+    (dosync (alter own-stream (fn [_] ms)))))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
   (log/info "Starting photon...")
+  (load-db-plugins!)
   (let [db (default-db)
         _ (log/info "DB Configured...")
         ms (m/start-server! (:microservice.name conf/config) db)]
