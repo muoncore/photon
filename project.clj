@@ -8,7 +8,6 @@
                  [http-kit "2.1.18"]
                  [tranchis/photon-db "0.9.9"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [congomongo "0.4.6" :exclusions [org.clojure/data.json]]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
@@ -21,6 +20,8 @@
                  [io.muoncore/muon-clojure "5.3.6"
                   :exclusions [com.cognitect/transit-clj
                                commons-codec
+                               congomongo
+                               org.mongodb/mongo-java-driver
                                org.clojure/data.json
                                org.mozilla/rhino
                                org.clojure/tools.reader
@@ -39,7 +40,6 @@
                                org.clojure/core.cache
                                com.cognitect/transit-java
                                org.clojure/test.check]]
-                 [tranchis/cassaforte "2.1.0-beta3"]
                  [dire "0.5.3"]
                  [jarohen/chord "0.6.0"
                   :exclusions [commons-codec
@@ -53,7 +53,11 @@
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  #_[tranchis/photon-riak "0.9.7"]
-                 [tranchis/photon-file "0.9.7"]]
+                 [tranchis/photon-cassandra "0.9.9"]
+                 [tranchis/photon-mongo "0.9.9"]
+                 [tranchis/photon-file "0.9.7"
+                  :exclusions [commons-codec
+                               com.cognitect/transit-clj]]]
   :plugins [[lein-cljsbuild "1.1.0"]
             [lein-midje "3.1.3"]
             [lein-figwheel "0.4.1"

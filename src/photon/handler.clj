@@ -24,10 +24,7 @@
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
             [photon.config :as conf]
-            [photon.cassandra :as cassandra]
-            #_[photon.filedb :as filedb]
             [photon.api :as api]
-            [photon.mongo :as mongo]
             [chord.http-kit :refer [wrap-websocket-handler]]
             [compojure.handler :refer [site]])
   (:import (com.fasterxml.jackson.core JsonGenerator)
@@ -228,24 +225,14 @@
                          files)
          codes (map #(.getInputStream jf (.getEntry jf %)) matches)]
      (dorun (map #(log/info "Loading" % "in" (.getName jf) "...") matches))
-     #_(dorun (map read-string (map slurp codes)))
-     (dorun (map #(require (symbol (file->ns %))) matches))))
+     (dorun (map #(let [n (file->ns %)]
+                    (log/trace "Requiring" n)
+                    (require (symbol n)))
+                 matches))))
   ([]
    (log/info "Finding backend plugin implementations...")
    (let [jarfiles (classpath-jarfiles)]
      (dorun (map load-db-plugins! jarfiles)))))
-
-#_(defmulti default-db (fn []
-                       (log/info "Configuring DB...")
-                       (:db.backend conf/config)))
-#_(defmethod default-db "cassandra" []
-  (cassandra/->DBCassandra (get conf/config :cassandra.ip "127.0.0.1")
-                           (get conf/config :kspace "photon")
-                           (get conf/config :table "events")))
-#_(defmethod default-db "mongodb" [] (mongo/mongo))
-#_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
-#_(defmethod default-db "file" []
-    (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
 
 (defn find-implementation [impls n]
   (first (filter #(= n (db/driver-name (%))) impls)))
@@ -254,6 +241,8 @@
   (let [target (:db.backend conf/config)
         impls (db/implementations)
         chosen (find-implementation impls target)]
+    (log/info "Backend implementations available:"
+              (map #(db/driver-name (%)) impls))
     (if (nil? chosen)
       (do
         (log/error "Backend plugin for" target
