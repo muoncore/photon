@@ -1,6 +1,6 @@
 (ns photon.mongo
-  (:require [photon.db.core :as db]
-            [photon.config.core :as conf]
+  (:require [photon.db :as db]
+            [photon.config :as conf]
             [clojure.tools.logging :as log]
             [somnium.congomongo :as m]))
 

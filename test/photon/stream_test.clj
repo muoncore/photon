@@ -4,14 +4,14 @@
             [ring.mock.request :as mock]
             [clojure.tools.logging :as log]
             [muon-clojure.client :as cl]
-            [photon.filedb :as filedb]
             [photon.cassandra :as cassandra]
+            [photon.current.common :refer :all]
             [photon.streams :as streams]
             [photon.muon :as m])
   (:use midje.sweet))
 
 (def amazon-url "amqp://localhost")
-(def db (filedb/->DBFile "/tmp/temporalphoton.log"))
+(def db (->TempDBFile "/tmp/temporalphoton.log"))
 #_(def db (cassandra/->DBCassandra
          "127.0.0.1" "photon"
          (first (clojure.string/split

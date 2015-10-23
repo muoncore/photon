@@ -1,7 +1,7 @@
 (ns photon.default-projs
   (:require [serializable.fn :as sfn]
             [clojure.java.io :as io]
-            [photon.config.core :as conf]
+            [photon.config :as conf]
             [photon.streams :as streams])
   (:import (java.io File)))
 

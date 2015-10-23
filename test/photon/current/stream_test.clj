@@ -1,14 +1,14 @@
 (ns photon.current.stream-test
   (:require [photon.streams :as streams]
-            [photon.db.core :as db]
-            [photon.filedb :as filedb]
+            [photon.db :as db]
             [muon-clojure.server :as mcs]
             [clojure.core.async :as async :refer [<!!]]
+            [photon.current.common :refer :all]
             [clojure.tools.logging :as log])
   (:use midje.sweet))
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
-(def d (filedb/->DBFile (.getAbsolutePath temp-file)))
+(def d (->TempDBFile (.getAbsolutePath temp-file)))
 (def s (streams/new-async-stream nil d))
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]

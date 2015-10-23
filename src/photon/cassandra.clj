@@ -1,7 +1,7 @@
 (ns photon.cassandra
   (:require [cheshire.core :as json]
             [clojure.tools.logging :as log]
-            [photon.db.core :as db]
+            [photon.db :as db]
             [clojure.set :refer [rename-keys]]
             [clojurewerkz.cassaforte.client :as cc]
             [clojurewerkz.cassaforte.cql    :as cql]

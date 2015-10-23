@@ -6,20 +6,18 @@
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [http-kit "2.1.18"]
-                 [tranchis/photon-db "0.9.6"]
+                 [tranchis/photon-db "0.9.9"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [congomongo "0.4.6"
-                  :exclusions [org.clojure/data.json]]
+                 [congomongo "0.4.6" :exclusions [org.clojure/data.json]]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
                  [uap-clj "1.0.1"]
                  [cheshire "5.5.0"]
                  [clj-time "0.11.0"]
-                 [compojure "1.4.0"
-                  :exclusions [org.clojure/tools.reader]]
+                 [compojure "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.6"]
+                 [tranchis/photon-config "0.9.8"]
                  [io.muoncore/muon-clojure "5.3.6"
                   :exclusions [com.cognitect/transit-clj
                                commons-codec
@@ -49,18 +47,19 @@
                                com.fasterxml.jackson.core/jackson-databind
                                com.fasterxml.jackson.core/jackson-annotations]]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
+                 [org.clojure/java.classpath "0.2.2"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.145"]
                  ;; photon plugins
-                 #_[tranchis/photon-riak "0.9.5"]
-                 ]
+                 [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
+                 #_[tranchis/photon-riak "0.9.7"]
+                 [tranchis/photon-file "0.9.7"]]
   :plugins [[lein-cljsbuild "1.1.0"]
             [lein-midje "3.1.3"]
             [lein-figwheel "0.4.1"
              :exclusions [org.clojure/clojure
                           org.codehaus.plexus/plexus-utils]]]
   :main photon.handler ;; http-kit
-  :aot :all
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"

@@ -1,7 +1,7 @@
 (ns photon.handler
   (:gen-class)
   (:use org.httpkit.server)
-  (:require [photon.db.core :as db]
+  (:require [photon.db :as db]
             [compojure.core :as cc]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
@@ -10,6 +10,7 @@
             [ring.middleware.reload :as reload]
             [photon.streams :as streams]
             [schema.core :as s]
+            [clojure.java.classpath :refer :all]
             [ring.util.http-response :refer :all]
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
@@ -22,9 +23,9 @@
             [cheshire.generate :refer [add-encoder]]
             [serializable.fn :as sfn]
             [ring.middleware.params :as pms]
-            [photon.config.core :as conf]
+            [photon.config :as conf]
             [photon.cassandra :as cassandra]
-            [photon.filedb :as filedb]
+            #_[photon.filedb :as filedb]
             [photon.api :as api]
             [photon.mongo :as mongo]
             [chord.http-kit :refer [wrap-websocket-handler]]
@@ -116,7 +117,7 @@
 
 (def cold-latency 5000)
 
-(def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
+#_(def test-ds (filedb/->DBFile (clojure.java.io/resource "events.json")))
 
 (defmulti default-db (fn []
                        (log/info "Configuring DB...")
@@ -127,8 +128,8 @@
                            (get conf/config :table "events")))
 (defmethod default-db "mongodb" [] (mongo/mongo))
 #_(defmethod default-db "riak" [] (riak/riak riak/s-bucket))
-(defmethod default-db "file" []
-  (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
+#_(defmethod default-db "file" []
+    (filedb/->DBFile (clojure.java.io/file (:file.path conf/config))))
 
 (defn figwheel-main []
   (let [ms (m/start-server! (:microservice.name conf/config)
@@ -227,6 +228,28 @@
   (context* "/api" []
             (routes (rjson/wrap-json-body (pms/wrap-params (site app-routes))
                                           {:keywords? true}))))
+
+(defn file->ns [f]
+  (let [tokens (clojure.string/split f #"\.clj")
+        main-part (clojure.string/join ".clj" tokens)
+        nn (clojure.string/replace main-part #"\/" ".")
+        nns (clojure.string/replace nn #"_" "-")]
+    nns))
+
+((defn load-db-plugins!
+   ([jf]
+    (let [files (filenames-in-jar jf)
+          matches (filter #(and (.startsWith % "photon/db/")
+                                (.endsWith % ".clj"))
+                          files)
+          codes (map #(.getInputStream jf (.getEntry jf %)) matches)]
+      (dorun (map #(log/info "Loading" % "in" (.getName jf) "...") matches))
+      #_(dorun (map read-string (map slurp codes)))
+      (dorun (map #(require (symbol (file->ns %))) matches))))
+   ([]
+    (log/info "Finding backend plugin implementations...")
+    (let [jarfiles (classpath-jarfiles)]
+      (dorun (map load-db-plugins! jarfiles))))))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`

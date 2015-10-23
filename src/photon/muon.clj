@@ -7,7 +7,7 @@
             [clojure.java.data :as j]
             [photon.default-projs :as dp]
             [photon.api :as api]
-            [photon.config.core :as conf]
+            [photon.config :as conf]
             [clojure.tools.logging :as log])
   (:import (io.muoncore Muon MuonStreamGenerator)
            (io.muoncore.future MuonFuture ImmediateReturnFuture)
