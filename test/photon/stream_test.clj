@@ -4,7 +4,6 @@
             [ring.mock.request :as mock]
             [clojure.tools.logging :as log]
             [muon-clojure.client :as cl]
-            [photon.cassandra :as cassandra]
             [photon.current.common :refer :all]
             [photon.streams :as streams]
             [photon.muon :as m])

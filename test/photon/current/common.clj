@@ -1,6 +1,5 @@
 (ns photon.current.common
   (:require [muon-clojure.client :as cl]
-            [photon.cassandra :as cassandra]
             [photon.db :as db]
             [cheshire.core :as json]
             [photon.muon :as muon])

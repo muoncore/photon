@@ -4,13 +4,9 @@
                                         put! >!! mix admix onto-chan
                                         pub sub alts! pipeline]
              :as async]
-            [serializable.fn :as sfn]
             [clj-rhino :as js]
             [clojure.tools.logging :as log]
-            [uap-clj.core :as uap]
-            [cheshire.core :as json]
             [somnium.congomongo :as m]
-            [clj-time.coerce :as cc]
             [photon.config :as conf]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
@@ -93,8 +89,7 @@
                              (cons-string->string elem)
                              elem))
                          identity
-                         (js/from-js res)
-                         #_(json/parse-string res true))]
+                         (js/from-js res))]
           converted)
         (catch Exception e
           (println (.getMessage e))
