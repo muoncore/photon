@@ -8,10 +8,12 @@
             [clojure.tools.logging :as log]
             [somnium.congomongo :as m]
             [photon.config :as conf]
+            [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
             [photon.db :as db])
   (:import (org.mozilla.javascript ConsString)
+           (java.util HashMap)
            (javax.script ScriptEngineManager SimpleBindings
                          ScriptContext)))
 ;; TODO: Do something about the conflict between keywords and strings
@@ -111,14 +113,21 @@
         compiled (.compile engine f)
         evaled (.eval compiled)
         global (SimpleBindings.)]
+    (.eval engine (str "load(\"nashorn:mozilla_compat.js\");"
+                       "var HashMap = Java.type(\"java.util.HashMap\");"))
     (.setBindings engine global ScriptContext/GLOBAL_SCOPE)
     (.put global "reduction" evaled)
     (let [wrap (.compile engine
                          (str "function() {"
-                              "return reduction(__prev, __next);}"))
+                              "return reduction(__prev, __next);"
+                              "}"))
           compiled-fun (fn [a b]
-                         (.put global "__prev" a)
-                         (.put global "__next" b)
+                         (.eval engine (str "__prev = "
+                                            (json/generate-string a)
+                                            ";"))
+                         (.eval engine (str "__next = "
+                                            (json/generate-string b)
+                                            ";"))
                          (let [script "wrap_reduction()"]
                            (.eval engine script global)))]
       (.put global "wrap_reduction" (.eval wrap))

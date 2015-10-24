@@ -33,9 +33,9 @@
 (fact "A simple function is correctly converted (javascript)"
       (let [f (:computable
                 (streams/generate-function "javascript" "function(prev,next) {return 0;}"))]
-        (f 0 0) => 0.0
-        (f 0 1) => 0.0
-        (f 5 0) => 0.0))
+        (f 0 0) => 0
+        (f 0 1) => 0
+        (f 5 0) => 0))
 
 (fact "A less simple function is correctly converted (javascript)"
       (let [f (:computable
@@ -48,7 +48,14 @@
                 (streams/generate-function
                   "javascript"
                   "function(prev,next) {prev.value *= next.number; return prev;}"))]
-        (f {:value 5} {:number 6}) => {:value 30.0}))
+        (f {:value 5} {:number 6}) => {"value" 30.0}))
+
+(fact "A more complex function with vectors is correctly converted (javascript)"
+      (let [f (:computable
+                (streams/generate-function
+                  "javascript"
+                  "function(prev,next) {prev.value = prev.value * next[1]; return prev;}"))]
+        (f {:value 5} [1 2]) => {"value" 10.0}))
 
 (fact "Wrong syntax makes babies cry (javascript)"
       (streams/generate-function "javascript" "function(prev,next) {return 0")
