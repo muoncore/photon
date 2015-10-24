@@ -61,7 +61,7 @@
   {:results [Event]})
 
 (s/defschema ProjectionTemplate
-  {:language (s/maybe (s/enum :clojure :javascript))
+  {:language (s/maybe (s/enum :clojure :javascript :js-legacy))
    :reduction s/Str
    :initial-value s/Str
    :stream-name s/Str
@@ -73,7 +73,7 @@
    :current-value (s/maybe ReductionValue)
    :init-time Long
    :status (s/enum :running :failed)
-   :language (s/maybe (s/enum :clojure :javascript))
+   :language (s/maybe (s/enum :clojure :javascript :js-legacy))
    :initial-value ReductionValue
    :processed Long
    :last-event Event
@@ -88,7 +88,7 @@
    :last-error (s/maybe s/Str)
    :init-time Long
    :status (s/enum :running :failed)
-   :language (s/maybe (s/enum :clojure :javascript))
+   :language (s/maybe (s/enum :clojure :javascript :js-legacy))
    :initial-value ReductionValue
    :processed Long
    :last-event Event

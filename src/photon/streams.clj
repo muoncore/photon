@@ -15,7 +15,9 @@
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
             [photon.db :as db])
-  (:import (org.mozilla.javascript ConsString)))
+  (:import (org.mozilla.javascript ConsString)
+           (javax.script ScriptEngineManager SimpleBindings
+                         ScriptContext)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
 
@@ -101,12 +103,32 @@
           (.printStackTrace e)
           res)))))
 
-(defmethod generate-function "javascript" [lang f]
+(defmethod generate-function "js-legacy" [_ f]
   (let [sc (js/new-safe-scope)
         compiled-fun (js/compile-function sc f :filename (str (db/uuid) ".js"))
         fun-with-return (generate-fun-with-return sc compiled-fun)]
     {:computable fun-with-return
      :persist f}))
+
+(defmethod generate-function "javascript" [_ f]
+  (let [factory (ScriptEngineManager.)
+        engine (.getEngineByName factory "nashorn")
+        compiled (.compile engine f)
+        evaled (.eval compiled)
+        global (SimpleBindings.)]
+    (.setBindings engine global ScriptContext/GLOBAL_SCOPE)
+    (.put global "reduction" evaled)
+    (let [wrap (.compile engine
+                         (str "function() {"
+                              "return reduction(__prev, __next);}"))
+          compiled-fun (fn [a b]
+                         (.put global "__prev" a)
+                         (.put global "__next" b)
+                         (let [script "wrap_reduction()"]
+                           (.eval engine script global)))]
+      (.put global "wrap_reduction" (.eval wrap))
+      {:computable compiled-fun
+       :persist f})))
 
 (extend org.bson.types.ObjectId js/RhinoConvertible
   {:-to-rhino (fn [obj scope ctx] (str obj))})

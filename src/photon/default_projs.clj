@@ -1,6 +1,7 @@
 (ns photon.default-projs
   (:require [serializable.fn :as sfn]
             [clojure.java.io :as io]
+            [clojure.tools.logging :as log]
             [photon.config :as conf]
             [photon.streams :as streams])
   (:import (java.io File)))
@@ -41,7 +42,10 @@
         proj-files (filter #(ends-with (absolute-path %)
                                        ".edn")
                            all-files)
-        projs (map #(read-string (slurp %)) proj-files)
+        projs (map #(do
+                      (log/info "Loading" %)
+                      (read-string (slurp %)))
+                   proj-files)
         projs (map #(if (list? (:reduction %))
                       (update-in % [:reduction] pr-str)
                       %)
