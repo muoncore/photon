@@ -6,7 +6,6 @@
             [compojure.route :as route]
             [clojure.tools.logging :as log]
             [photon.muon :as m]
-            [gniazdo.core :as ws]
             [ring.middleware.reload :as reload]
             [photon.streams :as streams]
             [schema.core :as s]

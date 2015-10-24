@@ -1,10 +1,7 @@
 (ns photon.muon
-  (:require #_[photon.riak :as riak]
-            [photon.streams :as streams]
+  (:require [photon.streams :as streams]
             [muon-clojure.common :as mcc]
             [muon-clojure.server :as mcs]
-            [muon-clojure.rx :as rx]
-            [clojure.java.data :as j]
             [photon.default-projs :as dp]
             [photon.api :as api]
             [photon.config :as conf]
