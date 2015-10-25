@@ -14,6 +14,8 @@
             [photon.db :as db])
   (:import (org.mozilla.javascript ConsString)
            (java.util HashMap)
+           (jdk.nashorn.api.scripting JSObject)
+           (clojure.lang PersistentArrayMap)
            (javax.script ScriptEngineManager SimpleBindings
                          ScriptContext)))
 ;; TODO: Do something about the conflict between keywords and strings
@@ -100,14 +102,59 @@
           (.printStackTrace e)
           res)))))
 
-(defmethod generate-function "js-legacy" [_ f]
+(defmethod generate-function "javascript" [_ f]
   (let [sc (js/new-safe-scope)
         compiled-fun (js/compile-function sc f :filename (str (db/uuid) ".js"))
         fun-with-return (generate-fun-with-return sc compiled-fun)]
     {:computable fun-with-return
      :persist f}))
 
-(defmethod generate-function "javascript" [_ f]
+(def ^:dynamic *nashorn-cache* true)
+(declare clj->nashorn)
+
+(defn m-get-member [x n]
+  (let [res (get x n (get x (keyword n)))]
+    (if (nil? res)
+      nil
+      (clj->nashorn res))))
+
+(def get-member (memoize m-get-member))
+
+(defprotocol JSProtocol)
+
+(extend-protocol JSProtocol JSObject)
+
+(defn clj->nashorn [x-ref]
+  (if (map? x-ref)
+    (reify JSObject
+      (isArray [^JSObject this] false)
+      (^boolean isInstance [^JSObject this ^Object instance])
+      (^boolean isInstanceOf [^JSObject this ^Object class] false)
+      (isStrictFunction [^JSObject this] false)
+      (keySet [^JSObject this] (into #{} (keys x-ref)))
+      (newObject [^JSObject this args] (clj->nashorn x-ref))
+      (^void removeMember [^JSObject this ^String s]
+             (swap! x-ref dissoc s (keyword s))
+             nil)
+      (^void setMember [^JSObject this ^String n ^Object v]
+             (swap! x-ref assoc n v))
+      (^void setSlot [^JSObject this ^int n ^Object v])
+      (values [^JSObject this] (map clj->nashorn x-ref))
+      (isFunction [^JSObject this] true)
+      (eval [^JSObject this ^String s])
+      (getClassName [^JSObject this])
+      (getSlot [^JSObject this ^int index])
+      (^boolean hasSlot [^JSObject this ^int index])
+      (^boolean hasMember [^JSObject this ^String s])
+      (call [this thiz args])
+      (getMember [^JSObject this ^String n]
+                 (condp = n
+                   "toString" "[object Object]"
+                   "valueOf" this
+                   (get-member x-ref n))))
+    x-ref))
+
+(defmethod generate-function "js-experimental" [_ f]
   (let [factory (ScriptEngineManager.)
         engine (.getEngineByName factory "nashorn")
         compiled (.compile engine f)
@@ -117,17 +164,23 @@
                        "var HashMap = Java.type(\"java.util.HashMap\");"))
     (.setBindings engine global ScriptContext/GLOBAL_SCOPE)
     (.put global "reduction" evaled)
+    (.put global "__prev" (.eval (.compile engine "null")))
     (let [wrap (.compile engine
                          (str "function() {"
-                              "return reduction(__prev, __next);"
+                              "var GLOBAL_SCOPE = "
+                              "javax.script.ScriptContext.GLOBAL_SCOPE;"
+                              "var g = context.getBindings(GLOBAL_SCOPE);"
+                              "__prev = g.get('__prev');"
+                              "__prev = reduction(__prev, __next);"
+                              "g.put('__prev', __prev);"
+                              "return __prev;"
                               "}"))
           compiled-fun (fn [a b]
-                         (.eval engine (str "__prev = "
-                                            (json/generate-string a)
-                                            ";"))
-                         (.eval engine (str "__next = "
-                                            (json/generate-string b)
-                                            ";"))
+                         (if (or
+                              (not *nashorn-cache*)
+                              (nil? (.get global "__prev")))
+                           (.put global "__prev" (clj->nashorn a)))
+                         (.put global "__next" (clj->nashorn b))
                          (let [script "wrap_reduction()"]
                            (.eval engine script global)))]
       (.put global "wrap_reduction" (.eval wrap))

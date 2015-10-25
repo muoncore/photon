@@ -2,6 +2,7 @@
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
+  :java-source-paths ["java"]
   :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
