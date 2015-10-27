@@ -62,55 +62,6 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
-(defroutes* schema-app-routes
-  (GET* "/streams" []
-        :return api/StreamInfoMap
-        :summary "Obtain a list of active streams
-                  and their current size"
-        (ok nil))
-  (GET* "/projection-keys" []
-        :return api/ProjectionKeyMap
-        :summary "Obtain a list of the names (IDs)
-                  of the current active projections"
-        (ok nil))
-  (GET* "/projections" []
-        :return api/ProjectionList
-        :summary "Obtain a list of the states of the current active
-                  projections without their computed reduction values"
-        (ok nil))
-  (GET* "/projection/:projection-name" [projection-name]
-        :path-params [projection-name :- s/Str]
-        :return api/ProjectionResponse
-        :summary "Obtain the current status of a given projection,
-                  including the latest computed reduction value"
-        (ok nil))
-  (GET* "/stream-contents/:stream-name" [stream-name]
-        :path-params [stream-name :- s/Str]
-        :return api/StreamContentsResponse
-        :summary "Obtain a list (maximum of 50) of events contained
-                  in a given stream"
-        (ok nil))
-  (GET* "/event/:stream-name/:order-id" [stream-name order-id]
-        :path-params [stream-name :- s/Str order-id :- s/Str]
-        :return api/EventResponse
-        :summary "Obtain the event identified by a given stream name
-                  and an order ID"
-        (ok nil))
-  (POST* "/projection" request
-         :body [body api/ProjectionTemplate]
-         :return api/PostResponse
-         :summary "Add a projection"
-         (ok nil))
-  (POST* "/event" request
-         :body [body api/EventTemplate]
-         :return api/PostResponse
-         :summary "Add an event"
-         (ok nil))
-  (POST* "/event/:stream-name" request
-         :no-doc true
-         (ok nil))
-  (route/not-found "Not Found"))
-
 (defn app-routes [stream]
   (defroutes* d-app-routes
     (GET* "/streams" []
