@@ -11,18 +11,11 @@
             [cheshire.core :as json]
             [compojure.api.sweet :refer :all]
             [ring.swagger.json-schema-dirty :refer :all]
-            [clojure.core.async :as async :refer [go-loop go timeout
-                                                  <! >! close! chan
-                                                  sliding-buffer]]
-            [cheshire.generate :refer [add-encoder]]
-            [serializable.fn :as sfn]
+            [clojure.core.async :refer [go-loop go timeout <! >! close!]]
             [ring.middleware.params :as pms]
             [photon.api :as api]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            [compojure.handler :refer [site]])
-  (:import (com.fasterxml.jackson.core JsonGenerator)
-           (clojure.lang AFunction Ref)
-           (org.bson.types ObjectId)))
+            [compojure.handler :refer [site]]))
 
 (defn f-ws-handler [ms]
   (fn [{:keys [ws-channel] :as req}]
@@ -68,32 +61,6 @@
             (close! ch)
             (close! ws-channel)
             (prn "closed.")))))))
-
-#_#_#_#_#_
-(add-encoder Double
-             (fn [^Double object ^JsonGenerator out]
-               (cond (.isInfinite object)
-                     (.writeString out (str 9007199254740992.0))
-                     (.isNaN object)
-                     (.writeString out (str 0.0))
-                     :else
-                     (.writeString out (str object)))))
-
-(add-encoder Exception
-             (fn [^Exception object ^JsonGenerator out]
-               (.writeString out (pr-str (.getMessage object)))))
-
-(add-encoder AFunction
-             (fn [^AFunction object ^JsonGenerator out]
-               (.writeString out (pr-str object))))
-
-(add-encoder ObjectId
-             (fn [^ObjectId object ^JsonGenerator out]
-               (.writeString out (str "\"" (.toString object) "\""))))
-
-(add-encoder Ref
-             (fn [^Ref object ^JsonGenerator out]
-               (.writeString out (json/generate-string @object))))
 
 (defn app-routes [ms]
   (defroutes* d-app-routes
