@@ -19,7 +19,7 @@
 
 (defn prepare! []
   (let [ms (m/start-server! (str "photon-test-" uuid) db)]
-    (streams/clean! (:stm ms))
+    (streams/clean! (:stream ms))
     ms))
 
 (defn test-cold []

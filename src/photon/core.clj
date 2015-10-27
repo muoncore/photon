@@ -59,7 +59,7 @@
         ms (m/start-server! (:microservice.name conf/config) db)]
     (log/info "Server started, initialising streams...")
     (log/info "Initialising endpoints...")
-    (let [handler (h/app ms)]
+    (let [handler (h/app (:stream ms))]
       (println run-server)
       (time (run-server handler {:port 3000})))))
 
