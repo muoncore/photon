@@ -49,7 +49,7 @@
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
                  #_[tranchis/photon-riak "0.9.7"]
-                 [tranchis/photon-cassandra "0.9.9"]
+                 [tranchis/photon-cassandra "0.9.11"]
                  #_[tranchis/photon-mongo "0.9.9"]
                  [tranchis/photon-file "0.9.7"
                   :exclusions [commons-codec
@@ -60,7 +60,7 @@
             [lein-figwheel "0.4.1"
              :exclusions [org.clojure/clojure
                           org.codehaus.plexus/plexus-utils]]]
-  :main photon.handler ;; http-kit
+  :main photon.core ;; http-kit
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"
