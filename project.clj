@@ -37,7 +37,6 @@
                  [jarohen/chord "0.6.0" :exclusions [commons-codec
                                                      org.clojure/tools.reader]]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
-                 [org.clojure/java.classpath "0.2.2"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.145"]
                  [tailrecursion/cljson "1.0.7"]
@@ -48,10 +47,10 @@
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
-                 #_[tranchis/photon-riak "0.9.7"]
-                 [tranchis/photon-cassandra "0.9.11"]
-                 #_[tranchis/photon-mongo "0.9.9"]
-                 [tranchis/photon-file "0.9.7"
+                 #_[tranchis/photon-riak "0.9.20"]
+                 [tranchis/photon-cassandra "0.9.20"]
+                 #_[tranchis/photon-mongo "0.9.20"]
+                 [tranchis/photon-file "0.9.20"
                   :exclusions [commons-codec
                                org.clojure/tools.reader
                                com.cognitect/transit-clj]]]
