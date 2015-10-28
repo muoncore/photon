@@ -48,17 +48,17 @@
        (let [f (:computable
                 (streams/generate-function
                  "js-experimental"
-                 #_"function(prev,next) {prev.value *= next.number; return prev;}"
-                 "function(prev,next) {var res = prev.value * next.number; return {value: res};}"))]
-         (f {:value 5} {:number 6}) => {"value" 30.0}))
+                 "function(prev,next) {prev.value *= next.number; return prev;}"
+                 #_"function(prev,next) {var res = prev.value * next.number; return {value: res};}"))]
+         (f {:value 5} {:number 6}) => {:value 30.0}))
 
  (fact "A more complex function with vectors is correctly converted (javascript)"
        (let [f (:computable
                 (streams/generate-function
                  "js-experimental"
-                 #_"function(prev,next) {prev.value = prev.value * next[1]; return prev;}"
-                 "function(prev,next) {var res = prev.value * next[1]; return {value: res}}"))]
-         (f {:value 5} [1 2]) => {"value" 10.0}))
+                 "function(prev,next) {prev.value = prev.value * next[1]; return prev;}"
+                 #_"function(prev,next) {var res = prev; res.value = res.value * next[1]; return res;}"))]
+         (f {:value 5} [1 2]) => {:value 10.0}))
 
  (fact "Wrong syntax makes babies cry (javascript)"
        (streams/generate-function "js-experimental" "function(prev,next) {return 0")
