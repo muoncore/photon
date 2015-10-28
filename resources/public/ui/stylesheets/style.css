@@ -1,0 +1,130 @@
+html{
+    height: 100%;
+    width: 100%;
+    margin: 0;
+}
+
+body{
+    background-color: #ECECEC;
+    margin: 0;
+}
+
+a:focus{
+    text-decoration: none;
+}
+
+a:hover{
+    text-decoration: none;
+}
+
+h1{
+    margin-bottom: 50px;
+}
+
+.box{
+    width: 80%;
+    margin: 20px auto;
+    padding: 20px;
+    border: solid #DDD 1px;
+}
+
+.menu-bar{
+    position: fixed;
+    left: 0;
+    top: 0;
+    background: #2B2628;
+    color: #fff;
+    width: 200px;
+    height: 100%;
+    text-align: center;
+    float: left;
+}
+
+.menu-bar a{
+    color: #F0C14E;
+    font-size: 16px;
+}
+
+.menu-item{
+    width: 200px;
+    height: 60px;
+    display: block;
+    padding: 15px;
+    background: #2B2628;
+    border-top: solid #ECECEC;
+}
+
+.menu-item:hover{
+    background: #443C3F;
+}
+
+.input-label{
+    font-weight: normal;
+    width: 150px;
+}
+
+.logo{
+    margin-bottom: 50px;
+}
+
+.projections{
+    width: 80%;
+    margin: 0 auto;
+}
+
+.streams{
+    width: 80%;
+    margin: 0 auto;
+}
+
+.dashboard{
+    width: 80%;
+    min-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.wide-input{
+    width: 500px;
+}
+
+.widget-box{
+    display: inline-block;
+    width: 30%;
+    text-align: center;
+    height: 300px;
+    margin-bottom: 20px;
+    background-color: #fafafa;
+    -moz-box-shadow: 3px 3px 5px 6px #ccc;
+    -webkit-box-shadow: 3px 3px 5px 6px #ccc;
+    box-shadow: 3px 3px 5px 6px #ccc;
+}
+
+.widget-box .large-value{
+    font-size: 45pt;
+    display: block;
+    padding: 50px;
+}
+
+.widget-box .title{
+    font-size: 26pt;
+    display: block;
+}
+
+.right{
+    float: right;
+}
+
+.left{
+    float: left;
+}
+
+.jumbotron{
+    background: #CCCCCC;
+    border-radius: 6px;
+}
+
+#main-area{
+    margin-left: 200px;
+    padding: 50px;
+}

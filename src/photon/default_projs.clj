@@ -2,7 +2,6 @@
   (:require [serializable.fn :as sfn]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
-            [photon.config :as conf]
             [photon.streams :as streams])
   (:import (java.io File)))
 
@@ -14,10 +13,6 @@
      p
      {(:stream-name n)
       {:total-events 1}})))
-
-(def cambio-updates
-  (sfn/fn [p n]
-    ))
 
 (def default-projections
   [{:projection-name "__streams__"
@@ -36,9 +31,8 @@
 
 (defn ends-with [^String s ^String e] (.endsWith s e))
 
-(defn init-default-projs! [stm]
-  (let [path (:projections.path conf/config)
-        all-files (file-seq (io/file path))
+(defn init-default-projs! [stm path]
+  (let [all-files (file-seq (io/file path))
         proj-files (filter #(ends-with (absolute-path %)
                                        ".edn")
                            all-files)

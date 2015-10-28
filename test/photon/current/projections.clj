@@ -10,7 +10,7 @@
       ms (new-server uuid)
       s-name (str "photon-integration-test-" uuid)
       url (str "muon://" s-name)
-      m (cl/muon-client (:amqp.url conf/config) (str "client-" uuid)
+      m (cl/muon-client "amqp://localhost" (str "client-" uuid)
                         "client" "test")
       spn (cl/with-muon m
             (cl/query-event (str url "/projection")

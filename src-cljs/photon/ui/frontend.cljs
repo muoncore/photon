@@ -45,12 +45,13 @@
       om/IRender
       (render [_]
         (dom/div
-            nil
+            #js {:className "box"}
           (dom/div
               nil
-            "Projection name"
+            (dom/label #js {:className "input-label"} "Projection name")
             (dom/input
-                #js {:type "text" :ref "name"
+                #js {:className "wide-input"
+                     :type "text" :ref "name"
                      :value (:projection-name data)
                      :onChange
                      (fn [ev]
@@ -58,17 +59,18 @@
                                    (.-value (.-target ev))))}))
           (dom/div
               nil
-            "Stream name"
+            (dom/label #js {:className "input-label"} "Stream name")
             (dom/input
-                #js {:type "text" :ref "name"
+                #js {:className "wide-input"
+                     :type "text" :ref "name"
                      :value (:stream-name data)
                      :onChange
                      (fn [ev]
                        (om/update! data :stream-name
                                    (.-value (.-target ev))))}))
-          (dom/div nil "Language")
           (apply dom/div
                  #js {:className "radio"}
+                 "Language:"
                  (map #(dom/div
                            nil
                          (dom/input
@@ -176,7 +178,7 @@
                              (condp = (key %)
                                :url
                               (dom/a #js
-                                 {:href (val %)} (val %)) 
+                                 {:href (val %)} (val %))
                                :projection-name
                                (dom/a #js
                                  {:href "#"
@@ -234,11 +236,8 @@
         (subscribe-projections! data))
       om/IRenderState
       (render-state [_ state]
-        (dom/div
-            nil
-          (dom/h1
-           nil
-           "Projections1")
+        (dom/div #js{:className "projections"}
+          (dom/h1 nil "Projections")
           (apply dom/table #js
                  {:className "table table-striped table-bordered table-hover table-heading"}
                  (apply dom/tr nil
@@ -252,6 +251,65 @@
           (if (not (nil? (:active-projection data)))
             (let [block (om/build code-block (:active-projection data))]
               block)))))))
+
+(defn widget-dashboard [params owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (dom/div #js{:className "dashboard"}
+        (dom/h1 nil "Dashboard")
+        (dom/div
+          #js{:className "jumbotron"}
+            (dom/h1 nil "HELLO THERE"))
+        (dom/div
+          #js{:className "widget-box left"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "1"))
+        (dom/div
+          #js{:className "widget-box right"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "3"))
+        (dom/div
+          #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "2"))
+        (dom/div
+          #js{:className "widget-box left"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "4"))
+        (dom/div
+          #js{:className "widget-box right"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "6"))
+        (dom/div
+          #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "5"))))))
+
 
 (defn event-list-item [params]
   (reify
@@ -268,7 +326,7 @@
                          (condp = (key %)
                            :url
                            (dom/a #js
-                             {:href (val %)} (val %)) 
+                             {:href (val %)} (val %))
                            (str (val %))))
                       event)
                  #_(if current?
@@ -358,10 +416,10 @@
       (subscribe-streams! owner))
     om/IRenderState
     (render-state [_ state]
-      (dom/div nil
-        (dom/h1 nil
-          "Streams")
-        (apply dom/table nil
+      (dom/div #js{:className "streams"}
+        (dom/h1 nil "Streams")
+        (apply dom/table #js
+               {:className "table table-striped table-bordered table-hover table-heading"}
                (apply dom/tr nil
                       (map #(dom/th nil
                               (k->header %))
@@ -379,7 +437,8 @@
     om/IRender
     (render [_]
       (dom/a #js
-        {:href "#"
+        {:className "menu-item"
+         :href "#"
          :onClick (fn [_]
                     (om/update! (:data data)
                                 :active-page (val (:item data))))}
@@ -389,12 +448,13 @@
   (reify
     om/IRender
     (render [_]
-      (dom/div nil
-        (apply dom/div nil
+      (dom/div
+            #js {:className "menu-bar"}
+            (dom/h2 #js {:className "logo"} "Photon")
                (map
                 #(om/build menu-item {:data (:data data)
                                       :item %})
-                (:items data)))))))
+                (:items data))))))
 
 (defn full-page [data owner]
   (reify
@@ -404,16 +464,16 @@
         nil
         (om/build main-menu
                   {:data data
-                   :items {"Streams" widget-streams
+                   :items {"dashboard" widget-dashboard
+                           "Streams" widget-streams
                            "Projections" widget-projections
                            "New projection" widget-new-projection}})
         (dom/div nil
           (if (nil? (:active-page data))
-            "Choose option from menu"
+            (dom/h3 nil "Choose option from menu...")
             (om/build (:active-page data) {:data data})))))))
 
 (go (let [response (<! (client/get "/api/startup"))]
       (om/root full-page app-state
                {:target (. js/document
                            (getElementById "main-area"))})))
-

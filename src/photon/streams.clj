@@ -7,7 +7,6 @@
             [clj-rhino :as js]
             [clojure.tools.logging :as log]
             [somnium.congomongo :as m]
-            [photon.config :as conf]
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
@@ -20,20 +19,6 @@
                          ScriptContext)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
-
-
-;; Global defs
-;;;;;;;;;;;;;;
-
-;; TODO: Try to minimise
-
-(def queries (ref {})) ;; TODO: Make persistent!
-(defonce publications (ref {}))
-(defonce global-channels (ref {}))
-(defonce active-streams (ref {}))
-(defonce virtual-streams (ref {}))
-(defonce projection-channel (chan))
-(defonce projection-mix (mix projection-channel))
 
 
 ;; Stream protocols and multimethods
@@ -238,32 +223,23 @@
 
 (defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
 
-(defn global-channel [async-stream]
-  (dosync
-    (let [ch (get @global-channels async-stream)]
-      (if (nil? ch)
-        (let [c (chan 1)
-              new-ch {:channel c :mult-channel (mult c)}]
-          (alter global-channels assoc async-stream new-ch)
-          new-ch)
-        ch))))
-
 (defn publisher [async-stream]
   (dosync
-    (let [p (get @publications async-stream)]
-      (if (nil? p)
-        (let [c (chan 1)
-              new-p {:channel c
-                     :p (pub c (fn [ev] (get ev "stream-name"
-                                             (get ev :stream-name))))}]
-          (alter publications assoc async-stream new-p)
-          new-p)
-        p))))
+   (let [p (:publication @(:state async-stream))]
+     (if (nil? p)
+       (let [c (chan 1)
+             new-p {:channel c
+                    :p (pub c (fn [ev] (get ev "stream-name"
+                                            (get ev :stream-name))))}]
+         (dosync
+          (alter (:state async-stream) assoc :publication new-p))
+         new-p)
+       p))))
 
 (defn exception->message [^Throwable t] (.getMessage t))
 (defn exception->stack-trace [^Throwable t] (.getStackTrace t))
 
-(defn projection-step! [running-query current-event function ch]
+(defn projection-step! [stream running-query current-event function ch]
   (dosync
    (let [current-value (:current-value @running-query)]
      (if (nil? current-event)
@@ -299,6 +275,7 @@
                      :processed (inc (:processed @running-query))
                      :last-event current-event})]
          (alter running-query merge to-merge)
+         ;; TODO: Reconsider projection persistence
          #_(spit (str (:projections.path conf/config)
                       "/" projection-name ".projection")
                  (pr-str @running-query) :append false) 
@@ -306,36 +283,35 @@
          (if (instance? Exception new-value)
            (do
              (close! ch)
-             (alter virtual-streams
-                    dissoc (:projection-name @running-query)))))))))
+             (alter (:state stream) update-in [:virtual-streams]
+                    #(dissoc (:projection-name @running-query))))))))))
 
 (defn schedule [current-proj]
-  (projection-step! (:running-query current-proj)
+  (projection-step! (:stream current-proj)
+                    (:running-query current-proj)
                     (:element current-proj)
                     (:function current-proj)
                     (:channel current-proj))
   true)
 
-(pipeline (read-string (str (:parallel.projections conf/config)))
-          (chan (sliding-buffer 1)) (map schedule) projection-channel)
-
-(defrecord AsyncStream [m db]
+(defrecord AsyncStream [muon db global-channel
+                        projection-mix state]
   StreamManager
   (init-stream-manager! [this]
     (let [db-streams (db/distinct-values db :stream-name)]
       (dorun (map #(update-streams! this %) db-streams)))
     (dosync
-     (alter active-streams assoc-in
-            [this :virtual-streams] #{"__all__"})))
+     (alter state assoc-in
+            [:active-streams :virtual-streams] #{"__all__"})))
   (update-streams! [this stream-name]
     (dosync
      (let [real-streams (into #{}
                               (:real-streams
-                               (get @active-streams this)))]
+                               (:active-streams @state)))]
        (if (not (contains? real-streams stream-name))
          (do
            (create-stream-endpoint! this stream-name)
-           (alter active-streams
+           (alter state update-in [:active-streams]
                   (fn [old-active-streams]
                     (assoc-in old-active-streams
                               [this :real-streams]
@@ -343,19 +319,19 @@
   (create-virtual-stream-endpoint! [this stream-name]
     (let [ch (chan (sliding-buffer 1))
           ch-mult (mult ch)]
-      (dosync (alter virtual-streams assoc stream-name
+      (dosync (alter state assoc-in [:virtual-streams stream-name]
                      {:channel ch :mult-channel ch-mult}))
-      (when (not (nil? m)) ;; TODO: Abstract this somehow
+      (when (not (nil? muon)) ;; TODO: Abstract this somehow
         (mcc/stream-source
-         {:m m} (str "projection/" stream-name)
+         {:m muon} (str "projection/" stream-name)
          (fn [params]
            (let [t-ch (chan)]
              (tap ch-mult t-ch)))))))
   (create-stream-endpoint! [this stream-name]
     ;; TODO: Fix this mess
-    (when (not (nil? m))
+    (when (not (nil? muon))
       (mcc/stream-source
-       {:m m} (str "stream/" stream-name)
+       {:m muon} (str "stream/" stream-name)
        (fn [params]
          (stream this
                  (assoc (assoc (into {} params)
@@ -363,7 +339,7 @@
                         :stream-name stream-name))))))
   (streams [this]
     {:streams
-     (let [active-streams (get @active-streams this)]
+     (let [active-streams (:active-streams @state)]
        (map #(hash-map :stream %)
             (concat (:real-streams active-streams)
                     (:virtual-streams active-streams))))})
@@ -373,7 +349,7 @@
   (data-from [this stream-name date-string]
     (db/lazy-events db stream-name date-string))
   HotStream
-  (next! [this] (go (<! (:channel (global-channel this)))))
+  (next! [this] (go (<! (:channel global-channel))))
   EventProcessor
   (register-query! [this projection-descriptor]
     (let [projection-name (:projection-name projection-descriptor)
@@ -385,7 +361,7 @@
           s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
-          ch (:channel (get @virtual-streams projection-name))
+          ch (:channel (get (:virtual-streams @state) projection-name))
           _ (log/info "Retrieving stream for" projection-name)
           new-descriptor (merge {:projection-name projection-name
                                  :fn (:persist function-descriptor)
@@ -409,13 +385,15 @@
           running-query (ref new-descriptor)
           to-mix (clojure.core.async/map
                   (fn [element]
-                    {:running-query running-query
+                    {:stream this
+                     :running-query running-query
                      :element element
                      :function function
                      :channel ch})
                   [s])]
       (log/info "Starting projection loop for" projection-name)
-      (dosync (alter queries assoc projection-name running-query))
+      (dosync (alter state assoc-in
+                     [:queries projection-name] running-query))
       (admix projection-mix to-mix)
       (log/info "All done for" projection-name)))
   (process-event! [this msg]
@@ -439,7 +417,7 @@
                     (when (not= (:stream-name msg) "eventlog")
                       (update-streams! this (get msg "stream-name"
                                                  (get msg :stream-name)))
-                      (>!! (:channel (global-channel this)) new-msg)
+                      (>!! (:channel global-channel) new-msg)
                       (>!! (:channel (publisher this)) new-msg)
                       (db/store db new-msg))) 
                   {:correct true}))
@@ -500,7 +478,7 @@
               (let [closed? (not (>! ch e))]
                 (recur (cons (first new-s) (rest new-s)) closed? last-t)))))))
       (if (= stream-name "__all__")
-        (tap (:mult-channel (global-channel a-stream)) ch)
+        (tap (:mult-channel (:global-channel a-stream)) ch)
         (sub (:p (publisher a-stream)) stream-name ch)))
     ch))
 
@@ -509,12 +487,27 @@
         stream-name (get params "stream-name"
                          (get params :stream-name "__all__"))]
     (if (= stream-name "__all__")
-      (tap (:mult-channel (global-channel a-stream)) ch)
+      (tap (:mult-channel (:global-channel a-stream)) ch)
       (sub (:p (publisher a-stream)) stream-name ch))
     ch))
 
-(defn new-async-stream [m db]
-  (let [as (->AsyncStream m db)]
+(defrecord AsyncStreamState [queries publication
+                             active-streams virtual-streams])
+
+(defn new-async-stream [m db threads state]
+  (let [c (chan 1)
+        global-channel {:channel c :mult-channel (mult c)}
+        projection-channel (chan)
+        projection-mix (mix projection-channel)
+        as (->AsyncStream m db global-channel projection-mix state)
+        initial-state (map->AsyncStreamState
+                       {:queries {}
+                        :publication nil
+                        :active-streams {}
+                        :virtual-streams {}})]
     (init-stream-manager! as)
+    (dosync (alter state (fn [_] initial-state)))
+    (pipeline threads
+              (chan (sliding-buffer 1)) (map schedule) projection-channel)
     as))
 

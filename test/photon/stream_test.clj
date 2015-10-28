@@ -18,8 +18,10 @@
 (def uuid (java.util.UUID/randomUUID))
 
 (defn prepare! []
-  (let [ms (m/start-server! (str "photon-test-" uuid) db)]
-    (streams/clean! (:stm ms))
+  (let [ms (m/start-server! "amqp://localhost"
+                            (str "photon-test-" uuid)
+                            db 2 "/tmp/non-existing-path")]
+    (streams/clean! (:stream ms))
     ms))
 
 (defn test-cold []

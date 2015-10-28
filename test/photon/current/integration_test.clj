@@ -16,7 +16,7 @@
 
 (let [uuid (java.util.UUID/randomUUID)
       ms (new-server uuid)
-      m (cl/muon-client (:amqp.url conf/config) "client-test"
+      m (cl/muon-client "amqp://localhost" "client-test"
                         "client" "test")
       res (post-one-event m (str "photon-integration-test-" uuid))
       ch (cl/with-muon m
