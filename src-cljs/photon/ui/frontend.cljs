@@ -68,9 +68,9 @@
                      (fn [ev]
                        (om/update! data :stream-name
                                    (.-value (.-target ev))))}))
-          (dom/div nil "Language")
           (apply dom/div
                  #js {:className "radio"}
+                 "Language:"
                  (map #(dom/div
                            nil
                          (dom/input
@@ -252,6 +252,14 @@
             (let [block (om/build code-block (:active-projection data))]
               block)))))))
 
+(defn widget-dashboard [params owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (dom/div #js{:className "dashboard"}
+        (dom/h1 nil "Dashboard")))))
+
+
 (defn event-list-item [params]
   (reify
     om/IRender
@@ -405,7 +413,8 @@
         nil
         (om/build main-menu
                   {:data data
-                   :items {"Streams" widget-streams
+                   :items {"dashboard" widget-dashboard
+                           "Streams" widget-streams
                            "Projections" widget-projections
                            "New projection" widget-new-projection}})
         (dom/div nil

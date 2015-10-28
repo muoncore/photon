@@ -9,14 +9,22 @@ body{
     margin: 0;
 }
 
-a:hover, a:focus{
+a:focus{
     text-decoration: none;
+}
+
+a:hover{
+    text-decoration: none;
+}
+
+h1{
+    margin-bottom: 50px;
 }
 
 .box{
     width: 80%;
     margin: 20px auto;
-    padding: 50px;
+    padding: 20px;
     border: solid #2B2628 1px;
 }
 
@@ -46,6 +54,10 @@ a:hover, a:focus{
     border-top: solid #ECECEC;
 }
 
+.menu-item:hover{
+    background: #443C3F;
+}
+
 .input-label{
     font-weight: normal;
     width: 150px;
@@ -65,8 +77,13 @@ a:hover, a:focus{
     margin: 0 auto;
 }
 
+.dashboard{
+    width: 80%;
+    margin: 0 auto;
+}
+
 .wide-input{
-    width: 300px;
+    width: 500px;
 }
 
 #main-area{
