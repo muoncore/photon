@@ -131,36 +131,36 @@
 (defn post-event! [stm ev]
   (streams/process-event! stm ev))
 
-(defn filtered-projections [projs filter-keys]
+(defn filtered-projections [stm filter-keys]
   {:projections
    (map
     (fn [v] (assoc v :fn (pr-str (:fn v))))
     (map #(apply dissoc (deref %) filter-keys)
-         (vals projs)))})
+         (vals (:queries @(:state stm)))))})
 
-(defn projections-without-val [projs]
-  (filtered-projections projs [:_id :current-value]))
+(defn projections-without-val [stm]
+  (filtered-projections stm [:_id :current-value]))
 
-(defn projections-with-val [projs]
-  (filtered-projections projs [:_id]))
+(defn projections-with-val [stm]
+  (filtered-projections stm [:_id]))
 
-(defn projection [projection-name]
+(defn projection [stm projection-name]
   (log/trace "Querying" projection-name)
   (let [res (first (filter #(= (name (:projection-name %)) projection-name)
-                           (map deref (vals @streams/queries))))]
-    #_(log/info "Result:" (pr-str res))
-    #_(log/info "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
+                           (map deref (vals (:queries @(:state stm))))))]
+    (log/trace "Result:" (pr-str res))
+    (log/trace "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
     res))
 
-(defn streams []
+(defn streams [stm]
   {:streams
    (into [] (map
              #(hash-map :stream-name (key %)
                         :total-events (:total-events (val %)))
-             (:current-value (projection "__streams__"))))})
+             (:current-value (projection stm "__streams__"))))})
 
-(defn projections []
-  (projections-without-val @streams/queries))
+(defn projections [stm]
+  (projections-without-val (:queries @(:state stm))))
 
 (defn map->hashmap [^Map m]
   (java.util.HashMap. m))
@@ -168,13 +168,13 @@
 (defn proper-map [m]
   (map->hashmap (clojure.walk/stringify-keys m)))
 
-(defn projection-keys []
+(defn projection-keys [stm]
   {:projection-keys
    (map :projection-name
         (map
           (fn [v] (assoc v :fn (pr-str (:fn v))))
           (map #(apply dissoc (deref %) [:_id])
-               (vals @streams/queries))))})
+               (vals (:queries @(:state stm))))))})
 
 (defn stream [stm stream-name & args]
   (let [m-args (apply hash-map args)

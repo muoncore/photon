@@ -20,28 +20,32 @@
 (defmethod decode-event "application/json" [^MuonResourceEvent queryEvent]
   (into {} (.getDecodedContent queryEvent)))
 
-(defrecord PhotonMicroservice [m stm]
+(defrecord PhotonMicroservice [muon stream]
+  ;; TODO: Fix muon-clojure --> {:m m}
   mcs/MicroserviceStream
   (expose-stream! [this]
-    (mcc/stream-source this "stream" (fn [params] (streams/stream stm params))))
+    (mcc/stream-source {:m muon} "stream"
+                       (fn [params] (streams/stream stream params))))
   mcs/MicroserviceQuery
   (expose-get [this]
-    (mcc/on-query this "projection" (fn [resource]
-                                      (log/info ":::: QUERY " (pr-str resource))
-                                      (api/projection (:projection-name resource))))
-    (mcc/on-query this "projection-keys" (fn [resource]
-                                           (api/projection-keys))))
+    (mcc/on-query {:m muon} "projection"
+                  (fn [resource]
+                    (log/info ":::: QUERY " (pr-str resource))
+                    (api/projection stream (:projection-name resource))))
+    (mcc/on-query {:m muon} "projection-keys"
+                  (fn [resource]
+                    (api/projection-keys stream))))
   mcs/MicroserviceCommand
   (expose-post! [this]
     (let [listener (fn [ev] (api/post-event!
-                             stm
+                             stream
                              (clojure.walk/keywordize-keys ev)))
           listener-projections
           (fn [resource]
             (let [params (clojure.walk/keywordize-keys resource)]
-              (api/post-projection! stm params)))]
-      (mcc/on-command this "events" listener)
-      (mcc/on-command this "projections" listener-projections))))
+              (api/post-projection! stream params)))]
+      (mcc/on-command {:m muon} "events" listener)
+      (mcc/on-command {:m muon} "projections" listener-projections))))
 
 (MuonBuilder/addWriter
  (reify AutoConfigurationWriter
@@ -65,7 +69,7 @@
             (catch io.muoncore.exception.MuonException e
               (log/error (str "AMQP queue not found, "
                               "dropping to Muon-less mode"))))
-        stm (streams/new-async-stream m db)
+        stm (streams/new-async-stream m db (ref nil))
         ms (->PhotonMicroservice m stm)]
     (log/info "Loading default projections...")
     (dp/init-default-projs! stm)
@@ -73,3 +77,4 @@
     (when (not (nil? m))
       (mcs/start-server! ms))
     ms))
+
