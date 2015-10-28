@@ -257,7 +257,58 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
-        (dom/h1 nil "Dashboard")))))
+        (dom/h1 nil "Dashboard")
+        (dom/div
+          #js{:className "jumbotron"}
+            (dom/h1 nil "HELLO THERE"))
+        (dom/div
+          #js{:className "widget-box left"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "1"))
+        (dom/div
+          #js{:className "widget-box right"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "3"))
+        (dom/div
+          #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "2"))
+        (dom/div
+          #js{:className "widget-box left"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "4"))
+        (dom/div
+          #js{:className "widget-box right"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "6"))
+        (dom/div
+          #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "5"))))))
 
 
 (defn event-list-item [params]

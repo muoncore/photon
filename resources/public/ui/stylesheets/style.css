@@ -25,11 +25,11 @@ h1{
     width: 80%;
     margin: 20px auto;
     padding: 20px;
-    border: solid #2B2628 1px;
+    border: solid #DDD 1px;
 }
 
 .menu-bar{
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
     background: #2B2628;
@@ -80,10 +80,48 @@ h1{
 .dashboard{
     width: 80%;
     margin: 0 auto;
+    text-align: center;
 }
 
 .wide-input{
     width: 500px;
+}
+
+.widget-box{
+    display: inline-block;
+    width: 30%;
+    text-align: center;
+    border: solid 2px;
+    height: 300px;
+    margin: 20px;
+    background-color: #fafafa;
+    -moz-box-shadow: 3px 3px 5px 6px #ccc;
+    -webkit-box-shadow: 3px 3px 5px 6px #ccc;
+    box-shadow: 3px 3px 5px 6px #ccc;
+}
+
+.widget-box .large-value{
+    font-size: 45pt;
+    display: block;
+    padding: 50px;
+}
+
+.widget-box .title{
+    font-size: 26pt;
+    display: block;
+}
+
+.right{
+    float: right;
+}
+
+.left{
+    float: left;
+}
+
+.jumbotron{
+    background: #CCCCCC;
+    border-radius: 6px;
 }
 
 #main-area{
