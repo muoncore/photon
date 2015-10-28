@@ -4,7 +4,6 @@
             [muon-clojure.server :as mcs]
             [photon.default-projs :as dp]
             [photon.api :as api]
-            [photon.config :as conf]
             [clojure.tools.logging :as log])
   (:import (io.muoncore Muon MuonStreamGenerator)
            (io.muoncore.future MuonFuture ImmediateReturnFuture)
@@ -47,15 +46,11 @@
       (mcc/on-command {:m muon} "events" listener)
       (mcc/on-command {:m muon} "projections" listener-projections))))
 
-(MuonBuilder/addWriter
- (reify AutoConfigurationWriter
-   (writeConfiguration [_ ac]
-    (.setDiscoveryUrl ac
-                      (if (nil? (:amqp.url conf/config))
-                        "amqp://localhost"
-                        (:amqp.url conf/config))))))
-
-(defn muon-local [service-identifier tags]
+(defn muon-local [amqp-url service-identifier tags]
+  (MuonBuilder/addWriter
+   (reify AutoConfigurationWriter
+     (writeConfiguration [_ ac]
+        (.setDiscoveryUrl ac amqp-url))))
   (let [builder (MuonBuilder.)]
     (.withServiceIdentifier builder service-identifier)
     (let [muon (.build builder)]
@@ -63,16 +58,17 @@
       (.start muon)
       muon)))
 
-(defn start-server! [server-name db]
+(defn start-server! [amqp-url server-name db threads projections-path]
   (let [m (try
-            (muon-local server-name ["photon" "eventstore"])
+            (muon-local amqp-url
+                        server-name ["photon" "eventstore"])
             (catch io.muoncore.exception.MuonException e
               (log/error (str "AMQP queue not found, "
                               "dropping to Muon-less mode"))))
-        stm (streams/new-async-stream m db (ref nil))
+        stm (streams/new-async-stream m db threads (ref nil))
         ms (->PhotonMicroservice m stm)]
     (log/info "Loading default projections...")
-    (dp/init-default-projs! stm)
+    (dp/init-default-projs! stm projections-path)
     (log/info "Projections loaded!")
     (when (not (nil? m))
       (mcs/start-server! ms))

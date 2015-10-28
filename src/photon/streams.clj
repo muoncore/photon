@@ -7,7 +7,6 @@
             [clj-rhino :as js]
             [clojure.tools.logging :as log]
             [somnium.congomongo :as m]
-            [photon.config :as conf]
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
@@ -235,6 +234,7 @@
                      :processed (inc (:processed @running-query))
                      :last-event current-event})]
          (alter running-query merge to-merge)
+         ;; TODO: Reconsider projection persistence
          #_(spit (str (:projections.path conf/config)
                       "/" projection-name ".projection")
                  (pr-str @running-query) :append false) 
@@ -453,7 +453,7 @@
 (defrecord AsyncStreamState [queries publication
                              active-streams virtual-streams])
 
-(defn new-async-stream [m db state]
+(defn new-async-stream [m db threads state]
   (let [c (chan 1)
         global-channel {:channel c :mult-channel (mult c)}
         projection-channel (chan)
@@ -466,7 +466,7 @@
                         :virtual-streams {}})]
     (init-stream-manager! as)
     (dosync (alter state (fn [_] initial-state)))
-    (pipeline (read-string (str (:parallel.projections conf/config)))
+    (pipeline threads
               (chan (sliding-buffer 1)) (map schedule) projection-channel)
     as))
 
