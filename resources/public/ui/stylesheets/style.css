@@ -79,6 +79,7 @@ h1{
 
 .dashboard{
     width: 80%;
+    min-width: 1000px;
     margin: 0 auto;
     text-align: center;
 }
@@ -91,9 +92,8 @@ h1{
     display: inline-block;
     width: 30%;
     text-align: center;
-    border: solid 2px;
     height: 300px;
-    margin: 20px;
+    margin-bottom: 20px;
     background-color: #fafafa;
     -moz-box-shadow: 3px 3px 5px 6px #ccc;
     -webkit-box-shadow: 3px 3px 5px 6px #ccc;
