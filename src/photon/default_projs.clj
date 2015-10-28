@@ -14,10 +14,6 @@
      {(:stream-name n)
       {:total-events 1}})))
 
-(def cambio-updates
-  (sfn/fn [p n]
-    ))
-
 (def default-projections
   [{:projection-name "__streams__"
     :stream-name "__all__"
