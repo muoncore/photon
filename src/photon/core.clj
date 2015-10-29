@@ -5,7 +5,8 @@
             [photon.db :as db]
             [photon.muon :as m]
             [photon.config :as conf]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log])
+  (:import (java.net ServerSocket)))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
@@ -13,11 +14,13 @@
   (log/info "Starting photon...")
   (try
     (let [conf (apply conf/config args)
-          db (db/default-db conf)
+          db ((db/default-db conf) conf)
           _ (log/info "DB Configured...")
           ms (m/start-server! (:amqp.url conf)
                               (:microservice.name conf)
                               db
+                              (:projections.port conf)
+                              (:events.port conf)
                               (:parallel.projections conf)
                               (:projections.path conf))]
       (log/info "Server started, initialising streams...")

@@ -9,7 +9,7 @@
                  [http-kit "2.1.18"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0" :exclusions [org.clojure/tools.reader]]
-                 [tranchis/photon-db "0.9.26"]
+                 [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.marianoguerra/clj-rhino "0.2.2"
@@ -18,7 +18,7 @@
                  [clj-time "0.11.0"]
                  [compojure "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.12"]
+                 [tranchis/photon-config "0.9.31"]
                  [io.muoncore/muon-clojure "5.3.7"
                   :exclusions [commons-codec
                                org.clojure/tools.namespace]]
@@ -47,10 +47,10 @@
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
-                 #_[tranchis/photon-riak "0.9.20"]
-                 [tranchis/photon-cassandra "0.9.25"]
-                 #_[tranchis/photon-mongo "0.9.20"]
-                 [tranchis/photon-file "0.9.20"
+                 #_[tranchis/photon-riak "0.9.31"]
+                 [tranchis/photon-cassandra "0.9.31"]
+                 #_[tranchis/photon-mongo "0.9.31"]
+                 [tranchis/photon-file "0.9.31"
                   :exclusions [commons-codec
                                org.clojure/tools.reader
                                com.cognitect/transit-clj]]]

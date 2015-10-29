@@ -141,7 +141,6 @@
     (swagger-ui)
     (swagger-docs)
     (GET* "/ui" []
-          :no-doc true
           (response/resource-response "index.html"
                                       {:root "public/ui"}))
     (route/resources "/")
