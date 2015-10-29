@@ -318,7 +318,7 @@
                               [this :real-streams]
                               (conj real-streams stream-name)))))))))
   (create-virtual-stream-endpoint! [this stream-name]
-    (let [ch (chan (sliding-buffer 1))
+    (let [ch (chan)
           ch-mult (mult ch)]
       (dosync (alter state assoc-in [:virtual-streams stream-name]
                      {:channel ch :mult-channel ch-mult}))
@@ -365,7 +365,7 @@
           virtual-stream (get (:virtual-streams @state) projection-name)
           ch (:channel virtual-stream)
           mult-ch (:mult-channel virtual-stream)
-          telnet-tap (chan (sliding-buffer 1))
+          telnet-tap (chan)
           _ (log/info "Retrieving stream for" projection-name)
           new-descriptor (merge {:projection-name projection-name
                                  :fn (:persist function-descriptor)
@@ -508,7 +508,7 @@
                 text "streaming...")
       (go
         (loop [elem (<! ch)]
-          (if (not (empty? @sockets))
+          (when (not (empty? @sockets))
             (let [edn (prn-str elem)
                   bs (bytes (byte-array (map (comp byte int) edn)))]
               (dorun (pmap #(let [os (.getOutputStream %)]
@@ -530,8 +530,8 @@
   (let [c (chan 1)
         mult-global (mult c)
         global-channel {:channel c :mult-channel mult-global}
-        telnet-projections-channel (chan (sliding-buffer 1))
-        telnet-events-channel (chan (sliding-buffer 1))
+        telnet-projections-channel (chan (sliding-buffer 1024))
+        telnet-events-channel (chan (sliding-buffer 1024))
         telnet-mix (mix telnet-projections-channel)
         projection-channel (chan)
         projection-mix (mix projection-channel)
