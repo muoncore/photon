@@ -362,7 +362,10 @@
           s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
-          ch (:channel (get (:virtual-streams @state) projection-name))
+          virtual-stream (get (:virtual-streams @state) projection-name)
+          ch (:channel virtual-stream)
+          mult-ch (:mult-channel virtual-stream)
+          telnet-tap (chan (sliding-buffer 1))
           _ (log/info "Retrieving stream for" projection-name)
           new-descriptor (merge {:projection-name projection-name
                                  :fn (:persist function-descriptor)
@@ -392,7 +395,8 @@
                      :function function
                      :channel ch})
                   [s])]
-      (admix telnet-mix ch)
+      (tap mult-ch telnet-tap)
+      (admix telnet-mix telnet-tap)
       (log/info "Starting projection loop for" projection-name)
       (dosync (alter state assoc-in
                      [:queries projection-name] running-query))

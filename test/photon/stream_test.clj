@@ -20,7 +20,7 @@
 (defn prepare! []
   (let [ms (m/start-server! "amqp://localhost"
                             (str "photon-test-" uuid)
-                            db 2 "/tmp/non-existing-path")]
+                            db 9998 9999 2 "/tmp/non-existing-path")]
     (streams/clean! (:stream ms))
     ms))
 
