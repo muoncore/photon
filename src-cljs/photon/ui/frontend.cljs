@@ -262,53 +262,69 @@
           #js{:className "jumbotron"}
             (dom/h1 nil "HELLO THERE"))
         (dom/div
-          #js{:className "widget-box left"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
-                "1"))
+          #js{:className "row"}
+                (dom/div
+                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
+                  (dom/div
+                    #js{:className "widget-box"}
+                    (dom/span
+                      #js{:className "title"}
+                        "title")
+                    (dom/span
+                      #js{:className "large-value"}
+                        "1")))
+                (dom/div
+                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
+                  (dom/div
+                    #js{:className "widget-box"}
+                    (dom/span
+                      #js{:className "title"}
+                        "title")
+                    (dom/span
+                      #js{:className "large-value"}
+                        "2")))
+                (dom/div
+                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
+                  (dom/div
+                    #js{:className "widget-box"}
+                    (dom/span
+                      #js{:className "title"}
+                        "title")
+                    (dom/span
+                      #js{:className "large-value"}
+                        "3"))))
         (dom/div
-          #js{:className "widget-box right"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
-                "3"))
-        (dom/div
-          #js{:className "widget-box"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
-                "2"))
-        (dom/div
-          #js{:className "widget-box left"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
-                "4"))
-        (dom/div
-          #js{:className "widget-box right"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
-                "6"))
-        (dom/div
-          #js{:className "widget-box"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
-                "5"))))))
+          #js{:className "row"}
+                (dom/div
+                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
+                  (dom/div
+                    #js{:className "widget-box"}
+                    (dom/span
+                      #js{:className "title"}
+                        "title")
+                    (dom/span
+                      #js{:className "large-value"}
+                        "4")))
+                (dom/div
+                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
+                  (dom/div
+                    #js{:className "widget-box"}
+                    (dom/span
+                      #js{:className "title"}
+                        "title")
+                    (dom/span
+                      #js{:className "large-value"}
+                        "5")))
+                (dom/div
+                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
+                  (dom/div
+                    #js{:className "widget-box"}
+                    (dom/span
+                      #js{:className "title"}
+                        "title")
+                    (dom/span
+                      #js{:className "large-value"}
+                        "6"))))))))
 
 
 (defn event-list-item [params]
@@ -449,7 +465,7 @@
     om/IRender
     (render [_]
       (dom/div
-            #js {:className "menu-bar"}
+            #js {:className "menu-bar hidden-xs"}
             (dom/h2 #js {:className "logo"} "Photon")
                (map
                 #(om/build menu-item {:data (:data data)

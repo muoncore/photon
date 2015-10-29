@@ -79,7 +79,6 @@ h1{
 
 .dashboard{
     width: 80%;
-    min-width: 1000px;
     margin: 0 auto;
     text-align: center;
 }
@@ -90,7 +89,7 @@ h1{
 
 .widget-box{
     display: inline-block;
-    width: 30%;
+    width: 90%;
     text-align: center;
     height: 300px;
     margin-bottom: 20px;
@@ -127,4 +126,10 @@ h1{
 #main-area{
     margin-left: 200px;
     padding: 50px;
+}
+
+@media screen and (max-width: 768px) {
+  #main-area {
+    margin-left: 0;
+  }
 }
