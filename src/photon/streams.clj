@@ -109,35 +109,73 @@
 
 (extend-protocol JSProtocol JSObject)
 
-(defn clj->nashorn [x-ref]
-  (if (map? x-ref)
-    (reify JSObject
-      (isArray [^JSObject this] false)
-      (^boolean isInstance [^JSObject this ^Object instance])
-      (^boolean isInstanceOf [^JSObject this ^Object class] false)
-      (isStrictFunction [^JSObject this] false)
-      (keySet [^JSObject this] (into #{} (keys x-ref)))
-      (newObject [^JSObject this args] (clj->nashorn x-ref))
-      (^void removeMember [^JSObject this ^String s]
-             (swap! x-ref dissoc s (keyword s))
-             nil)
-      (^void setMember [^JSObject this ^String n ^Object v]
-             (swap! x-ref assoc n v))
-      (^void setSlot [^JSObject this ^int n ^Object v])
-      (values [^JSObject this] (map clj->nashorn x-ref))
-      (isFunction [^JSObject this] true)
-      (eval [^JSObject this ^String s])
-      (getClassName [^JSObject this])
-      (getSlot [^JSObject this ^int index])
-      (^boolean hasSlot [^JSObject this ^int index])
-      (^boolean hasMember [^JSObject this ^String s])
-      (call [this thiz args])
-      (getMember [^JSObject this ^String n]
-                 (condp = n
-                   "toString" "[object Object]"
-                   "valueOf" this
-                   (get-member x-ref n))))
-    x-ref))
+(defn clj->nashorn [x-orig]
+  (if (map? x-orig)
+    (let [x-ref (atom x-orig)]
+      (reify JSObject
+        (isArray [^JSObject this]
+                 (println "isArray")
+                 false)
+        (^boolean isInstance [^JSObject this ^Object instance]
+                  (println "isInstance"))
+        (^boolean isInstanceOf [^JSObject this ^Object class]
+                  (println "isInstanceOf")
+                  false)
+        (isStrictFunction [^JSObject this]
+                          (println "isStrictFunction")
+                          false)
+        (keySet [^JSObject this]
+                #_(println "keySet")
+                (into #{} (keys @x-ref)))
+        (newObject [^JSObject this args]
+                   (println "newObject")
+                   (clj->nashorn @x-ref))
+        (^void removeMember [^JSObject this ^String s]
+               #_(println "removeMember")
+               (swap! x-ref dissoc s (keyword s)))
+        (^void setMember [^JSObject this ^String n ^Object v]
+               #_(println "setMember")
+               (let [k (if (contains? @x-ref (keyword n))
+                         (keyword n)
+                         n)]
+                 (swap! x-ref assoc k (clj->nashorn v))))
+        (^void setSlot [^JSObject this ^int n ^Object v]
+               #_(println "setSlot")
+               (let [k (let [k-c (nth (keys @x-ref) n)]
+                         (if (nil? k-c) (str n) k-c))]
+                 (swap! x-ref assoc k (clj->nashorn v))))
+        (values [^JSObject this]
+                #_(println "values")
+                (map clj->nashorn (vals @x-ref)))
+        (isFunction [^JSObject this]
+                    #_(println "isFunction")
+                    true)
+        (eval [^JSObject this ^String s]
+              #_(println "eval"))
+        (getClassName [^JSObject this]
+                      #_(println "getClassName")
+                      "ReifiedJSObject")
+        (getSlot [^JSObject this ^int index]
+                 #_(println "getSlot")
+                 (let [k (nth (keys @x-ref) index)]
+                   (if (nil? k) nil (get @x-ref k))))
+        (^boolean hasSlot [^JSObject this ^int index]
+                  #_(println "hasSlot")
+                  (let [k (nth (keys @x-ref) index)]
+                    (not (nil? k))))
+        (^boolean hasMember [^JSObject this ^String s]
+                  #_(println "hasMember")
+                  (or (contains? @x-ref s) (contains? @x-ref (keyword s))))
+        (call [this thiz args]
+              #_(println "call" thiz (into [] args)))
+        (getMember [^JSObject this ^String n]
+                   #_(println "getMember" n)
+                   (condp = n
+                     "toString" "[object Object]"
+                     "___map" @x-ref
+                     "valueOf" this
+                     (get-member @x-ref n)))))
+    x-orig))
 
 (defmethod generate-function "js-experimental" [_ f]
   (let [factory (ScriptEngineManager.)
@@ -156,9 +194,12 @@
                               "javax.script.ScriptContext.GLOBAL_SCOPE;"
                               "var g = context.getBindings(GLOBAL_SCOPE);"
                               "__prev = g.get('__prev');"
-                              "__prev = reduction(__prev, __next);"
-                              "g.put('__prev', __prev);"
-                              "return __prev;"
+                              "__res = reduction(__prev, __next);"
+                              "if(__res != null && typeof __res === 'function'"
+                              "&& __res.___map != null && __res.___map != undefined)"
+                              "{ __res = __res.___map; }"
+                              "g.put('__prev', __res);"
+                              "return __res;"
                               "}"))
           compiled-fun (fn [a b]
                          (if (or
