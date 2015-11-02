@@ -22,10 +22,14 @@ h1{
 }
 
 .box{
-    width: 80%;
+    width: 100%;
     margin: 20px auto;
     padding: 20px;
     border: solid #DDD 1px;
+}
+
+.box input[type=checkbox]{
+    margin-right: 10px;
 }
 
 .menu-bar{
@@ -68,6 +72,11 @@ h1{
 }
 
 .projections{
+    width: 80%;
+    margin: 0 auto;
+}
+
+.new-projection{
     width: 80%;
     margin: 0 auto;
 }
@@ -121,6 +130,14 @@ h1{
 .jumbotron{
     background: #CCCCCC;
     border-radius: 6px;
+}
+
+.streams-table{
+    width: auto;
+}
+
+.view-title{
+    text-align: left;
 }
 
 #main-area{
