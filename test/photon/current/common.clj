@@ -85,7 +85,7 @@
                    (.toString (java.util.UUID/randomUUID)) #"-")))
         ms (muon/start-server! "amqp://localhost"
                                (str "photon-integration-test-" uuid)
-                               d 2 "/tmp/non-existing-path")]
+                               d 9998 9999 2 "/tmp/non-existing-path")]
     (db/delete-all! d)
     ms))
 

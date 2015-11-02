@@ -1,5 +1,6 @@
 (ns photon.current.functions-test
   (:require [photon.streams :as streams]
+            [serializable.fn :as sfn]
             [clojure.tools.logging :as log])
   (:use midje.sweet))
 

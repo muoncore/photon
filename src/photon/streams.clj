@@ -15,6 +15,7 @@
            (java.util HashMap)
            (jdk.nashorn.api.scripting JSObject)
            (clojure.lang PersistentArrayMap)
+           (java.net ServerSocket)
            (javax.script ScriptEngineManager SimpleBindings
                          ScriptContext)))
 ;; TODO: Do something about the conflict between keywords and strings
@@ -295,7 +296,7 @@
   true)
 
 (defrecord AsyncStream [muon db global-channel
-                        projection-mix state]
+                        telnet-mix projection-mix state]
   StreamManager
   (init-stream-manager! [this]
     (let [db-streams (db/distinct-values db :stream-name)]
@@ -317,7 +318,7 @@
                               [this :real-streams]
                               (conj real-streams stream-name)))))))))
   (create-virtual-stream-endpoint! [this stream-name]
-    (let [ch (chan (sliding-buffer 1))
+    (let [ch (chan)
           ch-mult (mult ch)]
       (dosync (alter state assoc-in [:virtual-streams stream-name]
                      {:channel ch :mult-channel ch-mult}))
@@ -361,7 +362,10 @@
           s-name (if (nil? stream-name) "__all__" stream-name) 
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
-          ch (:channel (get (:virtual-streams @state) projection-name))
+          virtual-stream (get (:virtual-streams @state) projection-name)
+          ch (:channel virtual-stream)
+          mult-ch (:mult-channel virtual-stream)
+          telnet-tap (chan)
           _ (log/info "Retrieving stream for" projection-name)
           new-descriptor (merge {:projection-name projection-name
                                  :fn (:persist function-descriptor)
@@ -391,6 +395,8 @@
                      :function function
                      :channel ch})
                   [s])]
+      (tap mult-ch telnet-tap)
+      (admix telnet-mix telnet-tap)
       (log/info "Starting projection loop for" projection-name)
       (dosync (alter state assoc-in
                      [:queries projection-name] running-query))
@@ -494,20 +500,56 @@
 (defrecord AsyncStreamState [queries publication
                              active-streams virtual-streams])
 
-(defn new-async-stream [m db threads state]
+(defn create-telnet-socket! [port ch text]
+  (try
+    (let [ss (ServerSocket. (read-string (str port)))
+          sockets (atom #{})]
+      (log/info "Opening stream output on port" port "for"
+                text "streaming...")
+      (go
+        (loop [elem (<! ch)]
+          (when (not (empty? @sockets))
+            (let [edn (prn-str elem)
+                  bs (bytes (byte-array (map (comp byte int) edn)))]
+              (dorun (pmap #(let [os (.getOutputStream %)]
+                              (try
+                                (.write os bs)
+                                (catch Exception e
+                                  (swap! sockets disj %))))
+                           @sockets))))
+          (recur (<! ch))))
+      (go
+        (loop [s (.accept ss)]
+          (swap! sockets conj s)
+          (recur (.accept ss)))))
+    (catch java.net.BindException e
+      (log/error (str "Port " port " unavailable, "
+                      "deactivating telnet " text " streaming")))))
+
+(defn new-async-stream [m db projections-port events-port threads state]
   (let [c (chan 1)
-        global-channel {:channel c :mult-channel (mult c)}
+        mult-global (mult c)
+        global-channel {:channel c :mult-channel mult-global}
+        telnet-projections-channel (chan (sliding-buffer 1024))
+        telnet-events-channel (chan (sliding-buffer 1024))
+        telnet-mix (mix telnet-projections-channel)
         projection-channel (chan)
         projection-mix (mix projection-channel)
-        as (->AsyncStream m db global-channel projection-mix state)
+        as (->AsyncStream m db global-channel
+                          telnet-mix projection-mix state)
         initial-state (map->AsyncStreamState
                        {:queries {}
                         :publication nil
                         :active-streams {}
                         :virtual-streams {}})]
     (init-stream-manager! as)
+    (tap mult-global telnet-events-channel)
     (dosync (alter state (fn [_] initial-state)))
     (pipeline threads
               (chan (sliding-buffer 1)) (map schedule) projection-channel)
+    (create-telnet-socket! projections-port
+                           telnet-projections-channel "projections")
+    (create-telnet-socket! events-port
+                           telnet-events-channel "events")
     as))
 
