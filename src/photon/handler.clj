@@ -9,6 +9,7 @@
             [ring.util.response :as response]
             [ring.middleware.json :as rjson]
             [cheshire.core :as json]
+            [cheshire.generate :refer [add-encoder]]
             [compojure.api.sweet :refer :all]
             [ring.swagger.swagger2 :as rs]
             [ring.swagger.json-schema-dirty :refer :all]
@@ -63,9 +64,6 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
-(defn app-routes [stream]
-  )
-
 (defn ws-routes [stm]
   (cc/defroutes m-ws-routes
     (let [ws-handler (f-ws-handler stm)
@@ -76,6 +74,10 @@
             (wrap-websocket-handler ws-streams-handler))
       (GET* "/ws-projections" []
             (wrap-websocket-handler ws-projections-handler)))))
+
+(add-encoder java.lang.Class
+             (fn [c json-generator]
+               (.writeString json-generator (.getSimpleName c))))
 
 (defn app [ms]
   (defapi app-no-reload

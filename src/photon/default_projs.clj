@@ -2,17 +2,21 @@
   (:require [serializable.fn :as sfn]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
+            [clj-schema-inspector.core :as csi]
             [photon.streams :as streams])
   (:import (java.io File)))
 
 (def stream-fn
   (sfn/fn [p n]
-    (merge-with
-     #(assoc %1 :total-events (+ (:total-events %1)
-                                 (:total-events %2)))
-     p
-     {(:stream-name n)
-      {:total-events 1}})))
+    (let [ps (get p (:stream-name n) {})
+          old-total (get ps :total-events 0)
+          old-schema (get ps :schema {})
+          schema (if (< (rand) 0.02)
+                   (clj-schema-inspector.core/add-map
+                    old-schema (:payload n))
+                   old-schema)]
+      (assoc p (:stream-name n) {:total-events (inc old-total)
+                                 :schema schema})))) 
 
 (def default-projections
   [{:projection-name "__streams__"

@@ -285,7 +285,8 @@
            (do
              (close! ch)
              (alter (:state stream) update-in [:virtual-streams]
-                    #(dissoc (:projection-name @running-query))))))))))
+                    (fn [m]
+                      (dissoc m :projection-name @running-query))))))))))
 
 (defn schedule [current-proj]
   (projection-step! (:stream current-proj)

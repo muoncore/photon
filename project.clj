@@ -37,6 +37,7 @@
                  [jarohen/chord "0.6.0" :exclusions [commons-codec
                                                      org.clojure/tools.reader]]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
+                 [tranchis/clj-schema-inspector "0.2.0"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.145"]
                  [tailrecursion/cljson "1.0.7"]
