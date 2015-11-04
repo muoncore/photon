@@ -45,85 +45,88 @@
       om/IRender
       (render [_]
         (dom/div
-            #js {:className "box"}
-          (dom/div
-              nil
-            (dom/label #js {:className "input-label"} "Projection name")
-            (dom/input
-                #js {:className "wide-input"
-                     :type "text" :ref "name"
-                     :value (:projection-name data)
-                     :onChange
-                     (fn [ev]
-                       (om/update! data :projection-name
-                                   (.-value (.-target ev))))}))
-          (dom/div
-              nil
-            (dom/label #js {:className "input-label"} "Stream name")
-            (dom/input
-                #js {:className "wide-input"
-                     :type "text" :ref "name"
-                     :value (:stream-name data)
-                     :onChange
-                     (fn [ev]
-                       (om/update! data :stream-name
-                                   (.-value (.-target ev))))}))
-          (apply dom/div
-                 #js {:className "radio"}
-                 "Language:"
-                 (map #(dom/div
-                           nil
-                         (dom/input
-                             #js {:type "checkbox"
-                                  :checked (= % (:language data))
-                                  :onChange
-                                  (fn [ev] (om/update! data :language %))})
-                         %)
-                      ["clojure" "javascript"]))
-          (dom/div nil "Initial value")
-          (dom/pre
-           nil
-           (dom/code #js {:className "clojure"}
-                     (dom/div
-                         #js {:contentEditable "true"
-                              :ref "initial-value-box"
-                              :className "clojure"
-                              :onBlur
-                              (fn [ev]
-                                (om/update! data :initial-value
-                                            (.-textContent (.-target ev)))
-                                (update-box owner "initial-value-box"))}
-                         (:initial-value data))))
-          (dom/div nil "Code: content of (fn [prev item] ... )")
-          (dom/pre
-           nil
-           (dom/code #js {:className "clojure"}
-                     (dom/div
-                         #js {:contentEditable "true"
-                              :ref "code-box"
-                              :className "clojure"
-                              :onBlur
-                              (fn [ev]
-                                (om/update! data :reduction
-                                            (.-textContent (.-target ev)))
-                                (update-box owner "code-box"))}
-                         (:reduction data))))
-          (dom/div
-              nil
-            (dom/button
-                #js {:onClick
-                     (fn [_]
-                       (go
-                         (<! (client/post
-                              "/api/projection"
-                              {:json-params
-                               (select-keys data
-                                            [:projection-name
-                                             :stream-name
-                                             :initial-value
-                                             :reduction
-                                             :language])}))))}
-                "Register projection")))))))
+            #js {:className "new-projection"}
+            (dom/h1 #js{:className "view-title"} "New Projection")
+            (dom/div
+                #js {:className "box"}
+              (dom/div
+                  nil
+                (dom/label #js {:className "input-label"} "Projection name")
+                (dom/input
+                    #js {:className "wide-input"
+                         :type "text" :ref "name"
+                         :value (:projection-name data)
+                         :onChange
+                         (fn [ev]
+                           (om/update! data :projection-name
+                                       (.-value (.-target ev))))}))
+              (dom/div
+                  nil
+                (dom/label #js {:className "input-label"} "Stream name")
+                (dom/input
+                    #js {:className "wide-input"
+                         :type "text" :ref "name"
+                         :value (:stream-name data)
+                         :onChange
+                         (fn [ev]
+                           (om/update! data :stream-name
+                                       (.-value (.-target ev))))}))
+              (apply dom/div
+                     #js {:className "radio"}
+                     "Language:"
+                     (map #(dom/div
+                               nil
+                             (dom/input
+                                 #js {:type "checkbox"
+                                      :checked (= % (:language data))
+                                      :onChange
+                                      (fn [ev] (om/update! data :language %))})
+                             %)
+                          ["clojure" "javascript"]))
+              (dom/div nil "Initial value")
+              (dom/pre
+               nil
+               (dom/code #js {:className "clojure"}
+                         (dom/div
+                             #js {:contentEditable "true"
+                                  :ref "initial-value-box"
+                                  :className "clojure"
+                                  :onBlur
+                                  (fn [ev]
+                                    (om/update! data :initial-value
+                                                (.-textContent (.-target ev)))
+                                    (update-box owner "initial-value-box"))}
+                             (:initial-value data))))
+              (dom/div nil "Code: content of (fn [prev item] ... )")
+              (dom/pre
+               nil
+               (dom/code #js {:className "clojure"}
+                         (dom/div
+                             #js {:contentEditable "true"
+                                  :ref "code-box"
+                                  :className "clojure"
+                                  :onBlur
+                                  (fn [ev]
+                                    (om/update! data :reduction
+                                                (.-textContent (.-target ev)))
+                                    (update-box owner "code-box"))}
+                             (:reduction data))))
+              (dom/div
+                  nil
+                (dom/button
+                    #js {:onClick
+                         (fn [_]
+                           (go
+                             (<! (client/post
+                                  "/api/projection"
+                                  {:json-params
+                                   (select-keys data
+                                                [:projection-name
+                                                 :stream-name
+                                                 :initial-value
+                                                 :reduction
+                                                 :language])}))))}
+                    "Register projection"))))))))
 
 (defn subscribe-projections! [data]
   (go
@@ -237,7 +240,7 @@
       om/IRenderState
       (render-state [_ state]
         (dom/div #js{:className "projections"}
-          (dom/h1 nil "Projections")
+          (dom/h1 #js{:className "view-title"} "Projections")
           (apply dom/table #js
                  {:className "table table-striped table-bordered table-hover table-heading"}
                  (apply dom/tr nil
@@ -257,7 +260,7 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
-        (dom/h1 nil "Dashboard")
+        (dom/h1 #js{:className "view-title"} "Dashboard")
         (dom/div
           #js{:className "jumbotron"}
             (dom/h1 nil "HELLO THERE"))
@@ -433,9 +436,9 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "streams"}
-        (dom/h1 nil "Streams")
+        (dom/h1 #js{:className "view-title"} "Streams")
         (apply dom/table #js
-               {:className "table table-striped table-bordered table-hover table-heading"}
+               {:className "table table-striped table-bordered table-hover table-heading streams-table"}
                (apply dom/tr nil
                       (map #(dom/th nil
                               (k->header %))
