@@ -418,7 +418,7 @@
                                         :active-stream (val %)))}
                          (val %))
                        (val %)))
-                  (:stream data))))))
+                  (dissoc (:stream data) :schema))))))
 
 (defn widget-streams [data owner]
   (reify
