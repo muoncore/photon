@@ -260,7 +260,6 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
-        (dom/h1 #js{:className "view-title"} "Dashboard")
         (dom/div
           #js{:className "jumbotron"}
             (dom/h1 nil "HELLO THERE"))
@@ -393,7 +392,7 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div nil
-        (dom/h2 nil "Events")
+        (dom/h1 nil "Events")
         (apply dom/table #js
                {:className "table table-striped table-bordered table-hover table-heading"}
                (apply dom/tr nil
@@ -483,7 +482,7 @@
         nil
         (om/build main-menu
                   {:data data
-                   :items {"dashboard" widget-dashboard
+                   :items {"Dashboard" widget-dashboard
                            "Streams" widget-streams
                            "Projections" widget-projections
                            "New projection" widget-new-projection}})

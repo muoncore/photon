@@ -21,6 +21,10 @@ h1{
     margin-bottom: 50px;
 }
 
+td, th{
+    padding: 0 10px;
+}
+
 .box{
     width: 100%;
     margin: 20px auto;
