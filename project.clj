@@ -12,7 +12,8 @@
                  [ring/ring-json "0.4.0" :exclusions [org.clojure/tools.reader]]
                  [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 #_[org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [tranchis/core.async "0.3.0-SNAPSHOT"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
                  [cheshire "5.5.0"]
@@ -46,6 +47,7 @@
                  [org.omcljs/om "1.0.0-alpha7"]
                  [jayq "2.5.4"]
                  [fipp "0.6.2"]
+                 [reagent-utils "0.1.4"]
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
@@ -65,7 +67,7 @@
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"
-             #_"-agentpath:/Users/sergio/Downloads/YourKit_Java_Profiler_2015_build_15074.app/Contents/Resources/bin/mac/libyjpagent.jnilib"
+             #_"-agentpath:/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib=nowait"
              #_"server"
              "-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
              "-XX:+UseParNewGC" "-XX:ParallelCMSThreads=4"

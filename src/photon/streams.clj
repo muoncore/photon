@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [go-loop go <!! <! >! chan buffer
                                         sliding-buffer mult tap close!
                                         put! >!! mix admix onto-chan
-                                        pub sub alts! pipeline]
+                                        pub sub alts!]
              :as async]
             [clj-rhino :as js]
             [clojure.tools.logging :as log]
@@ -20,6 +20,12 @@
                          ScriptContext)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
+
+(defn merge-t
+  "An example implementation of `merge` using transients."
+  [x y]
+  (persistent! (reduce (fn [res [k v]] (assoc! res k v))
+                       (transient x) y)))
 
 
 ;; Stream protocols and multimethods
@@ -242,59 +248,57 @@
 
 (defn projection-step! [stream running-query current-event function ch]
   (dosync
-   (let [current-value (:current-value @running-query)]
+   (let [start-ts (System/currentTimeMillis)
+         rq @running-query
+         current-value (:current-value rq)]
      (if (nil? current-event)
        (alter running-query assoc :status :finished)
-       (let [start-ts (System/currentTimeMillis)
-             new-value (try
-                         (function current-value current-event)
-                         (catch Exception e
-                           (log/info (.getMessage e))
-                           (.printStackTrace e)
-                           e))
+       (let [to-merge (transient rq)
+             to-merge (try
+                        (assoc! to-merge :current-value
+                                (function current-value current-event))
+                        (catch Exception e
+                          (log/info (.getMessage e))
+                          (.printStackTrace e)
+                          (assoc!
+                           (assoc! to-merge :status :failed)
+                           :last-error
+                           (str (exception->message e) "\n"
+                                (clojure.string/join "\n"
+                                 (map str
+                                      (exception->stack-trace e)))))))
              current-time (- (System/currentTimeMillis) start-ts)
-             to-merge-no-time
-             (if (instance? Exception new-value)
-               {:last-error
-                (str (exception->message new-value) "\n"
-                     (clojure.string/join
-                      "\n"
-                      (map str (exception->stack-trace new-value))))
-                :status :failed}
-               {:current-value new-value
-                :status :running})
-             to-merge
-             (merge to-merge-no-time
-                    {:avg-global-time
-                     (double (/ (- (System/currentTimeMillis)
-                                   (:init-time @running-query))
-                                (inc (:processed @running-query))))
-                     :avg-time (next-avg
-                                (:avg-time @running-query)
-                                current-time
-                                (inc (:processed @running-query)))
-                     :processed (inc (:processed @running-query))
-                     :last-event current-event})]
-         (alter running-query merge to-merge)
+             to-merge (assoc! to-merge :avg-global-time
+                              (double (/ (- (System/currentTimeMillis)
+                                            (:init-time rq))
+                                         (inc (:processed rq)))))
+             to-merge (assoc! to-merge :avg-time
+                              (next-avg
+                               (:avg-time rq)
+                               current-time
+                               (inc (:processed rq))))
+             to-merge (assoc! to-merge :processed
+                              (inc (:processed rq)))
+             to-merge (assoc! to-merge :last-event current-event)
+             new-rq (persistent! to-merge)]
+         (alter running-query (fn [_] new-rq))
          ;; TODO: Reconsider projection persistence
          #_(spit (str (:projections.path conf/config)
                       "/" projection-name ".projection")
-                 (pr-str @running-query) :append false) 
-         (go (>! ch @running-query))
-         (if (instance? Exception new-value)
+                 (pr-str new-rq) :append false) 
+         (>!! ch new-rq)
+         (if (= (:status new-rq) :failed)
            (do
              (close! ch)
              (alter (:state stream) update-in [:virtual-streams]
-                    (fn [m]
-                      (dissoc m :projection-name @running-query))))))))))
+                    (fn [m] (dissoc m :projection-name))))))))))
 
 (defn schedule [current-proj]
   (projection-step! (:stream current-proj)
                     (:running-query current-proj)
                     (:element current-proj)
                     (:function current-proj)
-                    (:channel current-proj))
-  true)
+                    (:channel current-proj)))
 
 (defrecord AsyncStream [muon db global-channel
                         telnet-mix projection-mix state]
@@ -319,7 +323,7 @@
                               [this :real-streams]
                               (conj real-streams stream-name)))))))))
   (create-virtual-stream-endpoint! [this stream-name]
-    (let [ch (chan)
+    (let [ch (chan (sliding-buffer 1))
           ch-mult (mult ch)]
       (dosync (alter state assoc-in [:virtual-streams stream-name]
                      {:channel ch :mult-channel ch-mult}))
@@ -351,7 +355,7 @@
   (data-from [this stream-name date-string]
     (db/lazy-events db stream-name date-string))
   HotStream
-  (next! [this] (go (<! (:channel global-channel))))
+  (next! [this] (<!! (:channel global-channel)))
   EventProcessor
   (register-query! [this projection-descriptor]
     (let [projection-name (:projection-name projection-descriptor)
@@ -368,19 +372,19 @@
           mult-ch (:mult-channel virtual-stream)
           telnet-tap (chan)
           _ (log/info "Retrieving stream for" projection-name)
-          new-descriptor (merge {:projection-name projection-name
-                                 :fn (:persist function-descriptor)
-                                 :stream-name s-name
-                                 :language lang
-                                 :current-value init
-                                 :processed 0
-                                 :init-time (System/currentTimeMillis)
-                                 :last-event nil
-                                 :last-error nil
-                                 :avg-time 0
-                                 :avg-global-time 0
-                                 :status :running}
-                                projection-descriptor)
+          new-descriptor (merge-t {:projection-name projection-name
+                                   :fn (:persist function-descriptor)
+                                   :stream-name s-name
+                                   :language lang
+                                   :current-value init
+                                   :processed 0
+                                   :init-time (System/currentTimeMillis)
+                                   :last-event nil
+                                   :last-error nil
+                                   :avg-time 0
+                                   :avg-global-time 0
+                                   :status :running}
+                                  projection-descriptor)
           last-ts (str (inc (get (:last-event new-descriptor)
                                  :server-timestamp -1)))
           s (stream this {"from" last-ts
@@ -403,27 +407,29 @@
                      [:queries projection-name] running-query))
       (admix projection-mix to-mix)
       (log/info "All done for" projection-name)))
-  (process-event! [this msg]
+  (process-event! [this orig-msg]
                   ;; Think about the order of store+send to taps
-                  #_(println "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " (pr-str msg))
-                  (let [stream-name (get msg "stream-name"
+                  (log/trace (pr-str orig-msg))
+                  (let [msg (transient orig-msg)
+                        stream-name (get msg "stream-name"
                                          (get msg :stream-name))
                         server-timestamp (:server-timestamp msg)
                         now (bigint (System/currentTimeMillis))
                         new-timestamp (if (nil? server-timestamp)
                                         now
                                         (long server-timestamp))
-                        new-msg (merge msg
-                                       {:server-timestamp
-                                        new-timestamp
-                                        :photon-timestamp now
-                                        :order-id
+                        new-msg (assoc! msg :server-timestamp
+                                        new-timestamp)
+                        new-msg (assoc! new-msg :photon-timestamp
+                                        now)
+                        new-msg (assoc! new-msg :order-id
                                         (+ (* 1000 new-timestamp)
                                            (rem (System/nanoTime)
-                                                1000))})]
-                    (when (not= (:stream-name msg) "eventlog")
-                      (update-streams! this (get msg "stream-name"
-                                                 (get msg :stream-name)))
+                                                1000)))
+                        new-msg (persistent! new-msg)]
+                    (when (not= (:stream-name new-msg) "eventlog")
+                      (update-streams! this (get new-msg "stream-name"
+                                                 (get new-msg :stream-name)))
                       (>!! (:channel global-channel) new-msg)
                       (>!! (:channel (publisher this)) new-msg)
                       (db/store db new-msg))) 
@@ -452,9 +458,8 @@
               (log/info ":::::::::::::::::::: Stream depleted, closing"))
             (if closed?
               (log/info ":::::::::::::::::::: Stream closed!")
-              (do
-                (let [closed? (not (>! ch e))]
-                  (recur s closed?)))))))
+              (let [closed? (not (>! ch e))]
+                (recur s closed?))))))
       (log/info "::: Cold stream over"))
     ch))
 
@@ -527,6 +532,16 @@
       (log/error (str "Port " port " unavailable, "
                       "deactivating telnet " text " streaming")))))
 
+(defn pipeline [num fn ch]
+  (loop [i 0]
+    (when-not (= i num)
+      (go
+        (loop [elem (<! ch)]
+          (when-not (nil? elem)
+            (fn elem)
+            (recur (<! ch)))))
+      (recur (inc i)))))
+
 (defn new-async-stream [m db projections-port events-port threads state]
   (let [c (chan 1)
         mult-global (mult c)
@@ -546,8 +561,9 @@
     (init-stream-manager! as)
     (tap mult-global telnet-events-channel)
     (dosync (alter state (fn [_] initial-state)))
-    (pipeline threads
+    #_(pipeline threads
               (chan (sliding-buffer 1)) (map schedule) projection-channel)
+    (pipeline threads schedule projection-channel)
     (create-telnet-socket! projections-port
                            telnet-projections-channel "projections")
     (create-telnet-socket! events-port

@@ -3,7 +3,7 @@
             [photon.db :as db])
   (:import [photon.java MapProxy EntryComparator]
            [java.util Comparator]
-           [com.hazelcast.query Predicates PagingPredicate]
+           [com.hazelcast.query Predicates PagingPredicate Predicate]
            [com.hazelcast.instance HazelcastInstanceProxy]))
 
 (def chunk-size 1000)
@@ -59,8 +59,10 @@
                         (= stream-name :__all__))
                   (Predicates/greaterEqual "serverTimestamp" date)
                   (Predicates/and
-                   (Predicates/greaterEqual "serverTimestamp" date)
-                   (Predicates/equal "streamName" stream-name)))
+                   (into-array
+                    Predicate
+                    [(Predicates/greaterEqual "serverTimestamp" date)
+                     (Predicates/equal "streamName" stream-name)])))
           predicate (PagingPredicate. query
                                       map-comparator chunk-size)]
       (db/lazy-events-page this stream-name date predicate)))
