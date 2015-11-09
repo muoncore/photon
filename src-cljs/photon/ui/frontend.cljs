@@ -418,7 +418,7 @@
                                         :active-stream (val %)))}
                          (val %))
                        (val %)))
-                  (dissoc (:stream data) :schema))))))
+                  (:stream data))))))
 
 (defn widget-streams [data owner]
   (reify
@@ -441,10 +441,10 @@
                (apply dom/tr nil
                       (map #(dom/th nil
                               (k->header %))
-                           (keys (first (:streams state)))))
+                           (keys (dissoc (first (:streams state)) :schema))))
                (map #(om/build row-stream {:data (:data data)
                                            :stream %})
-                    (:streams state)))
+                    (map #(dissoc % :schema) (:streams state))))
         (if (not (nil? (:active-stream (:data data))))
           (om/build event-list
                     {:data (:data data)
@@ -468,6 +468,9 @@
     (render [_]
       (dom/div
             #js {:className "menu-bar hidden-xs"}
+            (dom/img #js {:src "/ui/images/photon.png"
+                          :width "100%"
+                          :height "auto"})
             (dom/h2 #js {:className "logo"} "Photon")
                (map
                 #(om/build menu-item {:data (:data data)

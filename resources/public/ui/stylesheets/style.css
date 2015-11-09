@@ -72,7 +72,11 @@ td, th{
 }
 
 .logo{
+    font-family: 'Audiowide', cursive;
     margin-bottom: 50px;
+    position: absolute;
+    top: 120px;
+    left: 37px;
 }
 
 .projections{
