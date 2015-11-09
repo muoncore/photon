@@ -258,12 +258,17 @@
 
 (defn widget-dashboard [params owner]
   (reify
+    om/IDidMount
+    (did-mount [_]
+              (.log js/console params)
+              (.generate js/c3 #js {:bindto "#chart"
+                                   :data #js {:columns #js [ #js ["data1", 30, 200, 100, 400, 150, 250]
+                                                             #js ["data2", 50, 20, 10, 40, 15, 25]]}}))
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
         (dom/div
-          #js{:className "jumbotron"}
-            (dom/h1 nil "HELLO THERE"))
+          #js{:id "chart"})
         (dom/div
           #js{:className "row"}
                 (dom/div

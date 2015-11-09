@@ -15,7 +15,6 @@
                    (clj-schema-inspector.core/add-map
                     old-schema (:payload n))
                    old-schema)]
-      (Thread/sleep 2000)
       (assoc p (:stream-name n) {:total-events (inc old-total)
                                  :schema schema}))))
 
