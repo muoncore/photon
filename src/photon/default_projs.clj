@@ -15,8 +15,9 @@
                    (clj-schema-inspector.core/add-map
                     old-schema (:payload n))
                    old-schema)]
+      (Thread/sleep 2000)
       (assoc p (:stream-name n) {:total-events (inc old-total)
-                                 :schema schema})))) 
+                                 :schema schema}))))
 
 (def default-projections
   [{:projection-name "__streams__"
@@ -51,4 +52,3 @@
         combined (vals (merge (projs->keyed default-projections)
                               (projs->keyed projs)))]
     (dorun (map #(streams/register-query! stm %) combined))))
-

@@ -40,6 +40,7 @@
                  [tranchis/clj-schema-inspector "0.2.0"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.145"]
+                 [cljsjs/c3 "0.4.10-0"]
                  [tailrecursion/cljson "1.0.7"]
                  [cljs-http "0.1.37"]
                  [org.omcljs/om "1.0.0-alpha7"]
@@ -98,4 +99,3 @@
    :repl {:dependencies [[midje "1.7.0"]]}
    :dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring-mock "0.1.5"]]}})
-
