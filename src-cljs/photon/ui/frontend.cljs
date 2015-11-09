@@ -6,8 +6,12 @@
             [fipp.edn :as fipp]
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
+            [goog.events :as events]
+            [reagent.session :as session]
             [om.core :as om]
-            [om.dom :as dom]))
+            [om.dom :as dom])
+  (:import goog.net.IframeIo
+           goog.net.EventType))
 
 (defonce app-state (atom {:stream nil
                           :current nil
@@ -421,6 +425,115 @@
                        (val %)))
                   (dissoc (:stream data) :schema))))))
 
+(defn add-select-state [option entry] 
+  (if (= option (:text entry)) 
+    #js {:value option :selected  "selected"} 
+    #js {:value option})) 
+
+(defn set-status [class title items]
+  (.log js/console "set-status" class title items))
+
+(defn iframe-response-ok [msg]
+  (let [status (set-status "alert alert-success"
+                           "Upload Successful"
+                           [(str "Filename: " (:filename msg))
+                            (str "Size: " (:size msg))
+                            (str "Tempfile: " (:tempfile msg))])]
+    (session/put! :upload-status status)))
+
+(defn iframe-response-error [msg]
+  (let [status (set-status "alert alert-danger"
+                           "Upload Failure"
+                           [(str "Status: " (:status msg))
+                            (str (:message msg))])]
+    (session/put! :upload-status status)))
+
+(defn handle-iframe-response [json-msg]
+  (let [msg (js->clj json-msg :keywordize-keys true)]
+    (.log js/console (str "iframe-response: " msg))
+    (cond
+      (= "OK" (:status msg)) (iframe-response-ok msg)
+      (= "ERROR" (:status msg)) (iframe-response-error msg)
+      :else (session/put! :upload-status [:div.alert.alert-danger
+                                          [:h4 "Unexpected Error"]
+                                          [:ul
+                                           [:li (str "Status: " (:status msg))]
+                                           [:li (:message msg)]]]))))
+
+(defn set-upload-indicator []
+  (let [class "fa fa-spinner fa-spin fa-pulse"]
+    (session/put! :upload-status [:div 
+                                  [:p "Uploading file... "
+                                   [:span {:class class}]]])))
+
+(defn iframeio-upload-file [form-id]
+  (let [el (.getElementById js/document form-id)
+        iframe (IframeIo.)]
+    (events/listen iframe EventType.COMPLETE
+                   (fn [event]
+                     (let [rsp (.getResponseJson iframe)
+                           status ()])
+                     (handle-iframe-response (.getResponseJson iframe))
+                     (.dispose iframe)))
+    (set-upload-indicator)
+    (.sendFromForm iframe el "/upload")))
+
+(defn widget-new-stream [params owner]
+  (let [data (:data params)
+        new-stream (:new-stream data)
+        new-stream (if (contains? new-stream :select-value)
+                     new-stream
+                     (assoc new-stream :select-value "file"))]
+    (reify
+      om/IRender
+      (render [_]
+        (dom/div #js {:className "new-stream"}
+          (dom/h1 #js {:className "view-title"} "New Stream")
+          (dom/div
+              #js {:className "box"}
+            (dom/div
+                nil
+              (dom/label #js {:className "input-label"} "Stream name")
+              (dom/input
+                  #js {:className "wide-input"
+                       :type "text" :ref "name"
+                       :value (:stream-name data)
+                       :onChange
+                       (fn [ev]
+                         (om/update! data :stream-name
+                                     (.-value (.-target ev))))}))
+            (dom/div
+                #js {:className "radio"}
+              "Source type:"
+              (dom/select
+               #js {:onChange
+                    (fn [ev]
+                      (om/update!
+                       data [:new-stream :select-value]
+                       (.-value (.-target ev))))}
+               (dom/option
+                (add-select-state "file"
+                                  (:select-value new-stream))
+                "JSON sequence file")))
+            (condp = (:select-value new-stream)
+              "file" (dom/div nil
+                       (dom/input #js
+                           {:type "file"
+                            :id "upload-form"
+                            :onChange
+                            (fn [ev]
+                              (om/update! data [:new-stream :file]
+                                          (.-name
+                                           (aget (.-files (.-target ev))
+                                                 0))))})
+                       (pr-str (:file new-stream))
+                       (dom/button
+                           #js {:onClick
+                                (fn [_]
+                                  (iframeio-upload-file "upload-form"))}
+                         "Declare stream")))
+            ))))))
+
 (defn widget-streams [data owner]
   (reify
     om/IInitState
@@ -486,7 +599,8 @@
                    :items {"dashboard" widget-dashboard
                            "Streams" widget-streams
                            "Projections" widget-projections
-                           "New projection" widget-new-projection}})
+                           "New projection" widget-new-projection
+                           "New stream" widget-new-stream}})
         (dom/div nil
           (if (nil? (:active-page data))
             (dom/h3 nil "Choose option from menu...")
