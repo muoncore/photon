@@ -143,8 +143,9 @@
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (.log js/console (pr-str elem))
-                (om/update! data :projections
-                            (:projections (:message elem))))
+                (om/update-state! data
+                                  #(assoc % :projections
+                                          (:projections (:message elem)))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
@@ -163,7 +164,7 @@
                 (let [streams-proj (:message elem)]
                   (om/update-state! data
                                     #(assoc % :streams
-                                            (proj->streams (:current-value streams-proj))))))
+                                      (proj->streams (:current-value streams-proj))))))
               (>! ws-channel {:projection-name "__streams__"})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
@@ -191,9 +192,7 @@
                                  {:href "#"
                                   :onClick
                                   (fn [_]
-                                    (om/update! (:data params)
-                                                :active-projection
-                                                (:projection params)))}
+                                    ((:fn-update params) (:projection params)))}
                                  (val %))
                                (str (val %))))
                           filtered))))))
@@ -232,42 +231,48 @@
                          {:className "clojure"}
                          (clj->str c))))))
 
-(defn widget-projections [params owner]
-  (let [data (:data params)]
-    (reify
-      om/IInitState
-      (init-state [this]
-        {})
-      om/IDidMount
-      (did-mount [this]
-        (subscribe-projections! data))
-      om/IRenderState
-      (render-state [_ state]
+(defn widget-projections [data owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:active-projection nil})
+    om/IRenderState
+    (render-state [_ state]
+      (let [fn-update (fn [new-active-projection]
+                        (om/update-state! owner (fn [state]
+                                                  (assoc state
+                                                         :active-projection
+                                                         new-active-projection))))]
         (dom/div #js{:className "projections"}
-          (dom/h1 #js{:className "view-title"} "Projections")
-          (apply dom/table #js
-                 {:className "table table-striped table-bordered table-hover table-heading"}
-                 (apply dom/tr nil
-                        (map #(dom/th #js {:style #js {:border "1px"}}
-                                      (k->header (key %)))
-                             (filter-projection
-                              (first (:projections data)))))
-                 (map #(om/build projection-item {:data data
-                                                  :projection %})
-                      (:projections data)))
-          (if (not (nil? (:active-projection data)))
-            (let [block (om/build code-block (:active-projection data))]
-              block)))))))
+                (dom/h1 #js{:className "view-title"} "Projections")
+                (apply dom/table #js
+                  {:className "table table-striped table-bordered table-hover table-heading"}
+                  (apply dom/tr nil
+                    (map #(dom/th #js {:style #js {:border "1px"}}
+                                  (k->header (key %)))
+                         (filter-projection
+                          (first (:projections data)))))
+                  (map #(om/build projection-item {:data data
+                                                   :projection %
+                                                   :fn-update fn-update})
+                       (:projections data)))
+                (if (not (nil? (:active-projection state)))
+                  (let [block (om/build code-block (:active-projection state))]
+                    block)))))))
 
 (defn widget-dashboard [params owner]
   (reify
+    om/IDidMount
+    (did-mount [_]
+              (.log js/console params)
+              (.generate js/c3 #js {:bindto "#chart"
+                                   :data #js {:columns #js [ #js ["data1", 30, 200, 100, 400, 150, 250]
+                                                             #js ["data2", 50, 20, 10, 40, 15, 25]]}}))
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
-        (dom/h1 #js{:className "view-title"} "Dashboard")
         (dom/div
-          #js{:className "jumbotron"}
-            (dom/h1 nil "HELLO THERE"))
+          #js{:id "chart"})
         (dom/div
           #js{:className "row"}
                 (dom/div
@@ -397,7 +402,7 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div nil
-        (dom/h2 nil "Events")
+        (dom/h1 nil "Events")
         (apply dom/table #js
                {:className "table table-striped table-bordered table-hover table-heading"}
                (apply dom/tr nil
@@ -419,11 +424,10 @@
                          {:href "#"
                           :onClick
                           (fn [_]
-                            (om/update! (:data data)
-                                        :active-stream (val %)))}
+                            ((:fn-update data) (val %)))}
                          (val %))
                        (val %)))
-                  (dissoc (:stream data) :schema))))))
+                  (:stream data))))))
 
 (defn add-select-state [option entry] 
   (if (= option (:text entry)) 
@@ -537,32 +541,32 @@
 (defn widget-streams [data owner]
   (reify
     om/IInitState
-    (init-state [this]
-      data)
-    om/IDidMount
-    (did-mount [this]
-      (go
-        (let [res (:body (<! (client/get "/api/streams")))]
-          (om/update-state! owner #(assoc % :streams
-                                          (proj->streams (:current-value res))))))
-      (subscribe-streams! owner))
+    (init-state [_]
+      {:active-stream nil})
     om/IRenderState
     (render-state [_ state]
-      (dom/div #js{:className "streams"}
-        (dom/h1 #js{:className "view-title"} "Streams")
-        (apply dom/table #js
-               {:className "table table-striped table-bordered table-hover table-heading streams-table"}
-               (apply dom/tr nil
-                      (map #(dom/th nil
-                              (k->header %))
-                           (keys (first (:streams state)))))
-               (map #(om/build row-stream {:data (:data data)
-                                           :stream %})
-                    (:streams state)))
-        (if (not (nil? (:active-stream (:data data))))
-          (om/build event-list
-                    {:data (:data data)
-                     :stream (:active-stream (:data data))}))))))
+      (let [fn-update (fn [new-active-stream]
+                        (om/update-state! owner (fn [state]
+                                                  (assoc state
+                                                         :active-stream
+                                                         new-active-stream))))]
+        (dom/div #js{:className "streams"}
+                 (dom/h1 #js{:className "view-title"} "Streams")
+                 (apply dom/table #js
+                   {:className (str "table table-striped table-bordered "
+                                    "table-hover table-heading streams-table")}
+                   (apply dom/tr nil
+                     (map #(dom/th nil
+                                   (k->header %))
+                          (keys (dissoc (first (:streams data)) :schema))))
+                   (map #(om/build row-stream {:data (:data data)
+                                               :stream %
+                                               :fn-update fn-update})
+                        (map #(dissoc % :schema) (:streams data))))
+                 (if (not (nil? (:active-stream state)))
+                   (om/build event-list
+                             {:data (:data data)
+                              :stream (:active-stream state)})))))))
 
 (defn menu-item [data owner]
   (reify
@@ -582,6 +586,9 @@
     (render [_]
       (dom/div
             #js {:className "menu-bar hidden-xs"}
+            (dom/img #js {:src "/ui/images/photon.png"
+                          :width "100%"
+                          :height "auto"})
             (dom/h2 #js {:className "logo"} "Photon")
                (map
                 #(om/build menu-item {:data (:data data)
@@ -590,13 +597,20 @@
 
 (defn full-page [data owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IInitState
+    (init-state [_]
+      data)
+    om/IDidMount
+    (did-mount [_]
+      (subscribe-streams! owner)
+      (subscribe-projections! owner))
+    om/IRenderState
+    (render-state [_ state]
       (dom/div
         nil
         (om/build main-menu
-                  {:data data
-                   :items {"dashboard" widget-dashboard
+                  {:data state
+                   :items {"Dashboard" widget-dashboard
                            "Streams" widget-streams
                            "Projections" widget-projections
                            "New projection" widget-new-projection
@@ -604,7 +618,7 @@
         (dom/div nil
           (if (nil? (:active-page data))
             (dom/h3 nil "Choose option from menu...")
-            (om/build (:active-page data) {:data data})))))))
+            (om/build (:active-page data) state)))))))
 
 (go (let [response (<! (client/get "/api/startup"))]
       (om/root full-page app-state

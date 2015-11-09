@@ -21,6 +21,10 @@ h1{
     margin-bottom: 50px;
 }
 
+td, th{
+    padding: 0 10px;
+}
+
 .box{
     width: 100%;
     margin: 20px auto;
@@ -68,7 +72,11 @@ h1{
 }
 
 .logo{
+    font-family: 'Audiowide', cursive;
     margin-bottom: 50px;
+    position: absolute;
+    top: 120px;
+    left: 37px;
 }
 
 .projections{

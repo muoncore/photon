@@ -101,4 +101,3 @@
    :repl {:dependencies [[midje "1.7.0"]]}
    :dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring-mock "0.1.5"]]}})
-
