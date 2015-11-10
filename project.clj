@@ -96,8 +96,8 @@
   :docker {:image-name "myregistry.example.org/myimage"
            :dockerfile "target/dist/Dockerfile"
            :build-dir  "target"}
+  :aot :all
   :profiles
-  {:uberjar {:aot :all}
-   :repl {:dependencies [[midje "1.7.0"]]}
+  {:repl {:dependencies [[midje "1.7.0"]]}
    :dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring-mock "0.1.5"]]}})
