@@ -2,7 +2,6 @@
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
-  :java-source-paths ["java"]
   :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
@@ -11,7 +10,8 @@
                  [ring/ring-json "0.4.0" :exclusions [org.clojure/tools.reader]]
                  [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 #_[org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [tranchis/core.async "0.3.0-20151110.100912-1"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
                  [cheshire "5.5.0"]
@@ -45,11 +45,13 @@
                  [org.omcljs/om "1.0.0-alpha7"]
                  [jayq "2.5.4"]
                  [fipp "0.6.2"]
+                 [reagent-utils "0.1.4"]
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-cassandra "0.9.31"]
+                 [tranchis/photon-cassandra "0.9.40"]
+                 [tranchis/photon-hazelcast "0.9.40"]
                  #_[tranchis/photon-mongo "0.9.31"]
                  [tranchis/photon-file "0.9.31"
                   :exclusions [commons-codec
@@ -64,7 +66,7 @@
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"
-             #_"-agentpath:/Users/sergio/Downloads/YourKit_Java_Profiler_2015_build_15074.app/Contents/Resources/bin/mac/libyjpagent.jnilib"
+             #_"-agentpath:/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib=nowait"
              #_"server"
              "-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
              "-XX:+UseParNewGC" "-XX:ParallelCMSThreads=4"
@@ -93,8 +95,8 @@
   :docker {:image-name "myregistry.example.org/myimage"
            :dockerfile "target/dist/Dockerfile"
            :build-dir  "target"}
+  :aot :all
   :profiles
-  {:uberjar {:aot :all}
-   :repl {:dependencies [[midje "1.7.0"]]}
+  {:repl {:dependencies [[midje "1.7.0"]]}
    :dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring-mock "0.1.5"]]}})
