@@ -27,7 +27,8 @@
       (log/info "Initialising endpoints...")
       (let [handler (h/app (:stream ms))]
         (println run-server)
-        (time (run-server handler {:port 3000}))))
+        (time (run-server handler {:port 3000}))
+        ms))
     (catch UnsupportedOperationException e
       (println (.getMessage e)))))
 

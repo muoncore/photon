@@ -99,10 +99,10 @@
       (swagger-ui :swagger-docs "/api/swagger.json")
       (swagger-docs)
       (GET* "/streams" []
-          :return api/StreamInfoMap
-          :summary "Obtain a list of active streams
-          and their current size"
-          (ok (api/streams ms)))
+            :return api/StreamInfoMap
+            :summary "Obtain a list of active streams
+                     and their current size"
+            (ok (api/streams ms)))
       (GET* "/projection-keys" []
           :return api/ProjectionKeyMap
           :summary "Obtain a list of the names (IDs)
@@ -119,7 +119,7 @@
           :summary "Obtain the current status of a given projection,
           including the latest computed reduction value"
           (let [pres (api/projection ms projection-name)]
-              (if (nil? pres)
+            (if (nil? pres)
               (not-found)
               (ok pres))))
       (GET* "/stream-contents/:stream-name" [stream-name]
@@ -136,20 +136,19 @@
           (let [res (api/event ms stream-name (read-string order-id))]
               (if (nil? res) (not-found) (ok res))))
       (POST* "/projection" [& request]
-              :body [body api/ProjectionTemplate]
-              :return api/PostResponse
-              :summary "Add a projection"
-              (ok (api/post-projection! ms request)))
+             :body [body api/ProjectionTemplate]
+             :return api/PostResponse
+             :summary "Add a projection"
+             (ok (api/post-projection! ms request)))
       (POST* "/event" [& request]
-              :body [body api/EventTemplate]
-              :return api/PostResponse
-              :summary "Add an event"
-              (let [res (api/post-event! ms request)]
-                (println res)
-                (ok res)))
+             :body [body api/EventTemplate]
+             :return api/PostResponse
+             :summary "Add an event"
+             (let [res (api/post-event! ms request)]
+               (ok res)))
       (POST* "/event/:stream-name" [& request]
-              :no-doc true
-              (api/post-event! ms request)))
+             :no-doc true
+             (api/post-event! ms request)))
     (GET* "/ui" []
           :no-doc true
           (response/resource-response "index.html"
@@ -163,3 +162,4 @@
     (route/resources "/")
     (route/not-found "Not Found"))
   (reload/wrap-reload #'app-no-reload))
+
