@@ -52,8 +52,7 @@
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-cassandra "0.9.40"]
                  [tranchis/photon-hazelcast "0.9.40"]
-                 [com.github.kstyrc/embedded-redis "0.6"]
-                 [com.taoensso/carmine "2.12.0"]
+                 [tranchis/photon-redis "0.9.40"]
                  #_[tranchis/photon-mongo "0.9.31"]
                  [tranchis/photon-file "0.9.31"
                   :exclusions [commons-codec
