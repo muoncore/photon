@@ -7,7 +7,7 @@
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
             [goog.events :as events]
-            [reagent.session :as session]
+            #_[reagent.session :as session]
             [om.core :as om]
             [om.dom :as dom])
   (:import goog.net.IframeIo
@@ -150,6 +150,24 @@
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
 
+(defn subscribe-incoming! [data]
+  (go
+    (let [{:keys [ws-channel error]}
+          (<! (ws-ch (str ws-localhost "/ws/ws-incoming")))]
+      (if-not error
+        (do
+          (>! ws-channel {:ok true})
+          (loop [elem (<! ws-channel)]
+            (when-not (nil? elem)
+              (if (contains? elem :error)
+                (.log js/console (pr-str elem))
+                (om/update-state! data
+                                  #(assoc % :incoming
+                                          (:incoming (:message elem)))))
+              (>! ws-channel {:ok true})
+              (recur (<! ws-channel)))))
+        (.log js/console "Error:" (pr-str error))))))
+
 (defn subscribe-streams! [data]
   (go
     (let [{:keys [ws-channel error]}
@@ -271,6 +289,7 @@
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
+        (.log js/console (pr-str params))
         (dom/div
           #js{:id "chart"})
         (dom/div
@@ -425,15 +444,15 @@
                        (val %)))
                   (:stream data))))))
 
-(defn add-select-state [option entry] 
-  (if (= option (:text entry)) 
-    #js {:value option :selected  "selected"} 
-    #js {:value option})) 
+(defn add-select-state [option entry]
+  (if (= option (:text entry))
+    #js {:value option :selected  "selected"}
+    #js {:value option}))
 
 (defn set-status [class title items]
   (.log js/console "set-status" class title items))
 
-(defn iframe-response-ok [msg]
+#_(defn iframe-response-ok [msg]
   (let [status (set-status "alert alert-success"
                            "Upload Successful"
                            [(str "Filename: " (:filename msg))
@@ -441,14 +460,14 @@
                             (str "Tempfile: " (:tempfile msg))])]
     (session/put! :upload-status status)))
 
-(defn iframe-response-error [msg]
+#_(defn iframe-response-error [msg]
   (let [status (set-status "alert alert-danger"
                            "Upload Failure"
                            [(str "Status: " (:status msg))
                             (str (:message msg))])]
     (session/put! :upload-status status)))
 
-(defn handle-iframe-response [json-msg]
+#_(defn handle-iframe-response [json-msg]
   (let [msg (js->clj json-msg :keywordize-keys true)]
     (.log js/console (str "iframe-response: " msg))
     (cond
@@ -460,13 +479,13 @@
                                            [:li (str "Status: " (:status msg))]
                                            [:li (:message msg)]]]))))
 
-(defn set-upload-indicator []
+#_(defn set-upload-indicator []
   (let [class "fa fa-spinner fa-spin fa-pulse"]
-    (session/put! :upload-status [:div 
+    (session/put! :upload-status [:div
                                   [:p "Uploading file... "
                                    [:span {:class class}]]])))
 
-(defn iframeio-upload-file [form-id]
+#_(defn iframeio-upload-file [form-id]
   (let [el (.getElementById js/document form-id)
         iframe (IframeIo.)]
     (events/listen iframe EventType.COMPLETE
@@ -599,7 +618,8 @@
     om/IDidMount
     (did-mount [_]
       (subscribe-streams! owner)
-      (subscribe-projections! owner))
+      (subscribe-projections! owner)
+      (subscribe-incoming! owner))
     om/IRenderState
     (render-state [_ state]
       (dom/div
@@ -614,9 +634,7 @@
         (dom/div nil
           (if (nil? (:active-page data))
             (dom/h3 nil "Choose option from menu...")
-            (om/build (:active-page data) #js [30, 40, 50, 60, 70, 80, 90, 100,
-                                               110, 120, 130, 140, 150, 160, 170,
-                                               180, 190, 200, 210, 220])))))))
+            (om/build (:active-page data) state)))))))
 
 (go (let [response (<! (client/get "/api/startup"))]
       (om/root full-page app-state

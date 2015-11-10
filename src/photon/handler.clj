@@ -46,6 +46,19 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
+(defn f-ws-incoming-handler [stream]
+  (fn [{:keys [ws-channel] :as req}]
+    (go
+      (loop [t 0]
+        (if-let [{:keys [message]} (<! ws-channel)]
+          (do
+            (<! (timeout t))
+            (>! ws-channel {:incoming (get @(:state stream) :incoming 0)})
+            (recur 1000))
+          (do
+            (close! ws-channel)
+            (prn "closed.")))))))
+
 (defn f-ws-streams-handler [stream]
   (fn [{:keys [ws-channel] :as req}]
     (let [ch (streams/stream stream
@@ -68,12 +81,15 @@
   (cc/defroutes m-ws-routes
     (let [ws-handler (f-ws-handler stm)
           ws-streams-handler (f-ws-streams-handler stm)
-          ws-projections-handler (f-ws-projections-handler stm)]
+          ws-projections-handler (f-ws-projections-handler stm)
+          ws-incoming-handler (f-ws-incoming-handler stm)]
       (GET* "/ws" [] (wrap-websocket-handler ws-handler))
       (GET* "/ws-streams" []
             (wrap-websocket-handler ws-streams-handler))
       (GET* "/ws-projections" []
-            (wrap-websocket-handler ws-projections-handler)))))
+            (wrap-websocket-handler ws-projections-handler))
+      (GET* "/ws-incoming" []
+            (wrap-websocket-handler ws-incoming-handler)))))
 
 (add-encoder java.lang.Class
              (fn [c json-generator]
@@ -147,4 +163,3 @@
     (route/resources "/")
     (route/not-found "Not Found"))
   (reload/wrap-reload #'app-no-reload))
-
