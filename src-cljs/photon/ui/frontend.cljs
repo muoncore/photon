@@ -7,7 +7,7 @@
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
             [goog.events :as events]
-            [reagent.session :as session]
+            #_[reagent.session :as session]
             [om.core :as om]
             [om.dom :as dom])
   (:import goog.net.IframeIo
@@ -150,6 +150,24 @@
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
 
+(defn subscribe-incoming! [data]
+  (go
+    (let [{:keys [ws-channel error]}
+          (<! (ws-ch (str ws-localhost "/ws/ws-incoming")))]
+      (if-not error
+        (do
+          (>! ws-channel {:ok true})
+          (loop [elem (<! ws-channel)]
+            (when-not (nil? elem)
+              (if (contains? elem :error)
+                (.log js/console (pr-str elem))
+                (om/update-state! data
+                                  #(assoc % :incoming
+                                          (:incoming (:message elem)))))
+              (>! ws-channel {:ok true})
+              (recur (<! ws-channel)))))
+        (.log js/console "Error:" (pr-str error))))))
+
 (defn subscribe-streams! [data]
   (go
     (let [{:keys [ws-channel error]}
@@ -266,77 +284,74 @@
     (did-mount [_]
               (.log js/console params)
               (.generate js/c3 #js {:bindto "#chart"
-                                   :data #js {:columns #js [ #js ["data1", 30, 200, 100, 400, 150, 250]
-                                                             #js ["data2", 50, 20, 10, 40, 15, 25]]}}))
+                                   :data #js{:columns #js[ params,
+                                                      #js["data2", 50, 20, 10, 40, 15, 25]]}}))
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
+        (.log js/console (pr-str params))
         (dom/div
           #js{:id "chart"})
         (dom/div
-          #js{:className "row"}
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "1")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "2")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "3"))))
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "1")))
         (dom/div
-          #js{:className "row"}
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "4")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "5")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "6"))))))))
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "2")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "3")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "4")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "5")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "6")))))))
 
 
 (defn event-list-item [params]
@@ -429,15 +444,15 @@
                        (val %)))
                   (:stream data))))))
 
-(defn add-select-state [option entry] 
-  (if (= option (:text entry)) 
-    #js {:value option :selected  "selected"} 
-    #js {:value option})) 
+(defn add-select-state [option entry]
+  (if (= option (:text entry))
+    #js {:value option :selected  "selected"}
+    #js {:value option}))
 
 (defn set-status [class title items]
   (.log js/console "set-status" class title items))
 
-(defn iframe-response-ok [msg]
+#_(defn iframe-response-ok [msg]
   (let [status (set-status "alert alert-success"
                            "Upload Successful"
                            [(str "Filename: " (:filename msg))
@@ -445,14 +460,14 @@
                             (str "Tempfile: " (:tempfile msg))])]
     (session/put! :upload-status status)))
 
-(defn iframe-response-error [msg]
+#_(defn iframe-response-error [msg]
   (let [status (set-status "alert alert-danger"
                            "Upload Failure"
                            [(str "Status: " (:status msg))
                             (str (:message msg))])]
     (session/put! :upload-status status)))
 
-(defn handle-iframe-response [json-msg]
+#_(defn handle-iframe-response [json-msg]
   (let [msg (js->clj json-msg :keywordize-keys true)]
     (.log js/console (str "iframe-response: " msg))
     (cond
@@ -464,13 +479,13 @@
                                            [:li (str "Status: " (:status msg))]
                                            [:li (:message msg)]]]))))
 
-(defn set-upload-indicator []
+#_(defn set-upload-indicator []
   (let [class "fa fa-spinner fa-spin fa-pulse"]
-    (session/put! :upload-status [:div 
+    (session/put! :upload-status [:div
                                   [:p "Uploading file... "
                                    [:span {:class class}]]])))
 
-(defn iframeio-upload-file [form-id]
+#_(defn iframeio-upload-file [form-id]
   (let [el (.getElementById js/document form-id)
         iframe (IframeIo.)]
     (events/listen iframe EventType.COMPLETE
@@ -603,7 +618,8 @@
     om/IDidMount
     (did-mount [_]
       (subscribe-streams! owner)
-      (subscribe-projections! owner))
+      (subscribe-projections! owner)
+      (subscribe-incoming! owner))
     om/IRenderState
     (render-state [_ state]
       (dom/div

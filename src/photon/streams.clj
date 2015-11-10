@@ -285,7 +285,7 @@
          ;; TODO: Reconsider projection persistence
          #_(spit (str (:projections.path conf/config)
                       "/" projection-name ".projection")
-                 (pr-str new-rq) :append false) 
+                 (pr-str new-rq) :append false)
          (>!! ch new-rq)
          (if (= (:status new-rq) :failed)
            (do
@@ -364,7 +364,7 @@
           lang (:language projection-descriptor)
           f (:reduction projection-descriptor)
           init (:initial-value projection-descriptor)
-          s-name (if (nil? stream-name) "__all__" stream-name) 
+          s-name (if (nil? stream-name) "__all__" stream-name)
           function-descriptor (generate-function lang f)
           function (:computable function-descriptor)
           virtual-stream (get (:virtual-streams @state) projection-name)
@@ -428,11 +428,13 @@
                                                 1000)))
                         new-msg (persistent! new-msg)]
                     (when (not= (:stream-name new-msg) "eventlog")
+                      (dosync (alter state update
+                                     :incoming #(if (= % nil) 1 (inc %))))
                       (update-streams! this (get new-msg "stream-name"
                                                  (get new-msg :stream-name)))
                       (>!! (:channel global-channel) new-msg)
                       (>!! (:channel (publisher this)) new-msg)
-                      (db/store db new-msg))) 
+                      (db/store db new-msg)))
                   {:correct true}))
 
 (defmethod stream "cold" [a-stream params]
@@ -442,7 +444,7 @@
       (log/info "Opening stream...")
       (loop [full-s
              (let [df (data-from
-                       a-stream 
+                       a-stream
                        (get params "stream-name"
                             (get params :stream-name "__all__"))
                        (extract-date params))]
@@ -569,4 +571,3 @@
     (create-telnet-socket! events-port
                            telnet-events-channel "events")
     as))
-
