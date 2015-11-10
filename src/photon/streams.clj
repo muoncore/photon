@@ -294,14 +294,15 @@
                     (fn [m] (dissoc m :projection-name))))))))))
 
 (defn schedule [current-proj]
+  (swap! (:stats (:stream current-proj)) update :processed inc)
   (projection-step! (:stream current-proj)
                     (:running-query current-proj)
                     (:element current-proj)
                     (:function current-proj)
                     (:channel current-proj)))
 
-(defrecord AsyncStream [muon db global-channel
-                        telnet-mix projection-mix state]
+(defrecord AsyncStream [muon db global-channel telnet-mix
+                        projection-mix state stats]
   StreamManager
   (init-stream-manager! [this]
     (let [db-streams (db/distinct-values db :stream-name)]
@@ -428,8 +429,7 @@
                                                 1000)))
                         new-msg (persistent! new-msg)]
                     (when (not= (:stream-name new-msg) "eventlog")
-                      (dosync (alter state update
-                                     :incoming #(if (= % nil) 1 (inc %))))
+                      (swap! stats update :incoming inc)
                       (update-streams! this (get new-msg "stream-name"
                                                  (get new-msg :stream-name)))
                       (>!! (:channel global-channel) new-msg)
@@ -544,7 +544,7 @@
             (recur (<! ch)))))
       (recur (inc i)))))
 
-(defn new-async-stream [m db projections-port events-port threads state]
+(defn new-async-stream [m db projections-port events-port threads]
   (let [c (chan 1)
         mult-global (mult c)
         global-channel {:channel c :mult-channel mult-global}
@@ -553,18 +553,17 @@
         telnet-mix (mix telnet-projections-channel)
         projection-channel (chan)
         projection-mix (mix projection-channel)
-        as (->AsyncStream m db global-channel
-                          telnet-mix projection-mix state)
         initial-state (map->AsyncStreamState
                        {:queries {}
                         :publication nil
                         :active-streams {}
-                        :virtual-streams {}})]
+                        :virtual-streams {}})
+        as (->AsyncStream m db global-channel
+                          telnet-mix projection-mix
+                          (ref initial-state)
+                          (atom {:incoming 0 :processed 0}))]
     (init-stream-manager! as)
     (tap mult-global telnet-events-channel)
-    (dosync (alter state (fn [_] initial-state)))
-    #_(pipeline threads
-              (chan (sliding-buffer 1)) (map schedule) projection-channel)
     (pipeline threads schedule projection-channel)
     (create-telnet-socket! projections-port
                            telnet-projections-channel "projections")

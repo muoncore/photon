@@ -46,14 +46,14 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
-(defn f-ws-incoming-handler [stream]
+(defn f-ws-stats-handler [stream]
   (fn [{:keys [ws-channel] :as req}]
     (go
       (loop [t 0]
         (if-let [{:keys [message]} (<! ws-channel)]
           (do
             (<! (timeout t))
-            (>! ws-channel {:incoming (get @(:state stream) :incoming 0)})
+            (>! ws-channel {:stats @(:stats stream)})
             (recur 1000))
           (do
             (close! ws-channel)
@@ -77,19 +77,17 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
-(defn ws-routes [stm]
-  (cc/defroutes m-ws-routes
-    (let [ws-handler (f-ws-handler stm)
-          ws-streams-handler (f-ws-streams-handler stm)
-          ws-projections-handler (f-ws-projections-handler stm)
-          ws-incoming-handler (f-ws-incoming-handler stm)]
-      (GET* "/ws" [] (wrap-websocket-handler ws-handler))
-      (GET* "/ws-streams" []
-            (wrap-websocket-handler ws-streams-handler))
+(defn ws-route-projections [stm]
+  (cc/defroutes m-ws-route-projections
+    (let [ws-projections-handler (f-ws-projections-handler stm)]
       (GET* "/ws-projections" []
-            (wrap-websocket-handler ws-projections-handler))
-      (GET* "/ws-incoming" []
-            (wrap-websocket-handler ws-incoming-handler)))))
+            (wrap-websocket-handler ws-projections-handler)))))
+
+(defn ws-route-stats [stm]
+  (cc/defroutes m-ws-route-stats
+    (let [ws-stats-handler (f-ws-stats-handler stm)]
+      (GET* "/ws-stats" []
+            (wrap-websocket-handler ws-stats-handler)))))
 
 (add-encoder java.lang.Class
              (fn [c json-generator]
@@ -158,7 +156,9 @@
                                       {:root "public/ui"}))
     (context* "/ws" []
               (routes (rjson/wrap-json-body
-                       (pms/wrap-params (site (ws-routes ms)))
+                       (pms/wrap-params
+                        (site (routes (ws-route-projections ms)
+                                      (ws-route-stats ms))))
                        {:keywords? true})))
     (route/resources "/")
     (route/not-found "Not Found"))

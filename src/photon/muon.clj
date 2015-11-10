@@ -67,7 +67,7 @@
               (log/error (str "AMQP queue not found, "
                               "dropping to Muon-less mode"))))
         stm (streams/new-async-stream m db projections-port
-                                      events-port threads (ref nil))
+                                      events-port threads)
         ms (->PhotonMicroservice m stm)]
     (log/info "Loading default projections...")
     (dp/init-default-projs! stm projections-path)
