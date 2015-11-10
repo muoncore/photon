@@ -13,7 +13,7 @@
                  [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
                  #_[org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [tranchis/core.async "0.3.0-SNAPSHOT"]
+                 [tranchis/core.async "0.3.0-20151110.100912-1"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
                  [cheshire "5.5.0"]
