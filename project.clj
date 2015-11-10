@@ -2,12 +2,10 @@
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
-  :java-source-paths ["java"]
   :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [http-kit "2.1.18"]
-                 [chazel "0.1.5"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0" :exclusions [org.clojure/tools.reader]]
                  [tranchis/photon-db "0.9.31"]
@@ -53,6 +51,7 @@
                  [congomongo "0.4.6"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-cassandra "0.9.40"]
+                 [tranchis/photon-hazelcast "0.9.40"]
                  #_[tranchis/photon-mongo "0.9.31"]
                  [tranchis/photon-file "0.9.31"
                   :exclusions [commons-codec
