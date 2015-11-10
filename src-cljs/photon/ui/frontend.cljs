@@ -262,77 +262,73 @@
     (did-mount [_]
               (.log js/console params)
               (.generate js/c3 #js {:bindto "#chart"
-                                   :data #js {:columns #js [ #js ["data1", 30, 200, 100, 400, 150, 250]
-                                                             #js ["data2", 50, 20, 10, 40, 15, 25]]}}))
+                                   :data #js{:columns #js[ params,
+                                                      #js["data2", 50, 20, 10, 40, 15, 25]]}}))
     om/IRenderState
     (render-state [_ state]
       (dom/div #js{:className "dashboard"}
         (dom/div
           #js{:id "chart"})
         (dom/div
-          #js{:className "row"}
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "1")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "2")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "3"))))
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "1")))
         (dom/div
-          #js{:className "row"}
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "4")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "5")))
-                (dom/div
-                  #js{:className "col-sm-12 col-md-6 col-lg-4"}
-                  (dom/div
-                    #js{:className "widget-box"}
-                    (dom/span
-                      #js{:className "title"}
-                        "title")
-                    (dom/span
-                      #js{:className "large-value"}
-                        "6"))))))))
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "2")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "3")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "4")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "5")))
+        (dom/div
+          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js{:className "widget-box"}
+            (dom/span
+              #js{:className "title"}
+                "title")
+            (dom/span
+              #js{:className "large-value"}
+                "6")))))))
 
 
 (defn event-list-item [params]
@@ -504,7 +500,9 @@
         (dom/div nil
           (if (nil? (:active-page data))
             (dom/h3 nil "Choose option from menu...")
-            (om/build (:active-page data) state)))))))
+            (om/build (:active-page data) #js [30, 40, 50, 60, 70, 80, 90, 100,
+                                               110, 120, 130, 140, 150, 160, 170,
+                                               180, 190, 200, 210, 220])))))))
 
 (go (let [response (<! (client/get "/api/startup"))]
       (om/root full-page app-state
