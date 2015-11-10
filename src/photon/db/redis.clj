@@ -4,76 +4,66 @@
   (:import (redis.embedded RedisServer)))
 
 (def chunk-size 1000)
-(def instances (ref {}))
-(def streams (ref {}))
+(def instances (atom {}))
 
 (defn redis-conn [db-hazelcast]
-  (dosync
-   (if-let [instance (get @instances db-hazelcast)]
-     instance
-     (let [port (int (+ 10000 (* 1000 (Math/random))))
-           rs (RedisServer. port)
-           pool {:pool {} :spec {:host "127.0.0.1" :port port}}]
-       (dosync (alter instances
-                      assoc db-hazelcast {:rs rs :conn pool}))))))
+  (if-let [instance (get @instances db-hazelcast)]
+    instance
+    (let [port (int (+ 10000 (* 1000 (Math/random))))
+          rs (RedisServer. port)
+          pool {:pool {} :spec {:host "127.0.0.1" :port port}}
+          new-instance {:rs rs :conn pool}]
+      (swap! instances assoc db-hazelcast new-instance)
+      (.start rs)
+      new-instance)))
 
-(defrecord DBHazelcast [conf]
+(defrecord DBRedis [conf]
   db/DB
   (db/driver-name [this] "hazelcast")
   (db/fetch [this stream-name id]
     (let [conn (:conn (redis-conn this))]
       (wcar conn
-            (car/zrangebyscore stream-name
-                               id (inc id) :limit 0 1))))
+            (car/zrangebyscore stream-name id (inc id) :limit 0 1))))
   (db/delete! [this id]
+    (let [conn (:conn (redis-conn this))
+          keys (wcar conn (car/keys "*"))]
+      (wcar conn
+            (dorun (map #(car/zremrangebyscore % id id) keys)))))
+  (db/delete-all! [this]
+    (let [conn (:conn (redis-conn this))]
+      (wcar conn (car/flushall))))
+  (db/put [this data]
     (let [conn (:conn (redis-conn this))]
       (wcar conn
-            #_(car/zremrangebyscore stream-name
-                                  id (inc id) :limit 0 1))))
-  (db/delete-all! [this]
-    )
-  (db/put [this data]
-    
-    )
+            (car/zadd (:stream-name data) (:order-id data) data))))
   (db/search [this id]
-    )
+    (let [conn (:conn (redis-conn this))
+          keys (wcar conn (car/keys "*"))]
+      (wcar conn
+            (mapcat #(car/zrangebyscore % id id :limit 0 1) keys))))
   (db/store [this payload]
-    )
+    (let [conn (:conn (redis-conn this))]
+      (wcar conn
+            (car/zadd (:stream-name payload)
+                      (:order-id payload) payload))))
   (db/distinct-values [this k]
-    )
+    ;; TODO: Decide what to do about k (it is always :stream-name)
+    (let [conn (:conn (redis-conn this))]
+      (println conn)
+      (wcar conn (car/keys "*"))))
   (db/lazy-events [this stream-name date]
-    )
+    (db/lazy-events-page this stream-name (* 1000 date) 0))
   (db/lazy-events-page [this stream-name date page]
-    ))
-
-(defn event []
-  {:stream-name "cambio"
-   :payload {:test :ok}
-   :service-id "muon://dummy"
-   :local-id (java.util.UUID/randomUUID)
-   :server-timestamp (System/currentTimeMillis)})
-
-#_(let [port (int (+ 10000 (* 1000 (Math/random))))
-      rs (RedisServer. port)]
-  (.start rs)
-  (let [server1-conn {:pool {} :spec {:host "127.0.0.1" :port port}}
-        res (wcar server1-conn
-                  (dorun (take 100000 (repeatedly #(let [ev (event)]
-                                                    (car/zadd :cambio (:server-timestamp ev) ev))))))]
-    #_(time (let [res (loop [cursor 0 all-vs []]
-                      (let [[st-cursor vs] (wcar server1-conn
-                                                 (car/zscan :cambio cursor))
-                            new-cursor (read-string st-cursor)
-                            new-vs (doall (concat all-vs vs))]
-                        (if (= 0 new-cursor)
-                          new-vs
-                          (recur new-cursor new-vs))))]
-              (.stop rs)       
-              (count (filter map? res))))
-    (let [res (wcar server1-conn (car/zrangebyscore :cambio 0 (System/currentTimeMillis) :limit 0 1))]
-      (.stop rs)
-      res)
-    (let [res (wcar server1-conn (car/keys "*mbio"))]
-      (.stop rs)
-      res)))
+    (let [conn (:conn (redis-conn this))
+          [st-cursor vs] (wcar conn (car/zscan stream-name page))
+          new-cursor (read-string st-cursor)]
+      (if (= 0 new-cursor)
+        []
+        (let [pairs (partition 2 vs)
+              valid-pairs (remove #(< (read-string (second %)) date)
+                                  pairs)]
+          (concat (map first valid-pairs)
+                  (lazy-seq
+                   (db/lazy-events-page this stream-name
+                                        date new-cursor))))))))
 
