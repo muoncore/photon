@@ -17,13 +17,13 @@
       (recur (<!! ch) (inc n)))))
 
 (fact "Empty stream has 0 elements"
-      (elem-count (streams/stream s {:stream-type "cold"
-                                     :stream-name "__all__"})) => 0)
+      (elem-count (streams/stream->ch s {:stream-type "cold"
+                                         :stream-name "__all__"})) => 0)
 
 (fact "Clean stream + 1 event stored = 1 element"
       (do
         (db/delete-all! d)
         (db/store d {})
-        (elem-count (streams/stream s {:stream-type "cold"
-                                       :stream-name "__all__"})) => 1))
+        (elem-count (streams/stream->ch s {:stream-type "cold"
+                                           :stream-name "__all__"})) => 1))
 
