@@ -93,6 +93,13 @@
              (fn [c json-generator]
                (.writeString json-generator (.getSimpleName c))))
 
+#_(defapi figwheel-handler
+  (GET* "/" []
+        (ok {:test :ok})))
+
+(defn figwheel-handler [& args]
+  (println "!!!!!!!!!!" args))
+
 (defn app [ms]
   (defapi app-no-reload
     (context* "/api" []

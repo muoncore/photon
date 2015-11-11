@@ -497,7 +497,7 @@
     (set-upload-indicator)
     (.sendFromForm iframe el "/upload")))
 
-(defn widget-new-stream [params owner]
+#_(defn widget-new-stream [params owner]
   (let [data (:data params)
         new-stream (:new-stream data)
         new-stream (if (contains? new-stream :select-value)
@@ -630,13 +630,12 @@
                            "Streams" widget-streams
                            "Projections" widget-projections
                            "New projection" widget-new-projection
-                           "New stream" widget-new-stream}})
+                           #_#_"New stream" widget-new-stream}})
         (dom/div nil
           (if (nil? (:active-page data))
             (dom/h3 nil "Choose option from menu...")
             (om/build (:active-page data) state)))))))
 
-(go (let [response (<! (client/get "/api/startup"))]
-      (om/root full-page app-state
-               {:target (. js/document
-                           (getElementById "main-area"))})))
+(om/root full-page app-state
+         {:target (. js/document
+                     (getElementById "main-area"))})

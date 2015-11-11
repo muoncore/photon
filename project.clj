@@ -16,13 +16,15 @@
                   :exclusions [org.mozilla/rhino]]
                  [cheshire "5.5.0"]
                  [clj-time "0.11.0"]
-                 [compojure "1.4.0" :exclusions [org.clojure/tools.reader]]
+                 [compojure "1.4.0" :exclusions [org.clojure/tools.reader
+                                                 commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.31"]
                  [io.muoncore/muon-clojure "5.3.7"
                   :exclusions [commons-codec
+                               midje
                                org.clojure/tools.namespace]]
-                 [prismatic/schema "1.0.1"]
+                 [prismatic/schema "1.0.3"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [org.clojure/tools.reader]]
                  [tranchis/compojure-api "0.24.1"
@@ -34,12 +36,15 @@
                                org.clojure/core.cache
                                org.clojure/data.priority-map]]
                  [dire "0.5.3"]
-                 [jarohen/chord "0.6.0" :exclusions [commons-codec
-                                                     org.clojure/tools.reader]]
+                 [jarohen/chord "0.6.0"
+                  :exclusions [commons-codec
+                               com.cognitect/transit-cljs
+                               org.clojure/tools.reader]]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
                  [tranchis/clj-schema-inspector "0.2.0"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.7.145"]
+                 [org.clojure/clojurescript "1.7.145"
+                  :exclusions [org.clojure/tools.reader]]
                  [tailrecursion/cljson "1.0.7"]
                  [cljs-http "0.1.37"]
                  [org.omcljs/om "1.0.0-alpha7"]
@@ -50,8 +55,11 @@
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-cassandra "0.9.40"]
-                 [tranchis/photon-hazelcast "0.9.40"]
+                 [tranchis/photon-cassandra "0.9.40"
+                  :exclusions [org.clojure/tools.reader
+                               com.taoensso/encore]]
+                 [tranchis/photon-hazelcast "0.9.40"
+                  :exclusions [com.cognitect/transit-clj]]
                  [tranchis/photon-redis "0.9.40"]
                  #_[tranchis/photon-mongo "0.9.31"]
                  [tranchis/photon-file "0.9.31"
@@ -82,7 +90,7 @@
   :figwheel {:server-port 3000
              :load-warninged-code true
              :open-file-command "mvim"
-             :ring-handler photon.handler/reloadable-app}
+             :ring-handler photon.core/figwheel-init!}
   :cljsbuild {:builds [{:source-paths ["src-cljs"]
                         :figwheel true
                         :compiler {:main photon.ui.frontend
