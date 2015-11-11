@@ -35,15 +35,15 @@
  (fact "A simple function is correctly converted (javascript)"
        (let [f (:computable
                 (exec/generate-function "js-experimental" "function(prev,next) {return 0;}"))]
-         (f 0 0) => 0
-         (f 0 1) => 0
-         (f 5 0) => 0))
+         (int (f 0 0)) => 0
+         (int (f 0 1)) => 0
+         (int (f 5 0)) => 0))
 
  (fact "A less simple function is correctly converted (javascript)"
        (let [f (:computable
                 (exec/generate-function "js-experimental" "function(prev,next) {return prev + 1;}"))]
-         (f 4 0) => 5
-         (f 10 6) => 11))
+         (int (f 4 0)) => 5
+         (int (f 10 6)) => 11))
 
  (fact "A more complex function is correctly converted (javascript)"
        (let [f (:computable
