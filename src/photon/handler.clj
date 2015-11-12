@@ -94,8 +94,8 @@
                (.writeString json-generator (.getSimpleName c))))
 
 #_(defapi figwheel-handler
-  (GET* "/" []
-        (ok {:test :ok})))
+    (GET* "/" []
+          (ok {:test :ok})))
 
 (defn figwheel-handler [& args]
   (println "!!!!!!!!!!" args))
@@ -103,59 +103,59 @@
 (defn app [ms]
   (defapi app-no-reload
     (context* "/api" []
-      (swagger-ui :swagger-docs "/api/swagger.json")
-      (swagger-docs)
-      (GET* "/streams" []
-            :return api/StreamInfoMap
-            :summary "Obtain a list of active streams
+              (swagger-ui :swagger-docs "/api/swagger.json")
+              (swagger-docs)
+              (GET* "/streams" []
+                    :return api/StreamInfoMap
+                    :summary "Obtain a list of active streams
                      and their current size"
-            (ok (api/streams ms)))
-      (GET* "/projection-keys" []
-          :return api/ProjectionKeyMap
-          :summary "Obtain a list of the names (IDs)
+                    (ok (api/streams ms)))
+              (GET* "/projection-keys" []
+                    :return api/ProjectionKeyMap
+                    :summary "Obtain a list of the names (IDs)
           of the current active projections"
-          (ok (api/projection-keys ms)))
-      (GET* "/projections" []
-          :return api/ProjectionList
-          :summary "Obtain a list of the states of the current active
+                    (ok (api/projection-keys ms)))
+              (GET* "/projections" []
+                    :return api/ProjectionList
+                    :summary "Obtain a list of the states of the current active
           projections without their computed reduction values"
-          (ok (api/projections ms)))
-      (GET* "/projection/:projection-name" [projection-name]
-          :path-params [projection-name :- s/Str]
-          :return api/ProjectionResponse
-          :summary "Obtain the current status of a given projection,
+                    (ok (api/projections ms)))
+              (GET* "/projection/:projection-name" [projection-name]
+                    :path-params [projection-name :- s/Str]
+                    :return api/ProjectionResponse
+                    :summary "Obtain the current status of a given projection,
           including the latest computed reduction value"
-          (let [pres (api/projection ms projection-name)]
-            (if (nil? pres)
-              (not-found)
-              (ok pres))))
-      (GET* "/stream-contents/:stream-name" [stream-name]
-          :path-params [stream-name :- s/Str]
-          :return api/StreamContentsResponse
-          :summary "Obtain a list (maximum of 50) of events contained
+                    (let [pres (api/projection ms projection-name)]
+                      (if (nil? pres)
+                        (not-found)
+                        (ok pres))))
+              (GET* "/stream-contents/:stream-name" [stream-name]
+                    :path-params [stream-name :- s/Str]
+                    :return api/StreamContentsResponse
+                    :summary "Obtain a list (maximum of 50) of events contained
           in a given stream"
-          (ok (api/stream ms stream-name :limit 50)))
-      (GET* "/event/:stream-name/:order-id" [stream-name order-id]
-          :path-params [stream-name :- s/Str order-id :- s/Str]
-          :return api/EventResponse
-          :summary "Obtain the event identified by a given stream name
+                    (ok (api/stream ms stream-name :limit 50)))
+              (GET* "/event/:stream-name/:order-id" [stream-name order-id]
+                    :path-params [stream-name :- s/Str order-id :- s/Str]
+                    :return api/EventResponse
+                    :summary "Obtain the event identified by a given stream name
           and an order ID"
-          (let [res (api/event ms stream-name (read-string order-id))]
-              (if (nil? res) (not-found) (ok res))))
-      (POST* "/projection" [& request]
-             :body [body api/ProjectionTemplate]
-             :return api/PostResponse
-             :summary "Add a projection"
-             (ok (api/post-projection! ms request)))
-      (POST* "/event" [& request]
-             :body [body api/EventTemplate]
-             :return api/PostResponse
-             :summary "Add an event"
-             (let [res (api/post-event! ms request)]
-               (ok res)))
-      (POST* "/event/:stream-name" [& request]
-             :no-doc true
-             (api/post-event! ms request)))
+                    (let [res (api/event ms stream-name (read-string order-id))]
+                      (if (nil? res) (not-found) (ok res))))
+              (POST* "/projection" [& request]
+                     :body [body api/ProjectionTemplate]
+                     :return api/PostResponse
+                     :summary "Add a projection"
+                     (ok (api/post-projection! ms request)))
+              (POST* "/event" [& request]
+                     :body [body api/EventTemplate]
+                     :return api/PostResponse
+                     :summary "Add an event"
+                     (let [res (api/post-event! ms request)]
+                       (ok res)))
+              (POST* "/event/:stream-name" [& request]
+                     :no-doc true
+                     (api/post-event! ms request)))
     (GET* "/ui" []
           :no-doc true
           (response/resource-response "index.html"

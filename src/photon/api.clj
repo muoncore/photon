@@ -172,9 +172,9 @@
   {:projection-keys
    (map :projection-name
         (map
-          (fn [v] (assoc v :fn (pr-str (:fn v))))
-          (map #(apply dissoc (deref %) [:_id])
-               (vals (:queries @(:state stm))))))})
+         (fn [v] (assoc v :fn (pr-str (:fn v))))
+         (map #(apply dissoc (deref %) [:_id])
+              (vals (:queries @(:state stm))))))})
 
 (defn stream [stm stream-name & args]
   (let [m-args (apply hash-map args)

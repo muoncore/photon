@@ -61,16 +61,16 @@
 
 (defn publisher [async-stream]
   (dosync
-   (let [p (:publication @(:state async-stream))]
-     (if (nil? p)
-       (let [c (chan 1)
-             new-p {:channel c
-                    :p (pub c (fn [ev] (get ev "stream-name"
-                                            (get ev :stream-name))))}]
-         (dosync
-          (alter (:state async-stream) assoc :publication new-p))
-         new-p)
-       p))))
+    (let [p (:publication @(:state async-stream))]
+      (if (nil? p)
+        (let [c (chan 1)
+              new-p {:channel c
+                     :p (pub c (fn [ev] (get ev "stream-name"
+                                             (get ev :stream-name))))}]
+          (dosync
+            (alter (:state async-stream) assoc :publication new-p))
+          new-p)
+        p))))
 
 (defn exception->message [^Throwable t] (.getMessage t))
 (defn exception->stack-trace [^Throwable t] (.getStackTrace t))
@@ -113,35 +113,35 @@
   [{:keys [stream running-query current-event function ch]}]
   (swap! (:stats stream) update :processed inc)
   (dosync
-   (if (nil? current-event)
-     (alter running-query assoc :status :finished)
-     (let [nrq (updated-value @running-query function current-event)]
-       (alter running-query (fn [_] nrq))
-       (>!! ch nrq)
-       (when (= (:status nrq) :failed)
-         (close! ch)
-         (alter (:state stream) update-in [:virtual-streams]
-                (fn [m] (dissoc m :projection-name))))))))
+    (if (nil? current-event)
+      (alter running-query assoc :status :finished)
+      (let [nrq (updated-value @running-query function current-event)]
+        (alter running-query (fn [_] nrq))
+        (>!! ch nrq)
+        (when (= (:status nrq) :failed)
+          (close! ch)
+          (alter (:state stream) update-in [:virtual-streams]
+                 (fn [m] (dissoc m :projection-name))))))))
 
 (defn as-init-stream-manager! [stream]
   (let [db-streams (db/distinct-values (:db stream) :stream-name)]
     (dorun (map #(update-streams! stream %) db-streams)))
   (dosync
-   (alter (:state stream) assoc-in
-          [:active-streams :virtual-streams] #{"__all__"})))
+    (alter (:state stream) assoc-in
+           [:active-streams :virtual-streams] #{"__all__"})))
 
 (defn as-update-streams! [stream stream-name]
   (dosync
-   (let [real-streams (into #{}
-                            (:real-streams
-                             (:active-streams @(:state stream))))]
-     (when-not (contains? real-streams stream-name)
-       (create-stream-endpoint! stream stream-name)
-       (alter (:state stream) update-in [:active-streams]
-              (fn [old-active-streams]
-                (assoc-in old-active-streams
-                          [stream :real-streams]
-                          (conj real-streams stream-name))))))))
+    (let [real-streams (into #{}
+                             (:real-streams
+                              (:active-streams @(:state stream))))]
+      (when-not (contains? real-streams stream-name)
+        (create-stream-endpoint! stream stream-name)
+        (alter (:state stream) update-in [:active-streams]
+               (fn [old-active-streams]
+                 (assoc-in old-active-streams
+                           [stream :real-streams]
+                           (conj real-streams stream-name))))))))
 
 (defn as-create-virtual-stream-endpoint! [stream stream-name]
   (let [ch (chan (sliding-buffer 1))
@@ -325,18 +325,18 @@
              closed? false
              last-t (System/currentTimeMillis)]
         (let [e (first full-s) s (rest full-s)]
-         (if (nil? e)
-          (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
-          (let [rest-s (rest s)
-                new-s (if (empty? rest-s)
-                        (concat s
-                                (data-from a-stream stream-name last-t))
-                        s)
-                last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
-            (if closed?
-              (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
-              (let [closed? (not (>! ch e))]
-                (recur (cons (first new-s) (rest new-s)) closed? last-t)))))))
+          (if (nil? e)
+            (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
+            (let [rest-s (rest s)
+                  new-s (if (empty? rest-s)
+                          (concat s
+                                  (data-from a-stream stream-name last-t))
+                          s)
+                  last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
+              (if closed?
+                (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
+                (let [closed? (not (>! ch e))]
+                  (recur (cons (first new-s) (rest new-s)) closed? last-t)))))))
       (if (= stream-name "__all__")
         (tap (:mult-channel (:global-channel a-stream)) ch)
         (sub (:p (publisher a-stream)) stream-name ch)))

@@ -40,10 +40,10 @@
 
 (defn figwheel-init! [& args]
   (let [h (dosync
-           (if-let [instance @figwheel-instance]
-             instance
-             (let [m-photon (init-photon!)]
-               (alter figwheel-instance (fn [_] (:handler m-photon)))
-               (:handler m-photon))))]
+            (if-let [instance @figwheel-instance]
+              instance
+              (let [m-photon (init-photon!)]
+                (alter figwheel-instance (fn [_] (:handler m-photon)))
+                (:handler m-photon))))]
     (apply h args)))
 

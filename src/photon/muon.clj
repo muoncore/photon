@@ -50,7 +50,7 @@
   (MuonBuilder/addWriter
    (reify AutoConfigurationWriter
      (writeConfiguration [_ ac]
-        (.setDiscoveryUrl ac amqp-url))))
+       (.setDiscoveryUrl ac amqp-url))))
   (let [builder (MuonBuilder.)]
     (.withServiceIdentifier builder service-identifier)
     (let [muon (.build builder)]

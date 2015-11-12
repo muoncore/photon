@@ -8,7 +8,7 @@
            (java.net ServerSocket)
            (javax.script ScriptEngineManager SimpleBindings
                          ScriptContext)))
-            
+
 ;; Code handling
 ;;;;;;;;;;;;;;;;
 
@@ -71,67 +71,67 @@
     (let [x-ref (atom x-orig)]
       (reify JSObject
         (isArray [^JSObject this]
-                 (println "isArray")
-                 false)
+          (println "isArray")
+          false)
         (^boolean isInstance [^JSObject this ^Object instance]
-                  (println "isInstance"))
+         (println "isInstance"))
         (^boolean isInstanceOf [^JSObject this ^Object class]
-                  (println "isInstanceOf")
-                  false)
+         (println "isInstanceOf")
+         false)
         (isStrictFunction [^JSObject this]
-                          (println "isStrictFunction")
-                          false)
+          (println "isStrictFunction")
+          false)
         (keySet [^JSObject this]
-                #_(println "keySet")
-                (into #{} (keys @x-ref)))
+          #_(println "keySet")
+          (into #{} (keys @x-ref)))
         (newObject [^JSObject this args]
-                   (println "newObject")
-                   (clj->nashorn @x-ref))
+          (println "newObject")
+          (clj->nashorn @x-ref))
         (^void removeMember [^JSObject this ^String s]
-               #_(println "removeMember")
-               (swap! x-ref dissoc s (keyword s)))
+         #_(println "removeMember")
+         (swap! x-ref dissoc s (keyword s)))
         (^void setMember [^JSObject this ^String n ^Object v]
-               #_(println "setMember")
-               (let [k (if (contains? @x-ref (keyword n))
-                         (keyword n)
-                         n)]
-                 (swap! x-ref assoc k (clj->nashorn v))))
+         #_(println "setMember")
+         (let [k (if (contains? @x-ref (keyword n))
+                   (keyword n)
+                   n)]
+           (swap! x-ref assoc k (clj->nashorn v))))
         (^void setSlot [^JSObject this ^int n ^Object v]
-               #_(println "setSlot")
-               (let [k (let [k-c (nth (keys @x-ref) n)]
-                         (if (nil? k-c) (str n) k-c))]
-                 (swap! x-ref assoc k (clj->nashorn v))))
+         #_(println "setSlot")
+         (let [k (let [k-c (nth (keys @x-ref) n)]
+                   (if (nil? k-c) (str n) k-c))]
+           (swap! x-ref assoc k (clj->nashorn v))))
         (values [^JSObject this]
-                #_(println "values")
-                (map clj->nashorn (vals @x-ref)))
+          #_(println "values")
+          (map clj->nashorn (vals @x-ref)))
         (isFunction [^JSObject this]
-                    #_(println "isFunction")
-                    true)
+          #_(println "isFunction")
+          true)
         (eval [^JSObject this ^String s]
-              #_(println "eval"))
+          #_(println "eval"))
         (getClassName [^JSObject this]
-                      #_(println "getClassName")
-                      "ReifiedJSObject")
+          #_(println "getClassName")
+          "ReifiedJSObject")
         (getSlot [^JSObject this ^int index]
-                 #_(println "getSlot")
-                 (let [k (nth (keys @x-ref) index)]
-                   (if (nil? k) nil (get @x-ref k))))
+          #_(println "getSlot")
+          (let [k (nth (keys @x-ref) index)]
+            (if (nil? k) nil (get @x-ref k))))
         (^boolean hasSlot [^JSObject this ^int index]
-                  #_(println "hasSlot")
-                  (let [k (nth (keys @x-ref) index)]
-                    (not (nil? k))))
+         #_(println "hasSlot")
+         (let [k (nth (keys @x-ref) index)]
+           (not (nil? k))))
         (^boolean hasMember [^JSObject this ^String s]
-                  #_(println "hasMember")
-                  (or (contains? @x-ref s) (contains? @x-ref (keyword s))))
+         #_(println "hasMember")
+         (or (contains? @x-ref s) (contains? @x-ref (keyword s))))
         (call [this thiz args]
-              #_(println "call" thiz (into [] args)))
+          #_(println "call" thiz (into [] args)))
         (getMember [^JSObject this ^String n]
-                   #_(println "getMember" n)
-                   (condp = n
-                     "toString" "[object Object]"
-                     "___map" @x-ref
-                     "valueOf" this
-                     (get-member @x-ref n)))))
+          #_(println "getMember" n)
+          (condp = n
+            "toString" "[object Object]"
+            "___map" @x-ref
+            "valueOf" this
+            (get-member @x-ref n)))))
     x-orig))
 
 (defmethod generate-function "js-experimental" [_ f]
@@ -171,6 +171,6 @@
        :persist f})))
 
 (extend org.bson.types.ObjectId js/RhinoConvertible
-  {:-to-rhino (fn [obj scope ctx] (str obj))})
+        {:-to-rhino (fn [obj scope ctx] (str obj))})
 
 
