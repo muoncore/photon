@@ -89,7 +89,7 @@
              "-XX:+CMSClassUnloadingEnabled" "-XX:+DoEscapeAnalysis"]
   :figwheel {:server-port 3000
              :load-warninged-code true
-             :open-file-command "mvim"
+             :open-file-command "atom"
              :ring-handler photon.core/figwheel-init!}
   :cljsbuild {:builds [{:source-paths ["src-cljs"]
                         :figwheel true
