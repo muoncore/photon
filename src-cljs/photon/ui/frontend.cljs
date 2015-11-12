@@ -50,7 +50,7 @@
       (render [_]
         (dom/div
             #js {:className "new-projection"}
-            (dom/h1 #js{:className "view-title"} "New Projection")
+            (dom/h1 #js {:className "view-title"} "New Projection")
             (dom/div
                 #js {:className "box"}
               (dom/div
@@ -132,7 +132,7 @@
                                                  :language])}))))}
                     "Register projection"))))))))
 
-(defn subscribe-projections! [data]
+(defn subscribe-projections! [owner]
   (go
     (let [{:keys [ws-channel error]}
           (<! (ws-ch (str ws-localhost "/ws/ws-projections")))]
@@ -143,32 +143,38 @@
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (.log js/console (pr-str elem))
-                (om/update-state! data
+                (om/update-state! owner
                                   #(assoc % :projections
                                           (:projections (:message elem)))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
         (.log js/console "Error:" (pr-str error))))))
 
-(defn subscribe-incoming! [data]
+(defn subscribe-stats! [owner]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch (str ws-localhost "/ws/ws-incoming")))]
+          (<! (ws-ch (str ws-localhost "/ws/ws-stats")))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
-          (loop [elem (<! ws-channel)]
+          (loop [elem (<! ws-channel)
+                 last-50 []
+                 previous 0]
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (.log js/console (pr-str elem))
-                (om/update-state! data
-                                  #(assoc % :incoming
-                                          (:incoming (:message elem)))))
+                (let [stats-from-msg (:stats (:message elem))
+                      difference (- (:processed stats-from-msg) previous)
+                      new-last-50 (into [] (take-last 50 (conj last-50 difference)))
+                      stats (assoc stats-from-msg :last-50 new-last-50)]
+                  (om/update-state! owner #(assoc % :stats stats))
+                  (>! ws-channel {:ok true})
+                  (recur (<! ws-channel) new-last-50 (:processed stats-from-msg))))
               (>! ws-channel {:ok true})
-              (recur (<! ws-channel)))))
+              (recur (<! ws-channel) last-50 previous))))
         (.log js/console "Error:" (pr-str error))))))
 
-(defn subscribe-streams! [data]
+(defn subscribe-streams! [owner]
   (go
     (let [{:keys [ws-channel error]}
           (<! (ws-ch (str ws-localhost "/ws/ws-projections")))]
@@ -180,7 +186,7 @@
               (if (contains? elem :error)
                 (.log js/console (pr-str elem))
                 (let [streams-proj (:message elem)]
-                  (om/update-state! data
+                  (om/update-state! owner
                                     #(assoc % :streams
                                       (proj->streams (:current-value streams-proj))))))
               (>! ws-channel {:projection-name "__streams__"})
@@ -261,8 +267,8 @@
                                                   (assoc state
                                                          :active-projection
                                                          new-active-projection))))]
-        (dom/div #js{:className "projections"}
-                (dom/h1 #js{:className "view-title"} "Projections")
+        (dom/div #js {:className "projections"}
+                (dom/h1 #js {:className "view-title"} "Projections")
                 (apply dom/table #js
                   {:className "table table-striped table-bordered table-hover table-heading"}
                   (apply dom/tr nil
@@ -278,79 +284,92 @@
                   (let [block (om/build code-block (:active-projection state))]
                     block)))))))
 
+(defn update-chart! [chart data]
+  (let [vector-data (clj->js (concat ["data"] data))]
+    (.log js/console vector-data)
+    (.load chart #js {:columns #js [vector-data]})))
+
 (defn widget-dashboard [params owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:chart nil})
     om/IDidMount
     (did-mount [_]
-              (.log js/console params)
-              (.generate js/c3 #js {:bindto "#chart"
-                                   :data #js{:columns #js[ params,
-                                                      #js["data2", 50, 20, 10, 40, 15, 25]]}}))
+      (.log js/console params)
+      (let [chart (.generate js/c3
+                             #js {:bindto "#chart"
+                                  :data
+                                  #js {:columns #js []}})]
+        (om/update-state! owner (fn [state] (assoc state :chart chart)))))
     om/IRenderState
     (render-state [_ state]
-      (dom/div #js{:className "dashboard"}
-        (.log js/console (pr-str params))
+      (if-let [chart (:chart state)]
+        (update-chart! chart (:last-50 (:stats params))))
+      (dom/div #js {:className "dashboard"}
+        (.log js/console (pr-str (:stats params)))
         (dom/div
-          #js{:id "chart"})
+          #js {:id "chart"})
         (dom/div
-          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
-            #js{:className "widget-box"}
+            #js {:className "widget-box"}
             (dom/span
-              #js{:className "title"}
+              #js {:className "title"}
+                "Events Processed")
+            (js/Date)
+            (dom/span
+              #js {:className "large-value"}
+                (:processed (:stats params)))))
+        (dom/div
+          #js {:className "col-sm-12 col-md-6 col-lg-4"}
+          (dom/div
+            #js {:className "widget-box"}
+            (dom/span
+              #js {:className "title"}
                 "title")
             (dom/span
-              #js{:className "large-value"}
-                "1")))
-        (dom/div
-          #js{:className "col-sm-12 col-md-6 col-lg-4"}
-          (dom/div
-            #js{:className "widget-box"}
-            (dom/span
-              #js{:className "title"}
-                "title")
-            (dom/span
-              #js{:className "large-value"}
+              #js {:className "large-value"}
                 "2")))
         (dom/div
-          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
-            #js{:className "widget-box"}
+            #js {:className "widget-box"}
             (dom/span
-              #js{:className "title"}
+              #js {:className "title"}
                 "title")
             (dom/span
-              #js{:className "large-value"}
+              #js {:className "large-value"}
                 "3")))
         (dom/div
-          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
-            #js{:className "widget-box"}
+            #js {:className "widget-box"}
             (dom/span
-              #js{:className "title"}
+              #js {:className "title"}
                 "title")
             (dom/span
-              #js{:className "large-value"}
+              #js {:className "large-value"}
                 "4")))
         (dom/div
-          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
-            #js{:className "widget-box"}
+            #js {:className "widget-box"}
             (dom/span
-              #js{:className "title"}
+              #js {:className "title"}
                 "title")
             (dom/span
-              #js{:className "large-value"}
+              #js {:className "large-value"}
                 "5")))
         (dom/div
-          #js{:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
-            #js{:className "widget-box"}
+            #js {:className "widget-box"}
             (dom/span
-              #js{:className "title"}
+              #js {:className "title"}
                 "title")
             (dom/span
-              #js{:className "large-value"}
+              #js {:className "large-value"}
                 "6")))))))
 
 
@@ -565,8 +584,8 @@
                                                   (assoc state
                                                          :active-stream
                                                          new-active-stream))))]
-        (dom/div #js{:className "streams"}
-                 (dom/h1 #js{:className "view-title"} "Streams")
+        (dom/div #js {:className "streams"}
+                 (dom/h1 #js {:className "view-title"} "Streams")
                  (apply dom/table #js
                    {:className (str "table table-striped table-bordered "
                                     "table-hover table-heading streams-table")}
@@ -592,8 +611,8 @@
          :href "#"
          :onClick (fn [_]
                     (om/update! (:data data)
-                                :active-page (val (:item data))))}
-        (key (:item data))))))
+                                :active-page (:item data)))}
+        (:item data)))))
 
 (defn main-menu [data owner]
   (reify
@@ -619,22 +638,22 @@
     (did-mount [_]
       (subscribe-streams! owner)
       (subscribe-projections! owner)
-      (subscribe-incoming! owner))
+      (subscribe-stats! owner))
     om/IRenderState
     (render-state [_ state]
       (dom/div
         nil
         (om/build main-menu
                   {:data state
-                   :items {"Dashboard" widget-dashboard
-                           "Streams" widget-streams
-                           "Projections" widget-projections
-                           "New projection" widget-new-projection
-                           #_#_"New stream" widget-new-stream}})
+                   :items ["Dashboard" "Streams" "Projections" "New Projection"]})
         (dom/div nil
-          (if (nil? (:active-page data))
-            (dom/h3 nil "Choose option from menu...")
-            (om/build (:active-page data) state)))))))
+          (condp = (:active-page data)
+            nil (dom/h3 nil "Choose option from menu...")
+            "Dashboard" (om/build widget-dashboard state)
+            "Streams" (om/build widget-streams state)
+            "Projections" (om/build widget-projections state)
+            "New Projection" (om/build widget-new-projection state)
+            #_#_"New stream" (om/build widget-new-stream state)))))))
 
 (om/root full-page app-state
          {:target (. js/document

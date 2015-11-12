@@ -399,4 +399,3 @@
     (create-telnet-socket! events-port
                            telnet-events-channel "events")
     as))
-
