@@ -182,9 +182,9 @@
         limit (get m-args :limit)
         res (async/<!!
              (async/reduce (fn [prev n] (concat prev [n])) []
-                           (streams/stream stm {"from" from
-                                                "stream-name" stream-name
-                                                :limit limit
-                                                "stream-type" "cold"})))]
+                           (streams/stream->ch stm {"from" from
+                                                    "stream-name" stream-name
+                                                    :limit limit
+                                                    "stream-type" "cold"})))]
     {:results res}))
 

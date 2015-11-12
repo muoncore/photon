@@ -61,10 +61,10 @@
 
 (defn f-ws-streams-handler [stream]
   (fn [{:keys [ws-channel] :as req}]
-    (let [ch (streams/stream stream
-                             {"from" "0"
-                              "stream-name" "__streams__"
-                              "stream-type" "hot-cold"})
+    (let [ch (streams/stream->ch stream
+                                 {"from" "0"
+                                  "stream-name" "__streams__"
+                                  "stream-type" "hot-cold"})
           current-value (atom (streams/streams stream))]
       (go-loop [t 0]
         (if-let [{:keys [message]} (<! ws-channel)]
