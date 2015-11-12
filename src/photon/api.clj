@@ -179,12 +179,13 @@
 (defn stream [stm stream-name & args]
   (let [m-args (apply hash-map args)
         from (str (get m-args :from 0))
-        limit (get m-args :limit)
+        limit (:limit m-args)
         res (async/<!!
-             (async/reduce (fn [prev n] (concat prev [n])) []
-                           (streams/stream->ch stm {"from" from
-                                                    "stream-name" stream-name
-                                                    :limit limit
-                                                    "stream-type" "cold"})))]
+             (async/reduce
+              (fn [prev n] (concat prev [n])) []
+              (streams/stream->ch stm {:from from
+                                       :stream-name stream-name
+                                       :limit limit
+                                       :stream-type "cold"})))]
     {:results res}))
 

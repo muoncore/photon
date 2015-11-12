@@ -20,7 +20,7 @@
                                                  commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.31"]
-                 [io.muoncore/muon-clojure "5.3.7"
+                 [io.muoncore/muon-clojure "5.3.8"
                   :exclusions [commons-codec
                                midje
                                org.clojure/tools.namespace]]

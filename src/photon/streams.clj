@@ -47,14 +47,14 @@
 
 (defmulti stream->ch (fn [_ params]
                        (log/info (pr-str params))
-                       (let [st (get params "stream-type"
-                                     (get params :stream-type "hot"))]
+                       (let [st (get params :stream-type "hot")]
                          (log/info "stream type:" st)
                          st)))
 
 (defn extract-date [params]
-  (let [pre-date (get params "from" 0)
-        post-date (if (string? pre-date) (read-string pre-date) pre-date)]
+  (let [pre-date (get params :from 0)
+        post-date (if (string? pre-date)
+                    (read-string pre-date) pre-date)]
     post-date))
 
 (defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
@@ -65,8 +65,7 @@
       (if (nil? p)
         (let [c (chan 1)
               new-p {:channel c
-                     :p (pub c (fn [ev] (get ev "stream-name"
-                                             (get ev :stream-name))))}]
+                     :p (pub c (fn [ev] (:stream-name ev)))}]
           (dosync
             (alter (:state async-stream) assoc :publication new-p))
           new-p)
@@ -163,8 +162,7 @@
      {:m (:muon stream)} (str "stream/" stream-name)
      (fn [params]
        (stream->ch stream
-                   (assoc (assoc (into {} params)
-                                 "stream-name" stream-name)
+                   (assoc (into {} params)
                           :stream-name stream-name))))))
 
 (defn as-streams [{:keys [state]}]
@@ -214,9 +212,9 @@
         new-descriptor (merge-t desc projection-descriptor)
         last-ts (str (inc (get (:last-event new-descriptor)
                                :server-timestamp -1)))
-        s (stream->ch stream {"from" last-ts
-                              "stream-type" "hot-cold"
-                              "stream-name" s-name})
+        s (stream->ch stream {:from last-ts
+                              :stream-type "hot-cold"
+                              :stream-name s-name})
         running-query (ref new-descriptor)
         function (:computable function-descriptor)
         to-mix (projection-queue-mix stream running-query
@@ -235,8 +233,7 @@
   ;; Think about the order of store+send to taps
   (log/trace (pr-str ev))
   (let [msg (transient ev)
-        stream-name (get msg "stream-name"
-                         (get msg :stream-name))
+        stream-name (:stream-name msg)
         server-timestamp (:server-timestamp msg)
         now (bigint (System/currentTimeMillis))
         new-timestamp (if (nil? server-timestamp)
@@ -253,8 +250,7 @@
         new-msg (persistent! new-msg)]
     (when (not= (:stream-name new-msg) "eventlog")
       (swap! stats update :incoming inc)
-      (update-streams! stream (get new-msg "stream-name"
-                                   (get new-msg :stream-name)))
+      (update-streams! stream (:stream-name new-msg))
       (>!! (:channel global-channel) new-msg)
       (>!! (:channel (publisher stream)) new-msg)
       (db/store db new-msg)))
@@ -291,8 +287,7 @@
       (loop [full-s
              (let [df (data-from
                        a-stream
-                       (get params "stream-name"
-                            (get params :stream-name "__all__"))
+                       (get params :stream-name "__all__")
                        (extract-date params))]
                (if (and (contains? params :limit)
                         (not (nil? (:limit params))))
@@ -316,8 +311,7 @@
   (let [date (extract-date params)
         ch (chan (buffer 1))
         _ (log/info "Getting stream-name and data")
-        stream-name (get params "stream-name"
-                         (get params :stream-name "__all__"))
+        stream-name (get params :stream-name "__all__")
         _ (log/info "Finished getting stream-name and data")]
     (go
       (loop [full-s (data-from a-stream stream-name
@@ -344,8 +338,7 @@
 
 (defmethod stream->ch "hot" [a-stream params]
   (let [ch (chan 1)
-        stream-name (get params "stream-name"
-                         (get params :stream-name "__all__"))]
+        stream-name (get params :stream-name "__all__")]
     (if (= stream-name "__all__")
       (tap (:mult-channel (:global-channel a-stream)) ch)
       (sub (:p (publisher a-stream)) stream-name ch))

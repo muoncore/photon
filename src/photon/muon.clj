@@ -24,7 +24,9 @@
   mcs/MicroserviceStream
   (expose-stream! [this]
     (mcc/stream-source {:m muon} "stream"
-                       (fn [params] (streams/stream->ch stream params))))
+                       (fn [params]
+                         (log/info "PhotonMS:" params)
+                         (streams/stream->ch stream params))))
   mcs/MicroserviceQuery
   (expose-get [this]
     (mcc/on-query {:m muon} "projection"
