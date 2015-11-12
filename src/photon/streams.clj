@@ -1,16 +1,13 @@
 (ns photon.streams
-  (:require [clojure.core.async :refer [go-loop go <!! <! >! chan
-                                        buffer sliding-buffer mult tap
-                                        close! put! >!! mix admix
-                                        onto-chan pub sub alts!]
-             :as async]
-            [clojure.tools.logging :as log]
-            [somnium.congomongo :as m]
-            [cheshire.core :as json]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
             [photon.exec :refer :all]
-            [photon.db :as db])
+            [photon.db :as db]
+            [clojure.string :as str]
+            [clojure.core.async :as async
+             :refer [go-loop go <!! <! >! chan buffer sliding-buffer
+                     mult tap close! put! >!! mix admix onto-chan
+                     pub sub alts!]])
   (:import (java.net ServerSocket)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
@@ -45,11 +42,12 @@
   (create-virtual-stream-endpoint! [this stream-name])
   (streams [this]))
 
-(defmulti stream->ch (fn [_ params]
-                       (log/info (pr-str params))
-                       (let [st (get params :stream-type "hot")]
-                         (log/info "stream type:" st)
-                         st)))
+(defmulti stream->ch
+  (fn [_ params]
+    (log/info (pr-str params))
+    (let [st (get params :stream-type "hot")]
+      (log/info "stream type:" st)
+      st)))
 
 (defn extract-date [params]
   (let [pre-date (get params :from 0)
@@ -57,27 +55,21 @@
                     (read-string pre-date) pre-date)]
     post-date))
 
-(defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
-
-(defn publisher [async-stream]
+(defn publisher [{:keys [state]}]
   (dosync
-    (let [p (:publication @(:state async-stream))]
-      (if (nil? p)
-        (let [c (chan 1)
-              new-p {:channel c
-                     :p (pub c (fn [ev] (:stream-name ev)))}]
-          (dosync
-            (alter (:state async-stream) assoc :publication new-p))
-          new-p)
-        p))))
+    (if-let [p (:publication @state)]
+      p
+      (let [c (chan 1)
+            new-p {:channel c :p (pub c :stream-name)}]
+        (dosync
+         (alter state assoc :publication new-p))
+        new-p))))
 
 (defn exception->message [^Throwable t] (.getMessage t))
 (defn exception->stack-trace [^Throwable t] (.getStackTrace t))
 (defn exception->error-str [t]
-  (str (exception->message t) "\n"
-       (clojure.string/join "\n"
-                            (map str
-                                 (exception->stack-trace t)))))
+  (let [stack (map str (exception->stack-trace t))]
+    (str (exception->message t) "\n" (str/join "\n" stack))))
 
 (defn assoc-update-t! [rqt function ev]
   (try
@@ -88,17 +80,18 @@
       (let [rqt-failed (assoc! rqt :status :failed)]
         (assoc! rqt-failed :last-error (exception->error-str e))))))
 
+(defn next-avg [avg x n] (double (/ (+ (* avg n) x) (inc n))))
+
 (defn new-avg-g-time [rqt]
-  (double (/ (- (System/currentTimeMillis)
-                (:init-time rqt))
+  (double (/ (- (System/currentTimeMillis) (:init-time rqt))
              (inc (:processed rqt)))))
 
 (defn new-avg-time [rqt delta]
   (next-avg (:avg-time rqt) delta (inc (:processed rqt))))
 
 (defn updated-value [rq function ev]
-  (let [start-ts (System/currentTimeMillis)
-        rqt (transient rq)
+  (let [rqt (transient rq)
+        start-ts (System/currentTimeMillis)
         to-merge (assoc-update-t! rqt function ev)
         delta (- (System/currentTimeMillis) start-ts)
         to-merge (assoc! to-merge :avg-global-time
@@ -114,8 +107,8 @@
   (dosync
     (if (nil? current-event)
       (alter running-query assoc :status :finished)
-      (let [nrq (updated-value @running-query function current-event)]
-        (alter running-query (fn [_] nrq))
+      (let [nrq (alter running-query updated-value
+                       function current-event)]
         (>!! ch nrq)
         (when (= (:status nrq) :failed)
           (close! ch)
@@ -129,48 +122,45 @@
     (alter (:state stream) assoc-in
            [:active-streams :virtual-streams] #{"__all__"})))
 
-(defn as-update-streams! [stream stream-name]
+(defn as-update-streams! [{:keys [state] :as stream} stream-name]
   (dosync
-    (let [real-streams (into #{}
-                             (:real-streams
-                              (:active-streams @(:state stream))))]
+    (let [active-streams (:active-streams @state)
+          real-streams (into #{} (:real-streams active-streams))]
       (when-not (contains? real-streams stream-name)
         (create-stream-endpoint! stream stream-name)
-        (alter (:state stream) update-in [:active-streams]
+        (alter state update-in [:active-streams]
                (fn [old-active-streams]
                  (assoc-in old-active-streams
                            [stream :real-streams]
                            (conj real-streams stream-name))))))))
 
-(defn as-create-virtual-stream-endpoint! [stream stream-name]
+(defn as-create-virtual-stream-endpoint!
+  [{:keys [muon state]} stream-name]
   (let [ch (chan (sliding-buffer 1))
         ch-mult (mult ch)]
-    (dosync (alter (:state stream) assoc-in
+    (dosync (alter state assoc-in
                    [:virtual-streams stream-name]
                    {:channel ch :mult-channel ch-mult}))
-    (when-not (nil? (:muon stream)) ;; TODO: Abstract this somehow
+    (when-not (nil? muon) ;; TODO: Abstract this somehow
       (mcc/stream-source
-       {:m (:muon stream)} (str "projection/" stream-name)
+       {:m muon} (str "projection/" stream-name)
        (fn [params]
          (let [t-ch (chan)]
            (tap ch-mult t-ch)))))))
 
-(defn as-create-stream-endpoint! [stream stream-name]
+(defn as-create-stream-endpoint! [{:keys [muon] :as stream} stream-name]
   ;; TODO: Fix this mess
-  (when-not (nil? (:muon stream))
+  (when-not (nil? muon)
     (mcc/stream-source
-     {:m (:muon stream)} (str "stream/" stream-name)
+     {:m muon} (str "stream/" stream-name)
      (fn [params]
-       (stream->ch stream
-                   (assoc (into {} params)
-                          :stream-name stream-name))))))
+       (let [mp (into {} params)]
+         (stream->ch stream (assoc mp :stream-name stream-name)))))))
 
 (defn as-streams [{:keys [state]}]
   {:streams
    (let [active-streams (:active-streams @state)]
-     (map #(hash-map :stream %)
-          (concat (:real-streams active-streams)
-                  (:virtual-streams active-streams))))})
+     (map #(hash-map :stream %) (map vals active-streams)))})
 
 (defn descriptor-default [projection-name function-descriptor
                           s-name language initial-value]
@@ -205,8 +195,6 @@
         function-descriptor (generate-function language reduction)
         virtual-stream (get (:virtual-streams @state) projection-name)
         ch (:channel virtual-stream)
-        mult-ch (:mult-channel virtual-stream)
-        telnet-tap (chan)
         desc (descriptor-default projection-name function-descriptor
                                  s-name language initial-value)
         new-descriptor (merge-t desc projection-descriptor)
@@ -220,8 +208,10 @@
         to-mix (projection-queue-mix stream running-query
                                      function ch s)]
     (log/info "Retrieved stream for" projection-name)
-    (tap mult-ch telnet-tap)
-    (admix telnet-mix telnet-tap)
+    (let [telnet-tap (chan)
+          mult-ch (:mult-channel virtual-stream)]
+      (tap mult-ch telnet-tap)
+      (admix telnet-mix telnet-tap))
     (log/info "Starting projection loop for" projection-name)
     (dosync (alter state assoc-in
                    [:queries projection-name] running-query))
