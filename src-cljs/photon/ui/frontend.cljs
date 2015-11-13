@@ -7,7 +7,6 @@
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
             [goog.events :as events]
-            #_[reagent.session :as session]
             [om.core :as om]
             [om.dom :as dom])
   (:import goog.net.IframeIo
@@ -30,7 +29,7 @@
 (defn clj->str [c]
   (let [res (clojure.string/replace
              (with-out-str (fipp/pprint c {:width 80})) #"}nil" "}")]
-    (.log js/console res)
+    #_(.log js/console res)
     res))
 
 (defn proj->streams [reg]
@@ -142,13 +141,14 @@
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
               (if (contains? elem :error)
-                (.log js/console (pr-str elem))
+                (do
+                  #_(.log js/console (pr-str elem)))
                 (om/update-state! owner
                                   #(assoc % :projections
                                           (:projections (:message elem)))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel)))))
-        (.log js/console "Error:" (pr-str error))))))
+        (do (.log js/console "Error:" (pr-str error)))))))
 
 (defn subscribe-stats! [owner]
   (go
@@ -162,7 +162,8 @@
                  previous 0]
             (when-not (nil? elem)
               (if (contains? elem :error)
-                (.log js/console (pr-str elem))
+                (do
+                  #_(.log js/console (pr-str elem)))
                 (let [stats-from-msg (:stats (:message elem))
                       difference (- (:processed stats-from-msg) previous)
                       new-last-50 (into [] (take-last 50 (conj last-50 difference)))
@@ -172,7 +173,8 @@
                   (recur (<! ws-channel) new-last-50 (:processed stats-from-msg))))
               (>! ws-channel {:ok true})
               (recur (<! ws-channel) last-50 previous))))
-        (.log js/console "Error:" (pr-str error))))))
+        (do
+          #_(.log js/console "Error:" (pr-str error)))))))
 
 (defn subscribe-streams! [owner]
   (go
@@ -184,14 +186,14 @@
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
               (if (contains? elem :error)
-                (.log js/console (pr-str elem))
+                (do #_(.log js/console (pr-str elem)))
                 (let [streams-proj (:message elem)]
                   (om/update-state! owner
                                     #(assoc % :streams
                                       (proj->streams (:current-value streams-proj))))))
               (>! ws-channel {:projection-name "__streams__"})
               (recur (<! ws-channel)))))
-        (.log js/console "Error:" (pr-str error))))))
+        (do #_(.log js/console "Error:" (pr-str error)))))))
 
 (defn filter-projection [proj]
   (assoc
@@ -246,7 +248,7 @@
   (reify
     om/IDidMount
     (did-mount [_]
-      (.log js/console "Update: code-block")
+      #_(.log js/console "Update: code-block")
       (dorun (map #(.highlightBlock js/hljs %) ($ "code"))))
     om/IRender
     (render [_]
@@ -286,7 +288,7 @@
 
 (defn update-chart! [chart data]
   (let [vector-data (clj->js (concat ["data"] data))]
-    (.log js/console vector-data)
+    #_(.log js/console vector-data)
     (.load chart #js {:columns #js [vector-data]})))
 
 (defn widget-dashboard [params owner]
@@ -296,7 +298,7 @@
       {:chart nil})
     om/IDidMount
     (did-mount [_]
-      (.log js/console params)
+      #_(.log js/console params)
       (let [chart (.generate js/c3
                              #js {:bindto "#chart"
                                   :data
@@ -307,7 +309,7 @@
       (if-let [chart (:chart state)]
         (update-chart! chart (:last-50 (:stats params))))
       (dom/div #js {:className "dashboard"}
-        (.log js/console (pr-str (:stats params)))
+        #_(.log js/console (pr-str (:stats params)))
         (dom/div
           #js {:id "chart"})
         (dom/div
@@ -403,7 +405,7 @@
             (:body (<! (client/get
                         (str "/api/stream-contents/"
                              stream-name))))]
-        (.log js/console response)
+        #_(.log js/console response)
         (om/update-state!
          owner
          #(assoc % :events (:results response))))))
@@ -471,106 +473,94 @@
 (defn set-status [class title items]
   (.log js/console "set-status" class title items))
 
-#_(defn iframe-response-ok [msg]
-  (let [status (set-status "alert alert-success"
-                           "Upload Successful"
-                           [(str "Filename: " (:filename msg))
-                            (str "Size: " (:size msg))
-                            (str "Tempfile: " (:tempfile msg))])]
-    (session/put! :upload-status status)))
-
-#_(defn iframe-response-error [msg]
-  (let [status (set-status "alert alert-danger"
-                           "Upload Failure"
-                           [(str "Status: " (:status msg))
-                            (str (:message msg))])]
-    (session/put! :upload-status status)))
-
-#_(defn handle-iframe-response [json-msg]
+(defn handle-iframe-response [json-msg]
   (let [msg (js->clj json-msg :keywordize-keys true)]
     (.log js/console (str "iframe-response: " msg))
     (cond
-      (= "OK" (:status msg)) (iframe-response-ok msg)
-      (= "ERROR" (:status msg)) (iframe-response-error msg)
-      :else (session/put! :upload-status [:div.alert.alert-danger
-                                          [:h4 "Unexpected Error"]
-                                          [:ul
-                                           [:li (str "Status: " (:status msg))]
-                                           [:li (:message msg)]]]))))
+      (= "OK" (:status msg)) (str "Uploaded to stream: " (:stream-name msg))
+      :else (str "Unexpected error: " (pr-str msg)))))
 
-#_(defn set-upload-indicator []
-  (let [class "fa fa-spinner fa-spin fa-pulse"]
-    (session/put! :upload-status [:div
-                                  [:p "Uploading file... "
-                                   [:span {:class class}]]])))
-
-#_(defn iframeio-upload-file [form-id]
-  (let [el (.getElementById js/document form-id)
+(defn iframeio-upload-file [form-id owner]
+  (let [el (.getDOMNode (om/get-node owner form-id))
         iframe (IframeIo.)]
+    (.log js/console el)
     (events/listen iframe EventType.COMPLETE
-                   (fn [event]
-                     (let [rsp (.getResponseJson iframe)
-                           status ()])
-                     (handle-iframe-response (.getResponseJson iframe))
-                     (.dispose iframe)))
-    (set-upload-indicator)
-    (.sendFromForm iframe el "/upload")))
+        (fn [event]
+          (om/update-state! owner
+                            (fn [state]
+                              (assoc state
+                                     :upload-status
+                                     (handle-iframe-response
+                                      (.getResponseJson iframe)))))
+          (.dispose iframe)))
+    (.sendFromForm iframe el)))
 
-#_(defn widget-new-stream [params owner]
-  (let [data (:data params)
-        new-stream (:new-stream data)
-        new-stream (if (contains? new-stream :select-value)
-                     new-stream
-                     (assoc new-stream :select-value "file"))]
-    (reify
-      om/IRender
-      (render [_]
-        (dom/div #js {:className "new-stream"}
-          (dom/h1 #js {:className "view-title"} "New Stream")
-          (dom/div
-              #js {:className "box"}
+(defn widget-new-stream [props owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+                {:name ""
+                 :select-value "file"
+                 :upload-status ""
+                 :stream-file nil})
+    om/IRenderState
+    (render-state [_ state]
+        (dom/form #js {:className "new-stream"
+                       :ref "upload-form"
+                       :method "POST"
+                       :encType "multipart/form-data"
+                       :onSubmit (fn [e]
+                                   (.preventDefault e)
+                                   (om/update-state! owner
+                                                     (fn [state]
+                                                       (assoc state
+                                                              :upload-status
+                                                              "Uploading...")))
+                                   (iframeio-upload-file "upload-form"
+                                                         owner))
+                       :action "/api/new-stream"}
+            (dom/h1 #js {:className "view-title"} "New Stream")
+            (:upload-status state)
             (dom/div
+                #js {:className "box"}
+                (dom/div
                 nil
-              (dom/label #js {:className "input-label"} "Stream name")
-              (dom/input
-                  #js {:className "wide-input"
-                       :type "text" :ref "name"
-                       :value (:stream-name data)
-                       :onChange
-                       (fn [ev]
-                         (om/update! data :stream-name
-                                     (.-value (.-target ev))))}))
-            (dom/div
+                (dom/label #js {:className "input-label"} "Stream name (optional)")
+                (dom/input
+                    #js {:className "wide-input"
+                         :name "stream-name"
+                         :type "text"
+                         :ref "name"
+                         :value (:name state)
+                         :onChange
+                         (fn [ev]
+                           (om/update-state!
+                            owner
+                            (fn [state]
+                              (assoc state :name (.-value (.-target ev))))))}))
+                (dom/div
                 #js {:className "radio"}
-              "Source type:"
-              (dom/select
-               #js {:onChange
-                    (fn [ev]
-                      (om/update!
-                       data [:new-stream :select-value]
-                       (.-value (.-target ev))))}
-               (dom/option
-                (add-select-state "file"
-                                  (:select-value new-stream))
-                "JSON sequence file")))
-            (condp = (:select-value new-stream)
-              "file" (dom/div nil
-                       (dom/input #js
-                           {:type "file"
-                            :id "upload-form"
-                            :onChange
-                            (fn [ev]
-                              (om/update! data [:new-stream :file]
-                                          (.-name
-                                           (aget (.-files (.-target ev))
-                                                 0))))})
-                       (pr-str (:file new-stream))
-                       (dom/button
-                           #js {:onClick
-                                (fn [_]
-                                  (iframeio-upload-file "upload-form"))}
-                         "Declare stream")))
-            ))))))
+                "Source type:"
+                (dom/select
+                    #js {:onChange
+                        (fn [ev]
+                          (om/update-state!
+                           owner
+                           (fn [state]
+                             (assoc state :select-value (.-value (.-target ev))))))}
+                    (dom/option
+                    (add-select-state "file"
+                                    (:select-value state))
+                    "JSON sequence file")))
+                (condp = (:select-value state)
+                    "file" (dom/div nil
+                                (dom/input #js
+                                    {:type "file"
+                                     :name "upload-file-name"})
+                                (dom/button
+                                  #js {:type "submit"
+                                       :value "submit"}
+                                    "Declare stream"))))))))
 
 (defn widget-streams [data owner]
   (reify
@@ -645,7 +635,8 @@
         nil
         (om/build main-menu
                   {:data state
-                   :items ["Dashboard" "Streams" "Projections" "New Projection"]})
+                   :items ["Dashboard" "Streams" "Projections"
+                           "New Projection" "New Stream"]})
         (dom/div nil
           (condp = (:active-page data)
             nil (dom/h3 nil "Choose option from menu...")
@@ -653,7 +644,7 @@
             "Streams" (om/build widget-streams state)
             "Projections" (om/build widget-projections state)
             "New Projection" (om/build widget-new-projection state)
-            #_#_"New stream" (om/build widget-new-stream state)))))))
+            "New Stream" (om/build widget-new-stream state)))))))
 
 (om/root full-page app-state
          {:target (. js/document

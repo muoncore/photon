@@ -1,6 +1,7 @@
 (ns photon.api
   (:require [photon.streams :as streams]
             [schema.core :as s]
+            [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async])
   (:import (java.util Map)))
@@ -188,4 +189,34 @@
                                        :limit limit
                                        :stream-type "cold"})))]
     {:results res}))
+
+(defn find-name [stm stream-name]
+  (loop [i -1 stms (into #{}
+                         (map :stream-name (:streams (streams stm))))]
+    (let [name (if (= -1 i)
+                 stream-name
+                 (str stream-name "-" i))]
+      (if (empty? stms)
+        name
+        (if (not (contains? stms name))
+          name
+          (recur (inc i) (disj stms name)))))))
+
+(defn new-stream [stm params]
+  (let [file (get params "upload-file-name")
+        filename (:filename file)
+        stream-name (get params "stream-name")
+        stream-name (if (or (nil? stream-name)
+                            (= "" (clojure.string/trim stream-name)))
+                      (clojure.string/join
+                       "."
+                       (drop-last (clojure.string/split
+                                   filename #"[.]")))
+                      stream-name)
+        stream-name (find-name stm stream-name)
+        lazy-events (json/parsed-seq
+                     (clojure.java.io/reader (:tempfile file)) true)]
+    (dorun (map #(streams/process-event! stm (assoc % :stream-name stream-name))
+                lazy-events))
+    stream-name))
 

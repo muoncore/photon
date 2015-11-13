@@ -33,7 +33,8 @@
 (defn -main [& args]
   (let [m-photon (apply init-photon! args)]
     (println run-server)
-    (time (run-server (:handler m-photon) {:port 3000}))
+    (time (run-server (:handler m-photon) {:port 3000
+                                           :max-body 600000000}))
     m-photon))
 
 (defonce figwheel-instance (ref nil))

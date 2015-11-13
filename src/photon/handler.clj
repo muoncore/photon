@@ -15,6 +15,7 @@
             [ring.swagger.json-schema-dirty :refer :all]
             [clojure.core.async :refer [go-loop go timeout <! >! close!]]
             [ring.middleware.params :as pms]
+            [ring.middleware.multipart-params :as mp]
             [photon.api :as api]
             [chord.http-kit :refer [wrap-websocket-handler]]
             [compojure.handler :refer [site]]))
@@ -93,10 +94,6 @@
              (fn [c json-generator]
                (.writeString json-generator (.getSimpleName c))))
 
-#_(defapi figwheel-handler
-    (GET* "/" []
-          (ok {:test :ok})))
-
 (defn figwheel-handler [& args]
   (println "!!!!!!!!!!" args))
 
@@ -155,7 +152,11 @@
                        (ok res)))
               (POST* "/event/:stream-name" [& request]
                      :no-doc true
-                     (api/post-event! ms request)))
+                     (api/post-event! ms request))
+              (mp/wrap-multipart-params
+               (cc/POST "/new-stream" {params :params}
+                     (ok {:status "OK"
+                          :stream-name (api/new-stream ms params)}))))
     (GET* "/ui" []
           :no-doc true
           (response/resource-response "index.html"
