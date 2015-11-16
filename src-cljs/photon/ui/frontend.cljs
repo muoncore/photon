@@ -159,22 +159,25 @@
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)
                  last-50 []
-                 previous 0]
+                 timestamps []
+                 previous 0
+                 is-first? true]
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (do
                   #_(.log js/console (pr-str elem)))
                 (let [stats-from-msg (:stats (:message elem))
-                      difference (- (:processed stats-from-msg) previous)
+                      difference (if is-first? 0 (- (:processed stats-from-msg) previous))
                       new-last-50 (into [] (take-last 50 (conj last-50 difference)))
-                      stats (assoc stats-from-msg :last-50 new-last-50)]
-                  (om/update-state! owner #(assoc % :stats stats))
+                      new-timestamps (into [] (take-last 50 (conj timestamps (.getTime (js/Date.)))))
+                      stats (assoc stats-from-msg :last-50 {:val new-last-50
+                                                            :timestamps new-timestamps})]
+                  (when-not is-first?
+                    (om/update-state! owner #(assoc % :stats stats)))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-last-50 (:processed stats-from-msg))))
-              (>! ws-channel {:ok true})
-              (recur (<! ws-channel) last-50 previous))))
+                  (recur (<! ws-channel) new-last-50 new-timestamps (:processed stats-from-msg) false))))))
         (do
-          #_(.log js/console "Error:" (pr-str error)))))))
+          (.log js/console "Error:" (pr-str error)))))))
 
 (defn subscribe-streams! [owner]
   (go
@@ -287,9 +290,10 @@
                     block)))))))
 
 (defn update-chart! [chart data]
-  (let [vector-data (clj->js (concat ["data"] data))]
+  (let [vector-data (clj->js (concat ["Incoming Events"] (:val data)))
+        x-axis (clj->js (concat ["x"] (:timestamps data)))]
     #_(.log js/console vector-data)
-    (.load chart #js {:columns #js [vector-data]})))
+    (.load chart #js {:columns #js [x-axis vector-data]})))
 
 (defn widget-dashboard [params owner]
   (reify
@@ -302,14 +306,22 @@
       (let [chart (.generate js/c3
                              #js {:bindto "#chart"
                                   :data
-                                  #js {:columns #js []}})]
+                                  #js {:x "x"
+                                       :columns #js []}
+                                  :axis
+                                  #js {:y #js {:min 0
+                                               :padding #js {:bottom 10}}
+                                       :x #js {:type "timeseries"
+                                              :tick #js {:format "%H:%M:%S"}}}
+                                  :transition
+                                  #js {:duration 0}})]
         (om/update-state! owner (fn [state] (assoc state :chart chart)))))
     om/IRenderState
     (render-state [_ state]
       (if-let [chart (:chart state)]
         (update-chart! chart (:last-50 (:stats params))))
       (dom/div #js {:className "dashboard"}
-        #_(.log js/console (pr-str (:stats params)))
+        (.log js/console (pr-str (:stats params)))
         (dom/div
           #js {:id "chart"})
         (dom/div
@@ -319,7 +331,6 @@
             (dom/span
               #js {:className "title"}
                 "Events Processed")
-            (js/Date)
             (dom/span
               #js {:className "large-value"}
                 (:processed (:stats params)))))
