@@ -317,6 +317,7 @@
         (om/update-state! owner (fn [state] (assoc state :chart chart)))))
     om/IRenderState
     (render-state [_ state]
+                  (.log js/console (pr-str (:stats params)))
       (if-let [chart (:chart state)]
         (update-chart! chart (:last-50 (:stats params))))
       (dom/div #js {:className "dashboard"}
