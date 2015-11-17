@@ -54,7 +54,10 @@
         (if-let [{:keys [message]} (<! ws-channel)]
           (do
             (<! (timeout t))
-            (>! ws-channel {:stats @(:stats stream)})
+            (let [stats-stream @(:stats stream)
+                  stats-rt (api/runtime-stats stream)
+                  all-stats {:stats (merge stats-stream stats-rt)}]
+              (>! ws-channel all-stats))
             (recur 1000))
           (do
             (close! ws-channel)
@@ -170,4 +173,3 @@
     (route/resources "/")
     (route/not-found "Not Found"))
   (reload/wrap-reload #'app-no-reload))
-

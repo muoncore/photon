@@ -302,7 +302,6 @@
       {:chart nil})
     om/IDidMount
     (did-mount [_]
-      #_(.log js/console params)
       (let [chart (.generate js/c3
                              #js {:bindto "#chart"
                                   :data
@@ -321,7 +320,6 @@
       (if-let [chart (:chart state)]
         (update-chart! chart (:last-50 (:stats params))))
       (dom/div #js {:className "dashboard"}
-        (.log js/console (pr-str (:stats params)))
         (dom/div
           #js {:id "chart"})
         (dom/div
@@ -342,8 +340,11 @@
               #js {:className "title"}
                 "title")
             (dom/span
-              #js {:className "large-value"}
-                "2")))
+              #js {:className "data"}
+                "Streams: " (count (:streams params)))
+            (dom/span
+              #js {:className "data"}
+                "Projections: " (count (:projections params)))))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
@@ -607,13 +608,16 @@
   (reify
     om/IRender
     (render [_]
-      (dom/a #js
-        {:className "menu-item"
-         :href "#"
-         :onClick (fn [_]
-                    (om/update! (:data data)
-                                :active-page (:item data)))}
-        (:item data)))))
+      (let [class (if (= (:active-page (:data data)) (:item data))
+                    "menu-item active" "menu-item")]
+        (dom/a #js
+          {:className class
+           :href "#"
+           :onClick (fn [_]
+                      (om/update-state! (:root-owner (:data data))
+                                        (fn [state]
+                                          (assoc state :active-page (:item data)))))}
+        (:item data))))))
 
 (defn main-menu [data owner]
   (reify
@@ -626,15 +630,16 @@
                           :height "auto"})
             (dom/h2 #js {:className "logo"} "Photon")
                (map
-                #(om/build menu-item {:data (:data data)
-                                      :item %})
+                #(do
+                   (om/build menu-item {:data (:data data)
+                                      :item %}))
                 (:items data))))))
 
 (defn full-page [data owner]
   (reify
     om/IInitState
     (init-state [_]
-      data)
+      (assoc data :root-owner owner :active-page "Dashboard"))
     om/IDidMount
     (did-mount [_]
       (subscribe-streams! owner)
@@ -649,8 +654,7 @@
                    :items ["Dashboard" "Streams" "Projections"
                            "New Projection" "New Stream"]})
         (dom/div nil
-          (condp = (:active-page data)
-            nil (dom/h3 nil "Choose option from menu...")
+          (condp = (:active-page state)
             "Dashboard" (om/build widget-dashboard state)
             "Streams" (om/build widget-streams state)
             "Projections" (om/build widget-projections state)

@@ -20,7 +20,8 @@
                               (:projections.port conf)
                               (:events.port conf)
                               (:parallel.projections conf)
-                              (:projections.path conf))]
+                              (:projections.path conf)
+                              conf)] ;; TODO: Pass conf instead of individual parameters
       (log/info "Server started, initialising streams...")
       (log/info "Initialising endpoints...")
       (let [handler (h/app (:stream ms))]
@@ -47,4 +48,3 @@
                 (alter figwheel-instance (fn [_] (:handler m-photon)))
                 (:handler m-photon))))]
     (apply h args)))
-

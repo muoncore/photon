@@ -247,7 +247,7 @@
   {:correct true})
 
 (defrecord AsyncStream [muon db global-channel telnet-mix
-                        projection-mix state stats]
+                        projection-mix state stats conf]
   StreamManager
   (init-stream-manager! [this] (as-init-stream-manager! this))
   (update-streams! [this stream-name]
@@ -373,7 +373,8 @@
             (recur (<! ch)))))
       (recur (inc i)))))
 
-(defn new-async-stream [m db projections-port events-port threads]
+;; TODO: Fix conf redundancy
+(defn new-async-stream [m db projections-port events-port threads conf]
   (let [c (chan 1)
         mult-global (mult c)
         global-channel {:channel c :mult-channel mult-global}
@@ -390,7 +391,8 @@
         as (->AsyncStream m db global-channel
                           telnet-mix projection-mix
                           (ref initial-state)
-                          (atom {:incoming 0 :processed 0}))]
+                          (atom {:incoming 0 :processed 0})
+                          conf)]
     (init-stream-manager! as)
     (tap mult-global telnet-events-channel)
     (pipeline threads schedule projection-channel)

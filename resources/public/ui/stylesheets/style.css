@@ -117,9 +117,9 @@ td, th{
 }
 
 .widget-box .large-value{
-    font-size: 45pt;
+    font-size: 2.5vw;
     display: block;
-    padding: 50px;
+    padding-top: 50px;
 }
 
 .widget-box .title{
@@ -146,6 +146,14 @@ td, th{
 
 .view-title{
     text-align: left;
+}
+
+.active{
+  background-color: #464646;
+}
+
+.data{
+  
 }
 
 #main-area{

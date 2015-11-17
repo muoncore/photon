@@ -220,3 +220,11 @@
                 lazy-events))
     stream-name))
 
+(defn runtime-stats [_]
+  (let [rt (Runtime/getRuntime)
+        total-memory (.totalMemory rt)
+        avail-memory (.freeMemory rt)
+        avail-processors (.availableProcessors rt)
+        stats {:total-memory total-memory :available-memory avail-memory
+               :available-processors avail-processors}]
+    stats))
