@@ -4,7 +4,8 @@
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async])
-  (:import (java.util Map)))
+  (:import (java.util Map)
+           (java.lang.management ManagementFactory)))
 
 ;; Schemas
 (s/defschema StreamInfo
@@ -222,9 +223,11 @@
 
 (defn runtime-stats [_]
   (let [rt (Runtime/getRuntime)
+        mf (ManagementFactory/getOperatingSystemMXBean)
         total-memory (.totalMemory rt)
         avail-memory (.freeMemory rt)
         avail-processors (.availableProcessors rt)
+        cpu-load (format "%.2f" (* (/ (.getSystemLoadAverage mf) avail-processors) 100))
         stats {:total-memory total-memory :available-memory avail-memory
-               :available-processors avail-processors}]
+               :cpu-load cpu-load}]
     stats))

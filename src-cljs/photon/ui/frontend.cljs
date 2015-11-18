@@ -353,9 +353,20 @@
             (dom/span
               #js {:className "title"}
                 "title")
-            (dom/span
-              #js {:className "large-value"}
-                "3")))
+              (dom/span
+                #js {:className "data"}
+                  "Total Memory (KB): " (quot (:total-memory (:stats params)) 1024))
+              (dom/span
+                #js {:className "data"}
+                  "Used Memory (KB): " (quot
+                                        (- (:total-memory (:stats params)) (:available-memory (:stats params))) 1024))
+              (dom/span
+                #js {:className "data"}
+                  "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
+              (dom/span
+                #js {:className "data"}
+                  "CPU Load: " (:cpu-load (:stats params)) "%")
+            ))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
