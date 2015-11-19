@@ -5,7 +5,7 @@
   :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [http-kit "2.1.18"]
+                 [http-kit "2.1.19"]
                  [ring "1.4.0"
                   :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"
@@ -53,6 +53,7 @@
                  [jayq "2.5.4"]
                  [fipp "0.6.2"]
                  [reagent-utils "0.1.4"]
+                 [com.stuartsierra/component "0.3.0"]
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
