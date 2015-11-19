@@ -373,9 +373,11 @@
             (recur (<! ch)))))
       (recur (inc i)))))
 
-;; TODO: Fix conf redundancy
-(defn new-async-stream [m db projections-port events-port threads conf]
-  (let [c (chan 1)
+(defn new-async-stream [m db conf]
+  (let [projections-port (:projections.port conf)
+        events-port (:events.port conf)
+        threads (:parallel.projections conf)
+        c (chan 1)
         mult-global (mult c)
         global-channel {:channel c :mult-channel mult-global}
         telnet-projections-channel (chan (sliding-buffer 1024))

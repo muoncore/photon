@@ -13,8 +13,7 @@
   (try
     (let [conf (apply conf/config args)
           db ((db/default-db conf) conf)
-          _ (log/info "DB Configured...")
-          ms (m/start-server! (:amqp.url conf)
+          ms (m/start-server! db conf (:amqp.url conf)
                               (:microservice.name conf)
                               db
                               (:projections.port conf)
@@ -22,6 +21,7 @@
                               (:parallel.projections conf)
                               (:projections.path conf)
                               conf)] ;; TODO: Pass conf instead of individual parameters
+      (log/info "DB Configured...")
       (log/info "Server started, initialising streams...")
       (log/info "Initialising endpoints...")
       (let [handler (h/app (:stream ms))]

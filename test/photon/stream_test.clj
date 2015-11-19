@@ -18,9 +18,13 @@
 (def uuid (java.util.UUID/randomUUID))
 
 (defn prepare! []
-  (let [ms (m/start-server! "amqp://localhost"
-                            (str "photon-test-" uuid)
-                            db 9998 9999 2 "/tmp/non-existing-path")]
+  (let [conf {:amqp.url "amqp://localhost"
+              :microservice.name (str "photon-test-" uuid)
+              :projections.path "/tmp/non-existing-path"
+              :projections.port 9998
+              :events.port 9999
+              :parallel.projections 2}
+        ms (m/start-server! db conf)]
     (streams/clean! (:stream ms))
     ms))
 

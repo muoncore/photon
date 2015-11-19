@@ -6,18 +6,20 @@
                  ["reactor" "http://repo.spring.io/libs-release"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [http-kit "2.1.18"]
-                 [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
-                 [ring/ring-json "0.4.0" :exclusions [org.clojure/tools.reader]]
+                 [ring "1.4.0"
+                  :exclusions [org.clojure/tools.reader]]
+                 [ring/ring-json "0.4.0"
+                  :exclusions [org.clojure/tools.reader]]
                  [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
-                 #_[org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [tranchis/core.async "0.3.0-20151110.100912-1"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
                  [cheshire "5.5.0"]
                  [clj-time "0.11.0"]
-                 [compojure "1.4.0" :exclusions [org.clojure/tools.reader
-                                                 commons-codec]]
+                 [compojure "1.4.0"
+                  :exclusions [org.clojure/tools.reader
+                               commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.31"]
                  [io.muoncore/muon-clojure "5.3.8"
@@ -75,7 +77,6 @@
   #_#_:warn-on-reflection true
   :jvm-opts [#_"-Xmx4g"
              #_"-XX:+PrintGCDetails"
-             #_"-agentpath:/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib=nowait"
              #_"server"
              "-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
              "-XX:+UseParNewGC" "-XX:ParallelCMSThreads=4"
@@ -91,16 +92,17 @@
              :load-warninged-code true
              :open-file-command "atom"
              :ring-handler photon.core/figwheel-init!}
-  :cljsbuild {:builds [{:source-paths ["src-cljs"]
-                        :figwheel true
-                        :compiler {:main photon.ui.frontend
-                                   :asset-path "ui/js/out"
-                                   :output-to "resources/public/ui/js/main.js"
-                                   :output-dir "resources/public/ui/js/out"
-                                   :source-map "resources/public/ui/js/out.js.map"
-                                   :preamble ["react/react.min.js"]
-                                   :optimizations :none
-                                   :pretty-print  true}}]}
+  :cljsbuild
+  {:builds [{:source-paths ["src-cljs"]
+             :figwheel true
+             :compiler {:main photon.ui.frontend
+                        :asset-path "ui/js/out"
+                        :output-to "resources/public/ui/js/main.js"
+                        :output-dir "resources/public/ui/js/out"
+                        :source-map "resources/public/ui/js/out.js.map"
+                        :preamble ["react/react.min.js"]
+                        :optimizations :none
+                        :pretty-print  true}}]}
   :docker {:image-name "myregistry.example.org/myimage"
            :dockerfile "target/dist/Dockerfile"
            :build-dir  "target"}
