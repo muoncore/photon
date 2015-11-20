@@ -25,6 +25,7 @@
                  [io.muoncore/muon-clojure "5.3.8"
                   :exclusions [commons-codec
                                midje
+                               org.clojure/core.async
                                org.clojure/tools.namespace]]
                  [prismatic/schema "1.0.3"]
                  [metosin/ring-http-response "0.6.5"
@@ -40,20 +41,25 @@
                  [dire "0.5.3"]
                  [jarohen/chord "0.6.0"
                   :exclusions [commons-codec
+                               org.clojure/core.async
+                               com.cognitect/transit-clj
                                com.cognitect/transit-cljs
+                               com.cognitect/transit-java
                                org.clojure/tools.reader]]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
                  [tranchis/clj-schema-inspector "0.2.0"]
+                 [com.stuartsierra/component "0.3.0"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.7.145"
+                 [org.clojure/clojurescript "1.7.170"
                   :exclusions [org.clojure/tools.reader]]
                  [tailrecursion/cljson "1.0.7"]
-                 [cljs-http "0.1.37"]
-                 [org.omcljs/om "1.0.0-alpha7"]
+                 [cljs-http "0.1.37"
+                  :exclusions [com.cognitect/transit-cljs
+                               org.clojure/core.async]]
+                 [org.omcljs/om "1.0.0-alpha22"]
                  [jayq "2.5.4"]
                  [fipp "0.6.2"]
                  [reagent-utils "0.1.4"]
-                 [com.stuartsierra/component "0.3.0"]
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
@@ -71,7 +77,7 @@
                                com.cognitect/transit-clj]]]
   :plugins [[lein-cljsbuild "1.1.0"]
             [lein-midje "3.1.3"]
-            [lein-figwheel "0.4.1"
+            [lein-figwheel "0.5.0-1"
              :exclusions [org.clojure/clojure
                           org.codehaus.plexus/plexus-utils]]]
   :main photon.core ;; http-kit
