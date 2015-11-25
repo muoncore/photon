@@ -158,7 +158,7 @@
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)
-                 last-50 []
+                 last-25 []
                  timestamps []
                  previous 0
                  is-first? true]
@@ -168,14 +168,14 @@
                   #_(.log js/console (pr-str elem)))
                 (let [stats-from-msg (:stats (:message elem))
                       difference (if is-first? 0 (- (:processed stats-from-msg) previous))
-                      new-last-50 (into [] (take-last 50 (conj last-50 difference)))
-                      new-timestamps (into [] (take-last 50 (conj timestamps (.getTime (js/Date.)))))
-                      stats (assoc stats-from-msg :last-50 {:val new-last-50
+                      new-last-25 (into [] (take-last 25 (conj last-25 difference)))
+                      new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
+                      stats (assoc stats-from-msg :last-25 {:val new-last-25
                                                             :timestamps new-timestamps})]
                   (when-not is-first?
                     (om/update-state! owner #(assoc % :stats stats)))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-last-50 new-timestamps (:processed stats-from-msg) false))))))
+                  (recur (<! ws-channel) new-last-25 new-timestamps (:processed stats-from-msg) false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
@@ -290,7 +290,7 @@
                     block)))))))
 
 (defn update-chart! [chart data]
-  (let [vector-data (clj->js (concat ["Incoming Events"] (:val data)))
+  (let [vector-data (clj->js (concat ["Events Processed"] (:val data)))
         x-axis (clj->js (concat ["x"] (:timestamps data)))]
     #_(.log js/console vector-data)
     (.load chart #js {:columns #js [x-axis vector-data]})))
@@ -299,11 +299,11 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:chart nil})
+      {:events-processed-chart nil})
     om/IDidMount
     (did-mount [_]
-      (let [chart (.generate js/c3
-                             #js {:bindto "#chart"
+      (let [events-processed-chart (.generate js/c3
+                             #js {:bindto "#events-processed"
                                   :data
                                   #js {:x "x"
                                        :columns #js []}
@@ -314,15 +314,21 @@
                                               :tick #js {:format "%H:%M:%S"}}}
                                   :transition
                                   #js {:duration 0}})]
-        (om/update-state! owner (fn [state] (assoc state :chart chart)))))
+        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart)))))
     om/IRenderState
     (render-state [_ state]
-                  (.log js/console (pr-str (:stats params)))
-      (if-let [chart (:chart state)]
-        (update-chart! chart (:last-50 (:stats params))))
+      (.log js/console (pr-str (:stats params)))
+      (if-let [events-processed-chart (:events-processed-chart state)]
+        (update-chart! events-processed-chart (:last-25 (:stats params))))
       (dom/div #js {:className "dashboard"}
         (dom/div
-          #js {:id "chart"})
+          #js {:className "col-sm-12 col-md-6 col-lg-6"}
+          (dom/div
+            #js {:id "events-processed"}))
+        (dom/div
+          #js {:className "col-sm-12 col-md-6 col-lg-6"}
+          (dom/div
+            #js {:id "chart"}))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
