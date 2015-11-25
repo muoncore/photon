@@ -159,24 +159,29 @@
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)
-                 last-25 []
+                 last-25-processed []
+                 last-25-incoming []
                  timestamps []
-                 previous 0
+                 previous-processed 0
+                 previous-incoming 0
                  is-first? true]
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (do
                   #_(.log js/console (pr-str elem)))
                 (let [stats-from-msg (:stats (:message elem))
-                      difference (if is-first? 0 (- (:processed stats-from-msg) previous))
-                      new-last-25 (into [] (take-last 25 (conj last-25 difference)))
+                      difference-processed (if is-first? 0 (- (:processed stats-from-msg) previous-processed))
+                      difference-incoming (if is-first? 0 (- (:incoming stats-from-msg) previous-incoming))
+                      new-last-25-processed (into [] (take-last 25 (conj last-25-processed difference-processed)))
+                      new-last-25-incoming (into [] (take-last 25 (conj last-25-incoming difference-incoming)))
                       new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
-                      stats (assoc stats-from-msg :last-25 {:val new-last-25
+                      stats (assoc stats-from-msg :last-25 {:processed new-last-25-processed
+                                                            :incoming new-last-25-incoming
                                                             :timestamps new-timestamps})]
                   (when-not is-first?
                     (om/update-state! owner #(assoc % :stats stats)))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-last-25 new-timestamps (:processed stats-from-msg) false))))))
+                  (recur (<! ws-channel) new-last-25-processed new-last-25-incoming new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
@@ -290,9 +295,9 @@
                   (let [block (om/build code-block (:active-projection state))]
                     block)))))))
 
-(defn update-chart! [chart data]
-  (let [vector-data (clj->js (concat ["Events Processed"] (:val data)))
-        x-axis (clj->js (concat ["x"] (:timestamps data)))]
+(defn update-chart! [chart data timestamps name]
+  (let [vector-data (clj->js (concat [name] data))
+        x-axis (clj->js (concat ["x"] timestamps ))]
     #_(.log js/console vector-data)
     (.load chart #js {:columns #js [x-axis vector-data]})))
 
@@ -300,80 +305,92 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:events-processed-chart nil})
+      {:events-processed-chart nil
+       :events-incoming-chart nil})
     om/IDidMount
     (did-mount [_]
-      (let [events-processed-chart (.generate js/c3
+      (let [events-incoming-chart (.generate js/c3
+                             #js {:bindto "#events-incoming"
+                                  :data
+                                  #js {:x "x"
+                                       :columns #js []
+                                       :colors #js {"Events Incoming" "#800000"}}
+                                  :axis
+                                  #js {:y #js {:min 0
+                                               :padding #js {:bottom 10}
+                                               :label "Events"}
+                                       :x #js {:type "timeseries"
+                                              :tick #js {:format "%H:%M:%S"}}}
+                                  :transition
+                                  #js {:duration 0}})
+            events-processed-chart (.generate js/c3
                              #js {:bindto "#events-processed"
                                   :data
                                   #js {:x "x"
-                                       :columns #js []}
+                                       :columns #js []
+                                       :colors #js {"Events Processed" "#009000"}}
                                   :axis
                                   #js {:y #js {:min 0
-                                               :padding #js {:bottom 10}}
+                                               :padding #js {:bottom 10}
+                                               :label "Events"}
                                        :x #js {:type "timeseries"
                                               :tick #js {:format "%H:%M:%S"}}}
                                   :transition
                                   #js {:duration 0}})]
-        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart)))))
+        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart :events-incoming-chart events-incoming-chart)))))
     om/IRenderState
     (render-state [_ state]
       (.log js/console (pr-str (:stats params)))
+      (if-let [events-incoming-chart (:events-incoming-chart state)]
+        (update-chart! events-incoming-chart (:incoming (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Incoming" ))
       (if-let [events-processed-chart (:events-processed-chart state)]
-        (update-chart! events-processed-chart (:last-25 (:stats params))))
+        (update-chart! events-processed-chart (:processed (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Processed"))
       (dom/div #js {:className "dashboard"}
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-6"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
+          (dom/div
+            #js {:id "events-incoming"}))
+        (dom/div
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:id "events-processed"}))
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-6"}
-          (dom/div
-            #js {:id "chart"}))
-        (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:className "widget-box"}
             (dom/span
               #js {:className "title"}
-                "Events Processed")
-            (dom/span
-              #js {:className "large-value"}
-                (:processed (:stats params)))))
-        (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-4"}
-          (dom/div
-            #js {:className "widget-box"}
-            (dom/span
-              #js {:className "title"}
-                "title")
+                "Summary")
+            (dom/div
+              #js {:className "summary"}
             (dom/span
               #js {:className "data"}
                 "Streams: " (count (:streams params)))
             (dom/span
               #js {:className "data"}
-                "Projections: " (count (:projections params)))))
+                "Projections: " (count (:projections params))))))
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:className "widget-box"}
             (dom/span
               #js {:className "title"}
-                "title")
-              (dom/span
-                #js {:className "data"}
-                  "Total Memory (KB): " (quot (:total-memory (:stats params)) 1024))
-              (dom/span
-                #js {:className "data"}
-                  "Used Memory (KB): " (quot
-                                        (- (:total-memory (:stats params)) (:available-memory (:stats params))) 1024))
-              (dom/span
-                #js {:className "data"}
-                  "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
-              (dom/span
-                #js {:className "data"}
-                  "CPU Load: " (:cpu-load (:stats params)) "%")
-            ))
+                "System Data")
+              (dom/div
+                #js {:className "system-data"}
+                (dom/span
+                  #js {:className "data"}
+                    "Total Memory (KB): " (quot (:total-memory (:stats params)) 1024))
+                (dom/span
+                  #js {:className "data"}
+                    "Used Memory (KB): " (quot
+                                           (- (:total-memory (:stats params)) (:available-memory (:stats params))) 1024))
+                (dom/span
+                  #js {:className "data"}
+                    "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
+                (dom/span
+                  #js {:className "data"}
+                    "CPU Load: " (:cpu-load (:stats params)) "%"))))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
@@ -536,62 +553,63 @@
                  :stream-file nil})
     om/IRenderState
     (render-state [_ state]
-        (dom/form #js {:className "new-stream"
-                       :ref "upload-form"
-                       :method "POST"
-                       :encType "multipart/form-data"
-                       :onSubmit (fn [e]
-                                   (.preventDefault e)
-                                   (om/update-state! owner
-                                                     (fn [state]
-                                                       (assoc state
-                                                              :upload-status
-                                                              "Uploading...")))
-                                   (iframeio-upload-file "upload-form"
-                                                         owner))
-                       :action "/api/new-stream"}
-            (dom/h1 #js {:className "view-title"} "New Stream")
-            (:upload-status state)
-            (dom/div
-                #js {:className "box"}
-                (dom/div
-                nil
-                (dom/label #js {:className "input-label"} "Stream name (optional)")
-                (dom/input
-                    #js {:className "wide-input"
-                         :name "stream-name"
-                         :type "text"
-                         :ref "name"
-                         :value (:name state)
-                         :onChange
-                         (fn [ev]
-                           (om/update-state!
-                            owner
-                            (fn [state]
-                              (assoc state :name (.-value (.-target ev))))))}))
-                (dom/div
-                #js {:className "radio"}
-                "Source type:"
-                (dom/select
-                    #js {:onChange
-                        (fn [ev]
-                          (om/update-state!
-                           owner
-                           (fn [state]
-                             (assoc state :select-value (.-value (.-target ev))))))}
-                    (dom/option
-                    (add-select-state "file"
-                                    (:select-value state))
-                    "JSON sequence file")))
-                (condp = (:select-value state)
-                    "file" (dom/div nil
-                                (dom/input #js
-                                    {:type "file"
-                                     :name "upload-file-name"})
-                                (dom/button
-                                  #js {:type "submit"
-                                       :value "submit"}
-                                    "Declare stream"))))))))
+        (dom/div
+         #js {:className "new-stream"}
+           (dom/form #js {:ref "upload-form"
+                         :method "POST"
+                         :encType "multipart/form-data"
+                         :onSubmit (fn [e]
+                                     (.preventDefault e)
+                                     (om/update-state! owner
+                                                       (fn [state]
+                                                         (assoc state
+                                                                :upload-status
+                                                                "Uploading...")))
+                                     (iframeio-upload-file "upload-form"
+                                                           owner))
+                         :action "/api/new-stream"}
+              (dom/h1 #js {:className "view-title"} "New Stream")
+              (:upload-status state)
+              (dom/div
+                  #js {:className "box"}
+                  (dom/div
+                  nil
+                  (dom/label #js {:className "input-label"} "Stream name (optional)")
+                  (dom/input
+                      #js {:className "wide-input"
+                           :name "stream-name"
+                           :type "text"
+                           :ref "name"
+                           :value (:name state)
+                           :onChange
+                           (fn [ev]
+                             (om/update-state!
+                              owner
+                              (fn [state]
+                                (assoc state :name (.-value (.-target ev))))))}))
+                  (dom/div
+                  #js {:className "radio"}
+                  "Source type:"
+                  (dom/select
+                      #js {:onChange
+                          (fn [ev]
+                            (om/update-state!
+                             owner
+                             (fn [state]
+                               (assoc state :select-value (.-value (.-target ev))))))}
+                      (dom/option
+                      (add-select-state "file"
+                                      (:select-value state))
+                      "JSON sequence file")))
+                  (condp = (:select-value state)
+                      "file" (dom/div nil
+                                  (dom/input #js
+                                      {:type "file"
+                                       :name "upload-file-name"})
+                                  (dom/button
+                                    #js {:type "submit"
+                                         :value "submit"}
+                                      "Declare stream")))))))))
 
 (defn widget-streams [data owner]
   (reify
