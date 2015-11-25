@@ -13,10 +13,12 @@
            goog.net.EventType))
 
 (defonce app-state (atom {:stream nil
+                          :random (rand 10)
                           :current nil
                           :initial-value ""
                           :reduction ""
                           :projections []
+                          :active-page "Dashboard"
                           :new-projection false}))
 (defonce localhost (let [href (.-href (.-location js/window))]
                      (clojure.string/join
@@ -38,6 +40,16 @@
 (defn update-box [owner box-ref]
   (.highlightBlock js/hljs (om/get-node owner box-ref)))
 
+(defn label [text]
+  (dom/label #js {:className "input-label"} text))
+
+(defn input [value fn-update]
+  (dom/input
+      #js {:className "wide-input"
+           :type "text" :ref "name"
+           :value value
+           :onChange fn-update}))
+
 (defn widget-new-projection [params owner]
   (let [data (:data params)]
     (reify
@@ -50,22 +62,15 @@
         (dom/div
             #js {:className "new-projection"}
             (dom/h1 #js {:className "view-title"} "New Projection")
-            (dom/div
-                #js {:className "box"}
-              (dom/div
-                  nil
-                (dom/label #js {:className "input-label"} "Projection name")
-                (dom/input
-                    #js {:className "wide-input"
-                         :type "text" :ref "name"
-                         :value (:projection-name data)
-                         :onChange
-                         (fn [ev]
-                           (om/update! data :projection-name
-                                       (.-value (.-target ev))))}))
-              (dom/div
-                  nil
-                (dom/label #js {:className "input-label"} "Stream name")
+            (dom/div #js {:className "box"}
+              (dom/div nil
+                (label "Projection name")
+                (input (:projection-name data)
+                       (fn [ev]
+                         (om/update! data :projection-name
+                                     (.-value (.-target ev))))))
+              (dom/div nil
+                (label "Stream name")
                 (dom/input
                     #js {:className "wide-input"
                          :type "text" :ref "name"
@@ -74,8 +79,7 @@
                          (fn [ev]
                            (om/update! data :stream-name
                                        (.-value (.-target ev))))}))
-              (apply dom/div
-                     #js {:className "radio"}
+              (apply dom/div #js {:className "radio"}
                      "Language:"
                      (map #(dom/div
                                nil
@@ -87,8 +91,7 @@
                              %)
                           ["clojure" "javascript"]))
               (dom/div nil "Initial value")
-              (dom/pre
-               nil
+              (dom/pre nil
                (dom/code #js {:className "clojure"}
                          (dom/div
                              #js {:contentEditable "true"
@@ -101,8 +104,7 @@
                                     (update-box owner "initial-value-box"))}
                              (:initial-value data))))
               (dom/div nil "Code: content of (fn [prev item] ... )")
-              (dom/pre
-               nil
+              (dom/pre nil
                (dom/code #js {:className "clojure"}
                          (dom/div
                              #js {:contentEditable "true"
@@ -114,8 +116,7 @@
                                                 (.-textContent (.-target ev)))
                                     (update-box owner "code-box"))}
                              (:reduction data))))
-              (dom/div
-                  nil
+              (dom/div nil
                 (dom/button
                     #js {:onClick
                          (fn [_]
@@ -657,7 +658,7 @@
   (reify
     om/IInitState
     (init-state [_]
-      (assoc data :root-owner owner :active-page "Dashboard"))
+      (assoc data :root-owner owner))
     om/IDidMount
     (did-mount [_]
       (subscribe-streams! owner)
@@ -665,15 +666,15 @@
       (subscribe-stats! owner))
     om/IRenderState
     (render-state [_ state]
+      (swap! app-state (fn [_] state))
       (dom/div
         nil
         (om/build main-menu
                   {:data state
                    :items ["Dashboard" "Streams" "Projections"
-                           "New Projection" "New Stream"
-                           "Analyse Data"]})
+                           "New Projection" "New Stream"]})
         (dom/div nil
-          (condp = (:active-page state)
+          (condp = (:active-page (om/get-state owner))
             "Dashboard" (om/build widget-dashboard state)
             "Streams" (om/build widget-streams state)
             "Projections" (om/build widget-projections state)
