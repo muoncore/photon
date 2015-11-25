@@ -3,10 +3,10 @@
   (:use [jayq.core :only [$ css html]])
   (:require [cljs-http.client :as client]
             [cljs.core.async :refer [<! >! put! close!]]
-            [fipp.edn :as fipp]
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
             [goog.events :as events]
+            [cljs.pprint :as pprint]
             [om.core :as om]
             [om.dom :as dom])
   (:import goog.net.IframeIo
@@ -28,7 +28,7 @@
 
 (defn clj->str [c]
   (let [res (clojure.string/replace
-             (with-out-str (fipp/pprint c {:width 80})) #"}nil" "}")]
+             (with-out-str (pprint/pprint c)) #"}nil" "}")]
     #_(.log js/console res)
     res))
 
@@ -670,7 +670,8 @@
         (om/build main-menu
                   {:data state
                    :items ["Dashboard" "Streams" "Projections"
-                           "New Projection" "New Stream"]})
+                           "New Projection" "New Stream"
+                           "Analyse Data"]})
         (dom/div nil
           (condp = (:active-page state)
             "Dashboard" (om/build widget-dashboard state)

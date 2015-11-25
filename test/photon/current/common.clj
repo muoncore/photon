@@ -83,9 +83,13 @@
            "127.0.0.1" "photon"
            (first (clojure.string/split
                    (.toString (java.util.UUID/randomUUID)) #"-")))
-        ms (muon/start-server! "amqp://localhost"
-                               (str "photon-integration-test-" uuid)
-                               d 9998 9999 2 "/tmp/non-existing-path")]
+        conf {:amqp.url "amqp://localhost"
+              :microservice.name (str "photon-integration-test-" uuid)
+              :projections.path "/tmp/non-existing-path"
+              :parallel.projections 2
+              :projections.port 9998
+              :events.port 9999}
+        ms (muon/start-server! d conf)]
     (db/delete-all! d)
     ms))
 

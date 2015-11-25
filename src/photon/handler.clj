@@ -97,9 +97,6 @@
              (fn [c json-generator]
                (.writeString json-generator (.getSimpleName c))))
 
-(defn figwheel-handler [& args]
-  (println "!!!!!!!!!!" args))
-
 (defn app [ms]
   (defapi app-no-reload
     (context* "/api" []

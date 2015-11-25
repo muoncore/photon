@@ -9,7 +9,10 @@
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
 (def d (->TempDBFile (.getAbsolutePath temp-file)))
-(def s (streams/new-async-stream nil d 9998 9999 2))
+(def conf {:projections.port 9998
+           :events.port 9999
+           :parallel.projections 2})
+(def s (streams/new-async-stream nil d conf))
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]
     (if (nil? elem)

@@ -60,20 +60,20 @@
       (.start muon)
       muon)))
 
-(defn start-server! [amqp-url server-name db projections-port
-                     events-port threads projections-path conf]
-  (let [m (try
+(defn start-server! [db conf]
+  (let [[amqp-url server-name projections-path]
+        (vals (select-keys conf [:amqp.url :microservice.name
+                                 :projections.path]))
+        m (try
             (muon-local amqp-url
                         server-name ["photon" "eventstore"])
             (catch io.muoncore.exception.MuonException e
               (log/error (str "AMQP queue not found, "
                               "dropping to Muon-less mode"))))
-        stm (streams/new-async-stream m db projections-port
-                                      events-port threads conf) ;; TODO: Fix redundancy with conf
+        stm (streams/new-async-stream m db conf)
         ms (->PhotonMicroservice m stm)]
     (log/info "Loading default projections...")
     (dp/init-default-projs! stm projections-path)
     (log/info "Projections loaded!")
-    (when (not (nil? m))
-      (mcs/start-server! ms))
+    (when (not (nil? m)) (mcs/start-server! ms))
     ms))
