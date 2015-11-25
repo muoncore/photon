@@ -158,24 +158,29 @@
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)
-                 last-25 []
+                 last-25-processed []
+                 last-25-incoming []
                  timestamps []
-                 previous 0
+                 previous-processed 0
+                 previous-incoming 0
                  is-first? true]
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (do
                   #_(.log js/console (pr-str elem)))
                 (let [stats-from-msg (:stats (:message elem))
-                      difference (if is-first? 0 (- (:processed stats-from-msg) previous))
-                      new-last-25 (into [] (take-last 25 (conj last-25 difference)))
+                      difference-processed (if is-first? 0 (- (:processed stats-from-msg) previous-processed))
+                      difference-incoming (if is-first? 0 (- (:incoming stats-from-msg) previous-incoming))
+                      new-last-25-processed (into [] (take-last 25 (conj last-25-processed difference-processed)))
+                      new-last-25-incoming (into [] (take-last 25 (conj last-25-incoming difference-incoming)))
                       new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
-                      stats (assoc stats-from-msg :last-25 {:val new-last-25
+                      stats (assoc stats-from-msg :last-25 {:processed new-last-25-processed
+                                                            :incoming new-last-25-incoming
                                                             :timestamps new-timestamps})]
                   (when-not is-first?
                     (om/update-state! owner #(assoc % :stats stats)))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-last-25 new-timestamps (:processed stats-from-msg) false))))))
+                  (recur (<! ws-channel) new-last-25-processed new-last-25-incoming new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
@@ -289,9 +294,9 @@
                   (let [block (om/build code-block (:active-projection state))]
                     block)))))))
 
-(defn update-chart! [chart data]
-  (let [vector-data (clj->js (concat ["Events Processed"] (:val data)))
-        x-axis (clj->js (concat ["x"] (:timestamps data)))]
+(defn update-chart! [chart data timestamps name]
+  (let [vector-data (clj->js (concat [name] data))
+        x-axis (clj->js (concat ["x"] timestamps ))]
     #_(.log js/console vector-data)
     (.load chart #js {:columns #js [x-axis vector-data]})))
 
@@ -299,36 +304,55 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:events-processed-chart nil})
+      {:events-processed-chart nil
+       :events-incoming-chart nil})
     om/IDidMount
     (did-mount [_]
-      (let [events-processed-chart (.generate js/c3
+      (let [events-incoming-chart (.generate js/c3
+                             #js {:bindto "#events-incoming"
+                                  :data
+                                  #js {:x "x"
+                                       :columns #js []
+                                       :colors #js {"Events Incoming" "#800000"}}
+                                  :axis
+                                  #js {:y #js {:min 0
+                                               :padding #js {:bottom 10}
+                                               :label "Events"}
+                                       :x #js {:type "timeseries"
+                                              :tick #js {:format "%H:%M:%S"}}}
+                                  :transition
+                                  #js {:duration 0}})
+            events-processed-chart (.generate js/c3
                              #js {:bindto "#events-processed"
                                   :data
                                   #js {:x "x"
-                                       :columns #js []}
+                                       :columns #js []
+                                       :colors #js {"Events Processed" "#009000"}}
                                   :axis
                                   #js {:y #js {:min 0
-                                               :padding #js {:bottom 10}}
+                                               :padding #js {:bottom 10}
+                                               :label "Events"}
                                        :x #js {:type "timeseries"
                                               :tick #js {:format "%H:%M:%S"}}}
                                   :transition
                                   #js {:duration 0}})]
-        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart)))))
+        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart :events-incoming-chart events-incoming-chart)))))
     om/IRenderState
     (render-state [_ state]
       (.log js/console (pr-str (:stats params)))
+      (if-let [events-incoming-chart (:events-incoming-chart state)]
+        (update-chart! events-incoming-chart (:incoming (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Incoming" ))
       (if-let [events-processed-chart (:events-processed-chart state)]
-        (update-chart! events-processed-chart (:last-25 (:stats params))))
+        (update-chart! events-processed-chart (:processed (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Processed"))
       (dom/div #js {:className "dashboard"}
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-6"}
           (dom/div
-            #js {:id "events-processed"}))
+            #js {:id "events-incoming"}))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-6"}
           (dom/div
-            #js {:id "chart"}))
+            #js {:id "events-processed"}))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
