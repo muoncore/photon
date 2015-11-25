@@ -56,7 +56,7 @@
                  [cljs-http "0.1.37"
                   :exclusions [com.cognitect/transit-cljs
                                org.clojure/core.async]]
-                 [org.omcljs/om "1.0.0-alpha22"]
+                 [org.omcljs/om "1.0.0-alpha23"]
                  [jayq "2.5.4"]
                  [fipp "0.6.2"]
                  [reagent-utils "0.1.4"]
