@@ -346,57 +346,50 @@
         (update-chart! events-processed-chart (:processed (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Processed"))
       (dom/div #js {:className "dashboard"}
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-6"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:id "events-incoming"}))
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-6"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:id "events-processed"}))
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:className "widget-box"}
             (dom/span
               #js {:className "title"}
-                "Events Processed")
-            (dom/span
-              #js {:className "large-value"}
-                (:processed (:stats params)))))
-        (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-4"}
-          (dom/div
-            #js {:className "widget-box"}
-            (dom/span
-              #js {:className "title"}
-                "title")
+                "Summary")
+            (dom/div
+              #js {:className "summary"}
             (dom/span
               #js {:className "data"}
                 "Streams: " (count (:streams params)))
             (dom/span
               #js {:className "data"}
-                "Projections: " (count (:projections params)))))
+                "Projections: " (count (:projections params))))))
         (dom/div
-          #js {:className "col-sm-12 col-md-6 col-lg-4"}
+          #js {:className "col-sm-12 col-md-12 col-lg-6"}
           (dom/div
             #js {:className "widget-box"}
             (dom/span
               #js {:className "title"}
-                "title")
-              (dom/span
-                #js {:className "data"}
-                  "Total Memory (KB): " (quot (:total-memory (:stats params)) 1024))
-              (dom/span
-                #js {:className "data"}
-                  "Used Memory (KB): " (quot
-                                        (- (:total-memory (:stats params)) (:available-memory (:stats params))) 1024))
-              (dom/span
-                #js {:className "data"}
-                  "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
-              (dom/span
-                #js {:className "data"}
-                  "CPU Load: " (:cpu-load (:stats params)) "%")
-            ))
+                "System Data")
+              (dom/div
+                #js {:className "system-data"}
+                (dom/span
+                  #js {:className "data"}
+                    "Total Memory (KB): " (quot (:total-memory (:stats params)) 1024))
+                (dom/span
+                  #js {:className "data"}
+                    "Used Memory (KB): " (quot
+                                           (- (:total-memory (:stats params)) (:available-memory (:stats params))) 1024))
+                (dom/span
+                  #js {:className "data"}
+                    "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
+                (dom/span
+                  #js {:className "data"}
+                    "CPU Load: " (:cpu-load (:stats params)) "%"))))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
@@ -559,62 +552,63 @@
                  :stream-file nil})
     om/IRenderState
     (render-state [_ state]
-        (dom/form #js {:className "new-stream"
-                       :ref "upload-form"
-                       :method "POST"
-                       :encType "multipart/form-data"
-                       :onSubmit (fn [e]
-                                   (.preventDefault e)
-                                   (om/update-state! owner
-                                                     (fn [state]
-                                                       (assoc state
-                                                              :upload-status
-                                                              "Uploading...")))
-                                   (iframeio-upload-file "upload-form"
-                                                         owner))
-                       :action "/api/new-stream"}
-            (dom/h1 #js {:className "view-title"} "New Stream")
-            (:upload-status state)
-            (dom/div
-                #js {:className "box"}
-                (dom/div
-                nil
-                (dom/label #js {:className "input-label"} "Stream name (optional)")
-                (dom/input
-                    #js {:className "wide-input"
-                         :name "stream-name"
-                         :type "text"
-                         :ref "name"
-                         :value (:name state)
-                         :onChange
-                         (fn [ev]
-                           (om/update-state!
-                            owner
-                            (fn [state]
-                              (assoc state :name (.-value (.-target ev))))))}))
-                (dom/div
-                #js {:className "radio"}
-                "Source type:"
-                (dom/select
-                    #js {:onChange
-                        (fn [ev]
-                          (om/update-state!
-                           owner
-                           (fn [state]
-                             (assoc state :select-value (.-value (.-target ev))))))}
-                    (dom/option
-                    (add-select-state "file"
-                                    (:select-value state))
-                    "JSON sequence file")))
-                (condp = (:select-value state)
-                    "file" (dom/div nil
-                                (dom/input #js
-                                    {:type "file"
-                                     :name "upload-file-name"})
-                                (dom/button
-                                  #js {:type "submit"
-                                       :value "submit"}
-                                    "Declare stream"))))))))
+        (dom/div
+         #js {:className "new-stream"}
+           (dom/form #js {:ref "upload-form"
+                         :method "POST"
+                         :encType "multipart/form-data"
+                         :onSubmit (fn [e]
+                                     (.preventDefault e)
+                                     (om/update-state! owner
+                                                       (fn [state]
+                                                         (assoc state
+                                                                :upload-status
+                                                                "Uploading...")))
+                                     (iframeio-upload-file "upload-form"
+                                                           owner))
+                         :action "/api/new-stream"}
+              (dom/h1 #js {:className "view-title"} "New Stream")
+              (:upload-status state)
+              (dom/div
+                  #js {:className "box"}
+                  (dom/div
+                  nil
+                  (dom/label #js {:className "input-label"} "Stream name (optional)")
+                  (dom/input
+                      #js {:className "wide-input"
+                           :name "stream-name"
+                           :type "text"
+                           :ref "name"
+                           :value (:name state)
+                           :onChange
+                           (fn [ev]
+                             (om/update-state!
+                              owner
+                              (fn [state]
+                                (assoc state :name (.-value (.-target ev))))))}))
+                  (dom/div
+                  #js {:className "radio"}
+                  "Source type:"
+                  (dom/select
+                      #js {:onChange
+                          (fn [ev]
+                            (om/update-state!
+                             owner
+                             (fn [state]
+                               (assoc state :select-value (.-value (.-target ev))))))}
+                      (dom/option
+                      (add-select-state "file"
+                                      (:select-value state))
+                      "JSON sequence file")))
+                  (condp = (:select-value state)
+                      "file" (dom/div nil
+                                  (dom/input #js
+                                      {:type "file"
+                                       :name "upload-file-name"})
+                                  (dom/button
+                                    #js {:type "submit"
+                                         :value "submit"}
+                                      "Declare stream")))))))))
 
 (defn widget-streams [data owner]
   (reify

@@ -94,6 +94,11 @@ td, th{
     margin: 0 auto;
 }
 
+.new-stream{
+    width: 80%;
+    margin: 0 auto;
+}
+
 .dashboard{
     width: 80%;
     margin: 0 auto;
@@ -108,8 +113,8 @@ td, th{
     display: inline-block;
     width: 90%;
     text-align: center;
-    height: 300px;
-    margin-bottom: 20px;
+    min-height: 300px;
+    margin: 25px 0;
     background-color: #fafafa;
     -moz-box-shadow: 3px 3px 5px 6px #ccc;
     -webkit-box-shadow: 3px 3px 5px 6px #ccc;
@@ -125,6 +130,25 @@ td, th{
 .widget-box .title{
     font-size: 26pt;
     display: block;
+    margin-bottom: 25px;
+}
+
+.widget-box .system-data{
+    font-size: 12pt;
+}
+
+.system-data .data{
+  display: block;
+  margin-bottom: 15px;
+}
+
+.widget-box .summary{
+  font-size: 16pt;
+}
+
+.summary .data{
+  display: block;
+  margin-bottom: 15px;
 }
 
 .right{
@@ -150,10 +174,6 @@ td, th{
 
 .active{
   background-color: #464646;
-}
-
-.data{
-  display: block;
 }
 
 #main-area{
