@@ -150,6 +150,11 @@
               (recur (<! ws-channel)))))
         (do (.log js/console "Error:" (pr-str error)))))))
 
+(defn get-chart-data [new-val previous last-25 is-first?]
+  (let [difference (if is-first? 0 (- new-val previous))
+        new-last-25 (into [] (take-last 25 (conj last-25 difference)))]
+    new-last-25))
+
 (defn subscribe-stats! [owner]
   (go
     (let [{:keys [ws-channel error]}
@@ -160,6 +165,7 @@
           (loop [elem (<! ws-channel)
                  last-25-processed []
                  last-25-incoming []
+                 last-25-memory (repeat 25 0)
                  timestamps []
                  previous-processed 0
                  previous-incoming 0
@@ -169,18 +175,20 @@
                 (do
                   #_(.log js/console (pr-str elem)))
                 (let [stats-from-msg (:stats (:message elem))
-                      difference-processed (if is-first? 0 (- (:processed stats-from-msg) previous-processed))
-                      difference-incoming (if is-first? 0 (- (:incoming stats-from-msg) previous-incoming))
-                      new-last-25-processed (into [] (take-last 25 (conj last-25-processed difference-processed)))
-                      new-last-25-incoming (into [] (take-last 25 (conj last-25-incoming difference-incoming)))
+                      new-processed (get-chart-data (:processed stats-from-msg) previous-processed last-25-processed is-first?)
+                      new-incoming (get-chart-data (:incoming stats-from-msg) previous-incoming last-25-incoming is-first?)
+                      used-memory (- (:total-memory stats-from-msg) (:available-memory stats-from-msg))
+                      used-memory-percentage (int (* (/ used-memory (:total-memory stats-from-msg)) 100))
+                      new-memory (into [] (take-last 25 (conj last-25-memory used-memory-percentage)))
                       new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
-                      stats (assoc stats-from-msg :last-25 {:processed new-last-25-processed
-                                                            :incoming new-last-25-incoming
+                      stats (assoc stats-from-msg :last-25 {:processed new-processed
+                                                            :incoming new-incoming
+                                                            :memory new-memory
                                                             :timestamps new-timestamps})]
                   (when-not is-first?
                     (om/update-state! owner #(assoc % :stats stats)))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-last-25-processed new-last-25-incoming new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
+                  (recur (<! ws-channel) new-processed new-incoming new-memory new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
@@ -278,6 +286,7 @@
                                                          :active-projection
                                                          new-active-projection))))]
         (dom/div #js {:className "projections"}
+                (dom/div #js {:className "button"} "New Projection")
                 (dom/h1 #js {:className "view-title"} "Projections")
                 (apply dom/table #js
                   {:className "table table-striped table-bordered table-hover table-heading"}
@@ -295,17 +304,18 @@
                     block)))))))
 
 (defn update-chart! [chart data timestamps name]
-  (let [vector-data (clj->js (concat [name] data))
-        x-axis (clj->js (concat ["x"] timestamps ))]
+  (let [vector-data (clj->js (concat [name] data))]
     #_(.log js/console vector-data)
-    (.load chart #js {:columns #js [x-axis vector-data]})))
+    (if-let [x-axis (clj->js (concat ["x"] timestamps ))]
+      (.load chart #js {:columns #js [x-axis vector-data]}) (.load chart #js {:columns #js [vector-data]}))))
 
 (defn widget-dashboard [params owner]
   (reify
     om/IInitState
     (init-state [_]
       {:events-processed-chart nil
-       :events-incoming-chart nil})
+       :events-incoming-chart nil
+       :memory-usage-chart nil})
     om/IDidMount
     (did-mount [_]
       (let [events-incoming-chart (.generate js/c3
@@ -319,7 +329,8 @@
                                                :padding #js {:bottom 10}
                                                :label "Events"}
                                        :x #js {:type "timeseries"
-                                              :tick #js {:format "%H:%M:%S"}}}
+                                               :tick #js {:count 5
+                                                          :format "%H:%M:%S"}}}
                                   :transition
                                   #js {:duration 0}})
             events-processed-chart (.generate js/c3
@@ -333,17 +344,39 @@
                                                :padding #js {:bottom 10}
                                                :label "Events"}
                                        :x #js {:type "timeseries"
-                                              :tick #js {:format "%H:%M:%S"}}}
+                                               :tick #js {:count 5
+                                                          :format "%H:%M:%S"}}}
+                                  :transition
+                                  #js {:duration 0}})
+            memory-usage-chart (.generate js/c3
+                             #js {:bindto "#memory-usage"
+                                  :data
+                                  #js {:columns #js []
+                                       :colors #js {"Memory Usage" "#009000"}
+                                       :type "area"}
+                                  :point
+                                  #js {:show false}
+                                  :axis
+                                  #js {:y #js {:min 0
+                                               :max 100
+                                               :padding #js {:bottom 0
+                                                             :top 0}
+                                               :label "%"}
+                                       :x #js {:show false}}
+                                  :tooltip
+                                  #js {:show false}
                                   :transition
                                   #js {:duration 0}})]
-        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart :events-incoming-chart events-incoming-chart)))))
+        (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart :events-incoming-chart events-incoming-chart :memory-usage-chart memory-usage-chart)))))
     om/IRenderState
     (render-state [_ state]
       (.log js/console (pr-str (:stats params)))
       (if-let [events-incoming-chart (:events-incoming-chart state)]
-        (update-chart! events-incoming-chart (:incoming (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Incoming" ))
+        (update-chart! events-incoming-chart (:incoming (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Incoming"))
       (if-let [events-processed-chart (:events-processed-chart state)]
         (update-chart! events-processed-chart (:processed (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Processed"))
+      (if-let [memory-usage-chart (:memory-usage-chart state)]
+        (update-chart! memory-usage-chart (:memory (:last-25 (:stats params))) nil "Memory Usage"))
       (dom/div #js {:className "dashboard"}
         (dom/div
           #js {:className "col-sm-12 col-md-12 col-lg-6"}
@@ -389,7 +422,9 @@
                     "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
                 (dom/span
                   #js {:className "data"}
-                    "CPU Load: " (:cpu-load (:stats params)) "%"))))
+                    "CPU Load: " (:cpu-load (:stats params)) "%"))
+            (dom/div
+             #js {:id "memory-usage"})))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div

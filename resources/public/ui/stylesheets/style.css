@@ -138,17 +138,17 @@ td, th{
 }
 
 .system-data .data{
-  display: block;
-  margin-bottom: 15px;
+    display: block;
+    margin-bottom: 15px;
 }
 
 .widget-box .summary{
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 .summary .data{
-  display: block;
-  margin-bottom: 15px;
+    display: block;
+    margin-bottom: 15px;
 }
 
 .right{
@@ -173,7 +173,19 @@ td, th{
 }
 
 .active{
-  background-color: #464646;
+    background-color: #464646;
+}
+
+.button{
+    float: right;
+    height: 40px;
+    padding: 10px;
+    background: rgba(43, 38, 40, 0.75);
+    color: #F0C14E;
+}
+
+.button:hover{
+    background: rgba(43, 38, 40, 1);
 }
 
 #main-area{
