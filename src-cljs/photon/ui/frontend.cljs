@@ -286,22 +286,29 @@
                                                          :active-projection
                                                          new-active-projection))))]
         (dom/div #js {:className "projections"}
-                (dom/div #js {:className "button"} "New Projection")
-                (dom/h1 #js {:className "view-title"} "Projections")
-                (apply dom/table #js
-                  {:className "table table-striped table-bordered table-hover table-heading"}
-                  (apply dom/tr nil
-                    (map #(dom/th #js {:style #js {:border "1px"}}
-                                  (k->header (key %)))
-                         (filter-projection
-                          (first (:projections data)))))
-                  (map #(om/build projection-item {:data data
-                                                   :projection %
-                                                   :fn-update fn-update})
-                       (:projections data)))
-                (if (not (nil? (:active-projection state)))
-                  (let [block (om/build code-block (:active-projection state))]
-                    block)))))))
+          (dom/h1 #js {:className "view-title"} "Projections")
+          (dom/div
+           #js {:className "button"
+                :onClick (fn [_]
+                           (om/update-state! (:full-page-owner data)
+                                             (fn [state]
+                                               (.log js/console (pr-str state))
+                                               (assoc state :active-page "New Projection"))))}
+           "+ New Projection")
+          (apply dom/table #js
+            {:className "table table-striped table-bordered table-hover table-heading"}
+            (apply dom/tr nil
+              (map #(dom/th #js {:style #js {:border "1px"}}
+                            (k->header (key %)))
+                   (filter-projection
+                    (first (:projections data)))))
+            (map #(om/build projection-item {:data data
+                                             :projection %
+                                             :fn-update fn-update})
+                 (:projections data)))
+          (if (not (nil? (:active-projection state)))
+            (let [block (om/build code-block (:active-projection state))]
+              block)))))))
 
 (defn update-chart! [chart data timestamps name]
   (let [vector-data (clj->js (concat [name] data))]
@@ -350,6 +357,9 @@
                                   #js {:duration 0}})
             memory-usage-chart (.generate js/c3
                              #js {:bindto "#memory-usage"
+                                  :size
+                                  #js {:height 150
+                                       :width 250}
                                   :data
                                   #js {:columns #js []
                                        :colors #js {"Memory Usage" "#009000"}
@@ -357,7 +367,8 @@
                                   :point
                                   #js {:show false}
                                   :axis
-                                  #js {:y #js {:min 0
+                                  #js {:y #js {:tick #js {:count 5}
+                                               :min 0
                                                :max 100
                                                :padding #js {:bottom 0
                                                              :top 0}
@@ -370,7 +381,7 @@
         (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart :events-incoming-chart events-incoming-chart :memory-usage-chart memory-usage-chart)))))
     om/IRenderState
     (render-state [_ state]
-      (.log js/console (pr-str (:stats params)))
+      (.log js/console (pr-str (:projections params)))
       (if-let [events-incoming-chart (:events-incoming-chart state)]
         (update-chart! events-incoming-chart (:incoming (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Incoming"))
       (if-let [events-processed-chart (:events-processed-chart state)]
@@ -410,6 +421,8 @@
                 "System Data")
               (dom/div
                 #js {:className "system-data"}
+                (dom/div
+                 #js {:id "memory-usage"})
                 (dom/span
                   #js {:className "data"}
                     "Total Memory (KB): " (quot (:total-memory (:stats params)) 1024))
@@ -422,9 +435,7 @@
                     "Available Memory (KB): " (quot (:available-memory (:stats params)) 1024))
                 (dom/span
                   #js {:className "data"}
-                    "CPU Load: " (:cpu-load (:stats params)) "%"))
-            (dom/div
-             #js {:id "memory-usage"})))
+                    "CPU Load: " (:cpu-load (:stats params)) "%"))))
         (dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
@@ -658,22 +669,30 @@
                                                          :active-stream
                                                          new-active-stream))))]
         (dom/div #js {:className "streams"}
-                 (dom/h1 #js {:className "view-title"} "Streams")
-                 (apply dom/table #js
-                   {:className (str "table table-striped table-bordered "
-                                    "table-hover table-heading streams-table")}
-                   (apply dom/tr nil
-                     (map #(dom/th nil
-                                   (k->header %))
-                          (keys (dissoc (first (:streams data)) :schema))))
-                   (map #(om/build row-stream {:data (:data data)
-                                               :stream %
-                                               :fn-update fn-update})
-                        (map #(dissoc % :schema) (:streams data))))
-                 (if (not (nil? (:active-stream state)))
-                   (om/build event-list
-                             {:data (:data data)
-                              :stream (:active-stream state)})))))))
+           (dom/h1 #js {:className "view-title"} "Streams")
+           (dom/div
+            #js {:className "button"
+                 :onClick (fn [_]
+                            (om/update-state! (:full-page-owner data)
+                                              (fn [state]
+                                                (.log js/console (pr-str state))
+                                                (assoc state :active-page "New Stream"))))}
+            "+ New Stream")
+           (apply dom/table #js
+             {:className (str "table table-striped table-bordered "
+                              "table-hover table-heading streams-table")}
+             (apply dom/tr nil
+               (map #(dom/th nil
+                             (k->header %))
+                    (keys (dissoc (first (:streams data)) :schema))))
+             (map #(om/build row-stream {:data (:data data)
+                                         :stream %
+                                         :fn-update fn-update})
+                  (map #(dissoc % :schema) (:streams data))))
+           (if (not (nil? (:active-stream state)))
+             (om/build event-list
+                       {:data (:data data)
+                        :stream (:active-stream state)})))))))
 
 (defn menu-item [data owner]
   (reify
@@ -722,14 +741,12 @@
         nil
         (om/build main-menu
                   {:data state
-                   :items ["Dashboard" "Streams" "Projections"
-                           "New Projection" "New Stream"
-                           "Analyse Data"]})
+                   :items ["Dashboard" "Streams" "Projections" "Analyse Data"]})
         (dom/div nil
           (condp = (:active-page state)
             "Dashboard" (om/build widget-dashboard state)
-            "Streams" (om/build widget-streams state)
-            "Projections" (om/build widget-projections state)
+            "Streams" (om/build widget-streams (assoc state :full-page-owner owner))
+            "Projections" (om/build widget-projections (assoc state :full-page-owner owner))
             "New Projection" (om/build widget-new-projection state)
             "New Stream" (om/build widget-new-stream state)))))))
 
