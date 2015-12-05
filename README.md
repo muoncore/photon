@@ -75,4 +75,4 @@ lein new muon-clojure photon-test-client
 
 ## License
 
-Copyright © 2015 FIXME
+See LICENSE.adoc
