@@ -1,4 +1,4 @@
-(defproject tranchis/photon "0.9.2"
+(defproject tranchis/photon "0.9.3"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
@@ -21,7 +21,7 @@
                   :exclusions [org.clojure/tools.reader
                                commons-codec]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.31"]
+                 [tranchis/photon-config "0.9.32"]
                  [io.muoncore/muon-clojure "6.0.3"]
                  [prismatic/schema "1.0.3"]
                  [metosin/ring-http-response "0.6.5"

@@ -44,7 +44,8 @@
   (start [component]
     (if (nil? server)
       (let [server (run-server (:handler ui)
-                               {:port 3000 :max-body 600000000})]
+                               {:port (:rest.port options)
+                                :max-body 600000000})]
         (assoc component :server server))
       component))
   (stop [component]
@@ -66,21 +67,18 @@
                                   [:stream-manager])
    :ui (component/using (ui-handler conf) [:stream-manager])))
 
-(defn init-photon! [& args]
-  (log/info "Starting photon...")
-  (try
-    (let [conf (apply conf/config args)]
-      (photon-system conf))
-    (catch UnsupportedOperationException e
-      (println (.getMessage e)))))
-
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn -main [& args]
-  (let [system (apply init-photon! args)
-        comp {:web-server (component/using (web-server {}) [:ui])}
-        web-system (merge system comp)]
-    (component/start web-system)))
+  (log/info "Starting photon...")
+  (try
+    (let [conf (apply conf/config args)
+          system (photon-system conf)
+          comp {:web-server (component/using (web-server conf) [:ui])}
+          web-system (merge system comp)]
+      (component/start web-system))
+    (catch UnsupportedOperationException e
+      (println (.getMessage e)))))
 
 (defonce figwheel-instance (ref nil))
 
@@ -89,7 +87,8 @@
   (let [h (dosync
             (if-let [instance @figwheel-instance]
               instance
-              (let [m-photon (component/start (init-photon!))
+              (let [system (photon-system (conf/config))
+                    m-photon (component/start system)
                     handler (:handler (:ui m-photon))]
                 (alter figwheel-instance (fn [_] handler))
                 handler)))]
