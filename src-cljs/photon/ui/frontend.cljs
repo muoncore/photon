@@ -391,7 +391,7 @@
                 (dom/span
                   #js {:className "data"}
                     "CPU Load: " (:cpu-load (:stats params)) "%"))))
-        (dom/div
+        #_#_#_(dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
             #js {:className "widget-box"}
