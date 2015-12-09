@@ -1,4 +1,4 @@
-(defproject tranchis/photon "0.9.1"
+(defproject tranchis/photon "0.9.2"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
@@ -22,11 +22,7 @@
                                commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.31"]
-                 [io.muoncore/muon-clojure "5.3.8"
-                  :exclusions [commons-codec
-                               midje
-                               org.clojure/core.async
-                               org.clojure/tools.namespace]]
+                 [io.muoncore/muon-clojure "6.0.3"]
                  [prismatic/schema "1.0.3"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [org.clojure/tools.reader]]
@@ -75,8 +71,11 @@
                   :exclusions [commons-codec
                                org.clojure/tools.reader
                                com.cognitect/transit-clj]]]
+  :ring {:handler photon.core/figwheel-instance
+         :init photon.core/figwheel-init!}
   :plugins [[lein-cljsbuild "1.1.0"]
             [lein-midje "3.1.3"]
+            [lein-ring "0.9.7"]
             [lein-figwheel "0.5.0-1"
              :exclusions [org.clojure/clojure
                           org.codehaus.plexus/plexus-utils]]]

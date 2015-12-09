@@ -1,6 +1,8 @@
 (ns photon.current.common
   (:require [muon-clojure.client :as cl]
             [photon.db :as db]
+            [photon.core :as core]
+            [com.stuartsierra.component :as component]
             [cheshire.core :as json]
             [photon.muon :as muon])
   (:import (java.io File)))
@@ -58,19 +60,19 @@
 (defn post-one-event
   ([m url]
    (cl/with-muon m
-     (cl/post-event (str "muon://" url "/events")
-                    {"service-id","muon://chatter",
-                     "local-id", (java.util.UUID/randomUUID),
-                     "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
-                                "text","substitutable",
-                                "textanalysis",
-                                {"aggregateSentiment",40,
-                                 "keyphrases",[{"phrase",
-                                                "substitutable",
-                                                "count",1}]}},
-                     "stream-name","chatter",
-                     "server-timestamp",1420660080000})
-     #_(cl/query-event "muon://photon/projection"
+     (cl/request! (str "request://" url "/events")
+                 {"service-id","request://chatter",
+                  "local-id", (java.util.UUID/randomUUID),
+                  "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
+                             "text","substitutable",
+                             "textanalysis",
+                             {"aggregateSentiment",40,
+                              "keyphrases",[{"phrase",
+                                             "substitutable",
+                                             "count",1}]}},
+                  "stream-name","chatter",
+                  "server-timestamp",1420660080000})
+     #_(cl/query-event "request://photon/projection"
                        {:projection-name "count"}))) 
   ([m]
    (post-one-event m "photon-integration-test")))
@@ -78,18 +80,17 @@
 (defn new-server [uuid]
   (let [temp-file (.getAbsolutePath
                    (java.io.File/createTempFile "muon" ".json"))
-        d (->TempDBFile temp-file)
-        #_#_d (cassandra/->DBCassandra
-           "127.0.0.1" "photon"
-           (first (clojure.string/split
-                   (.toString (java.util.UUID/randomUUID)) #"-")))
         conf {:amqp.url "amqp://localhost"
               :microservice.name (str "photon-integration-test-" uuid)
               :projections.path "/tmp/non-existing-path"
               :parallel.projections 2
               :projections.port 9998
               :events.port 9999}
-        ms (muon/start-server! d conf)]
+        comp (component/start
+              (core/photon-system (merge conf {:db.backend "file"
+                                               :file.path temp-file})))
+        d (:driver (:database comp))
+        ms (:muon (:muon-service comp))]
     (db/delete-all! d)
     ms))
 

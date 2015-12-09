@@ -8,6 +8,8 @@
             [photon.current.common :refer :all])
   (:use midje.sweet))
 
+(set! (. io.muoncore.channel.async.StandardAsyncChannel echoOut) true)
+
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]
     (if (nil? elem)
@@ -20,46 +22,48 @@
                         "client" "test")
       res (post-one-event m (str "photon-integration-test-" uuid))
       ch (cl/with-muon m
-           (cl/stream-subscription (str "muon://photon-integration-test-"
-                                        uuid "/stream")
-                                   :stream-name "__all__"
-                                   :stream-type "cold"
-                                   :from 0))]
+           (cl/subscribe! (str "stream://photon-integration-test-"
+                               uuid "/stream")
+                          :stream-name "__all__"
+                          :stream-type "cold"
+                          :from 0))]
   (fact "Post works correctly" res => {:correct true})
-  (Thread/sleep 5000)
+  (Thread/sleep 60000)
   (fact "One event on stream" (elem-count ch) => 1)
   (dorun (take 10 (repeatedly
                    (fn []
                       (post-one-event
                       m (str "photon-integration-test-" uuid))))))
   (let [ch (cl/with-muon m
-             (cl/stream-subscription (str "muon://photon-integration-test-"
-                                          uuid "/stream")
-                                     :stream-name "__all__"
-                                     :stream-type "cold"
-                                     :from 0))]
+             (cl/subscribe! (str "stream://photon-integration-test-"
+                                 uuid "/stream")
+                            :stream-name "__all__"
+                            :stream-type "cold"
+                            :from 0))]
+    (Thread/sleep 60000)
     (fact "11 events on stream" (elem-count ch) => 11))
-  (dorun (take 1000 (repeatedly
+  (dorun (take 100 (repeatedly
                      (fn []
                        (post-one-event
                         m (str "photon-integration-test-" uuid))))))
   (let [ch (cl/with-muon m
-             (cl/stream-subscription (str "muon://photon-integration-test-"
-                                          uuid "/stream")
-                                     :stream-name "__all__"
-                                     :stream-type "cold"
-                                     :from 0))]
-    (fact "1011 events on stream" (elem-count ch) => 1011))
+             (cl/subscribe! (str "stream://photon-integration-test-"
+                                 uuid "/stream")
+                            :stream-name "__all__"
+                            :stream-type "cold"
+                            :from 0))]
+    (Thread/sleep 60000)
+    (fact "111 events on stream" (elem-count ch) => 111))
   #_(dorun (take 10000 (repeatedly
                       (fn []
                         (post-one-event
                          m (str "photon-integration-test-" uuid))))))
   #_(let [ch (cl/with-muon m
-             (cl/stream-subscription (str "muon://photon-integration-test-"
-                                          uuid "/stream")
-                                     :stream-name "__all__"
-                                     :stream-type "cold"
-                                     :from 0))]
+               (cl/subscribe! (str "stream://photon-integration-test-"
+                                   uuid "/stream")
+                              :stream-name "__all__"
+                              :stream-type "cold"
+                              :from 0))]
     (Thread/sleep 20000)
     (fact "11011 events on stream" (elem-count ch) => 11011)))
 

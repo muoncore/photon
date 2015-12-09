@@ -5,34 +5,23 @@
             [photon.db :as db]
             [photon.muon :as m]
             [photon.config :as conf]
+            [photon.streams :as streams]
             [com.stuartsierra.component :as component]
             [clojure.tools.logging :as log])
   (:import (java.net ServerSocket)))
 
-(defrecord MuonService [options database ms stream]
-  component/Lifecycle
-  (start [component]
-    (if (or (nil? ms) (nil? stream))
-      (let [ms (m/start-server! (:driver database) options)]
-        (log/info "Server started, initialising streams...")
-        (assoc (assoc component :ms ms) :stream (:stream ms)))
-      component))
-  (stop [component]
-    ;; TODO: Stop muon and async-stream
-    component))
-
-(defn muon-service [options]
-  (map->MuonService {:options options}))
-
-(defrecord UIHandler [options muon handler]
+(defrecord UIHandler [options stream-manager handler]
   component/Lifecycle
   (start [component]
     (if (nil? handler)
       (do
         (log/info "Initialising endpoints...")
-        (assoc component :handler (h/app (:stream muon))))
+        (assoc component :handler (h/app (:manager stream-manager))))
       component))
-  (stop [component] component))
+  (stop [component]
+    (if (nil? handler)
+      component
+      (assoc component :handler nil))))
 
 (defn ui-handler [options]
   (map->UIHandler {:options options}))
@@ -68,14 +57,20 @@
 (defn web-server [options]
   (map->WebServer {:options options}))
 
+(defn photon-system [conf]
+  (component/system-map
+   :database (component/using (db-component conf) [])
+   :stream-manager (component/using (streams/stream-manager conf)
+                                    [:database])
+   :muon-service (component/using (m/muon-service conf)
+                                  [:stream-manager])
+   :ui (component/using (ui-handler conf) [:stream-manager])))
+
 (defn init-photon! [& args]
   (log/info "Starting photon...")
   (try
     (let [conf (apply conf/config args)]
-      (component/system-map
-       :database (component/using (db-component conf) [])
-       :muon (component/using (muon-service conf) [:database])
-       :ui (component/using (ui-handler conf) [:muon])))
+      (photon-system conf))
     (catch UnsupportedOperationException e
       (println (.getMessage e)))))
 
@@ -85,11 +80,12 @@
   (let [system (apply init-photon! args)
         comp {:web-server (component/using (web-server {}) [:ui])}
         web-system (merge system comp)]
-    web-system))
+    (component/start web-system)))
 
 (defonce figwheel-instance (ref nil))
 
 (defn figwheel-init! [& args]
+  (log/info "Starting photon UI handler...")
   (let [h (dosync
             (if-let [instance @figwheel-instance]
               instance
