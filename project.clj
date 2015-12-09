@@ -73,7 +73,7 @@
                                com.cognitect/transit-clj]]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
-  :plugins [[lein-cljsbuild "1.1.0"]
+  :plugins [[lein-cljsbuild "1.1.1"]
             [lein-midje "3.1.3"]
             [lein-ring "0.9.7"]
             [lein-figwheel "0.5.0-1"
