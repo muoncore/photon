@@ -73,34 +73,34 @@ td, th{
 
 .logo{
     font-family: 'Audiowide', cursive;
-    margin-bottom: 50px;
-    position: absolute;
-    top: 120px;
-    left: 37px;
+    // margin-bottom: 50px;
+    // position: absolute;
+    // top: 120px;
+    // left: 37px;
 }
 
 .projections{
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
 }
 
 .new-projection{
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
 }
 
 .streams{
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
 }
 
 .new-stream{
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
 }
 
 .dashboard{
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
     text-align: center;
 }
@@ -111,7 +111,7 @@ td, th{
 
 .widget-box{
     display: inline-block;
-    width: 90%;
+    width: 100%;
     text-align: center;
     min-height: 300px;
     margin: 25px 0;
@@ -138,17 +138,17 @@ td, th{
 }
 
 .system-data .data{
-  display: block;
-  margin-bottom: 15px;
+    display: block;
+    margin-bottom: 15px;
 }
 
 .widget-box .summary{
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 .summary .data{
-  display: block;
-  margin-bottom: 15px;
+    display: block;
+    margin-bottom: 15px;
 }
 
 .right{
@@ -170,10 +170,27 @@ td, th{
 
 .view-title{
     text-align: left;
+    display: inline-block;
+    width: 200px;
 }
 
 .active{
-  background-color: #464646;
+    background-color: #464646;
+}
+
+.button{
+    display: inline-block;
+    height: 30px;
+    padding: 5px 10px;
+    vertical-align: super;
+    background: rgba(43, 38, 40, 0.75);
+    color: #F0C14E;
+    cursor: pointer;
+    margin-left: 50px;
+}
+
+.button:hover{
+    background: rgba(43, 38, 40, 1);
 }
 
 #main-area{

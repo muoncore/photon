@@ -35,9 +35,9 @@
    (s/optional-key :schema) (s/maybe s/Str)
    :payload s/Any
    :service-id (s/maybe s/Str) ;; TODO: Re-check this
-   :photon-timestamp Long
-   :local-id s/Str
-   :order-id Long
+   (s/optional-key :photon-timestamp) Long
+   :local-id s/Any
+   (s/optional-key :order-id) Long
    (s/optional-key :provenance) (s/maybe Provenance)
    :stream-name s/Str
    :server-timestamp Long})
@@ -224,8 +224,8 @@
 (defn runtime-stats [_]
   (let [rt (Runtime/getRuntime)
         mf (ManagementFactory/getOperatingSystemMXBean)
-        total-memory (.totalMemory rt)
-        avail-memory (.freeMemory rt)
+        total-memory (.maxMemory rt)
+        avail-memory (+ (.freeMemory rt) (- total-memory (.totalMemory rt)))
         avail-processors (.availableProcessors rt)
         cpu-load (format "%.2f" (* (/ (.getSystemLoadAverage mf) avail-processors) 100))
         stats {:total-memory total-memory :available-memory avail-memory
