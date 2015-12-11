@@ -283,6 +283,7 @@
   (event [this stream-name order-id] (db/fetch db stream-name order-id))
   (clean! [this] (db/delete-all! db))
   (data-from [this stream-name date]
+    (log/info "data-from" stream-name)
     (db/lazy-events db stream-name date))
   HotStream
   (next! [this] (<!! (:channel global-channel)))

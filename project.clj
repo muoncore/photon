@@ -60,7 +60,7 @@
                  [io.github.lukehutch/fast-classpath-scanner "1.9.7"]
                  [congomongo "0.4.6"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-cassandra "0.9.40"
+                 [tranchis/photon-cassandra "0.9.41"
                   :exclusions [org.clojure/tools.reader
                                com.taoensso/encore]]
                  [tranchis/photon-hazelcast "0.9.40"
