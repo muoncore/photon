@@ -288,13 +288,13 @@
                                                          :active-projection
                                                          new-active-projection))))]
         (dom/div #js {:className "projections"}
-          (dom/h1 #js {:className "view-title"} "Projections")
+          (dom/h1 #js {:className "view-title"} "Rrojections")
           (dom/div
            #js {:className "button"
                 :onClick (fn [_]
                            (om/update-state! (:full-page-owner data)
                                              (fn [state]
-                                               (.log js/console (pr-str state))
+                                               #_(.log js/console (pr-str state))
                                                (assoc state :active-page "New Projection"))))}
            "+ New Projection")
           (apply dom/table #js
@@ -383,7 +383,7 @@
         (om/update-state! owner (fn [state] (assoc state :events-processed-chart events-processed-chart :events-incoming-chart events-incoming-chart :memory-usage-chart memory-usage-chart)))))
     om/IRenderState
     (render-state [_ state]
-      (.log js/console (pr-str (:projections params)))
+      #_(.log js/console (pr-str (:projections params)))
       (if-let [events-incoming-chart (:events-incoming-chart state)]
         (update-chart! events-incoming-chart (:incoming (:last-25 (:stats params))) (:timestamps (:last-25 (:stats params))) "Events Incoming"))
       (if-let [events-processed-chart (:events-processed-chart state)]
@@ -566,11 +566,11 @@
     #js {:value option}))
 
 (defn set-status [class title items]
-  (.log js/console "set-status" class title items))
+  #_(.log js/console "set-status" class title items))
 
 (defn handle-iframe-response [json-msg]
   (let [msg (js->clj json-msg :keywordize-keys true)]
-    (.log js/console (str "iframe-response: " msg))
+    #_(.log js/console (str "iframe-response: " msg))
     (cond
       (= "OK" (:status msg)) (str "Uploaded to stream: " (:stream-name msg))
       :else (str "Unexpected error: " (pr-str msg)))))
@@ -578,7 +578,7 @@
 (defn iframeio-upload-file [form-id owner]
   (let [el (.getDOMNode (om/get-node owner form-id))
         iframe (IframeIo.)]
-    (.log js/console el)
+    #_(.log js/console el)
     (events/listen iframe EventType.COMPLETE
         (fn [event]
           (om/update-state! owner
@@ -677,7 +677,7 @@
                  :onClick (fn [_]
                             (om/update-state! (:full-page-owner data)
                                               (fn [state]
-                                                (.log js/console (pr-str state))
+                                                #_(.log js/console (pr-str state))
                                                 (assoc state :active-page "New Stream"))))}
             "+ New Stream")
            (apply dom/table #js
