@@ -22,7 +22,7 @@ rm -rf muon-documentation
 git clone git@github.com:microserviceux/muon-documentation.git
 cd  muon-documentation
 mkdir -p photon
-rsync -avr --delete ../../doc/ photon/$DOCPATH
+rsync -avr --delete ../../docs/ photon/$DOCPATH
 rm photon/$DOCPATH/*.iml
 git add photon/
 git commit -m "Update Photon Documentation"
