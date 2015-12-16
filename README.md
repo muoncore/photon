@@ -1,21 +1,99 @@
-# Photon Event Store
 
-Photon is an event store with cold+hot event streaming.
+## Dependencies
 
-## Prerequisites
+* Java JDK (preferably 8)
+* [Leiningen][] (2.0.0 or greater)
+* RabbitMQ, either remote or local
 
-You will need [Leiningen][] 2.0.0 or above installed.
+## Other database backends
 
-[leiningen]: https://github.com/technomancy/leiningen
+This configuration assumes you're using a local file, but other database backends are available
+* cassandradb
+* riak
 
 ## Muon schemas
 
 The endpoints and expected schemas to interact with `photon` can be found
 [here](docs/schemas.md).
 
-## Create config file
+## Installation
 
-create file resources/config.properties with your environment settings:
+### Install java JDK 8
+```bash
+$ wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u65-b17/jdk-8u65-linux-x64.tar.gz
+```
+#### The Debian Way
+
+This installs a lot of dependencies and isn't recommended for a production environment. It is, however, essentially foolproof on debian. Useful for testing things.
+
+sudo apt-get install libgl1-mesa-glx libxslt1.1 libxtst6 libxxf86vm1
+
+install java-package and follow the instructions here
+
+https://wiki.debian.org/JavaPackage
+
+#### The General Way (aka the clean way)
+
+untar jdk-8u65-linux-x64.tar.gz to /opt
+symlink /opt/jdk-1.8<.ver> to /opt/java
+Edit /etc/profile (or add a file in /etc/profile.d) to contain the following
+
+```
+JAVA_HOME=/opt/java
+PATH="$PATH:/opt/java/bin"
+```
+
+### Install Leiningen
+
+See the guide here: https://github.com/technomancy/leiningen/tree/stable
+
+### Install Photon
+
+```bash
+$ mkdir photon
+$ cd photon 
+$ git clone https://github.com/microserviceux/photon.git .
+```
+create photon/resources/config.properties. The following is a minimal config that runs entirely locally.
+
+```
+db.backend=file
+microservice.name=photon
+file.path=/muon/photon/data_base.json
+amqp.url=amqp://localhost
+```
+
+Build and run.
+
+```bash
+$ ./build.sh
+$ lein cljsbuild once
+$ lein run
+```
+
+## Admin Console
+
+     Browse to http://localhost:3000/index.html
+
+
+## Testing
+
+To run the test suite:
+
+```bash
+lein repl
+=> (use 'midje.sweet)
+=> (autotest)
+```
+
+
+Alternatively, create a test photon client to interact with photon event store:
+
+```bash
+lein new muon-clojure photon-test-client
+```
+
+## All Config Options
 
 ```
 # Microservice identifier (default = photon):
@@ -40,38 +118,6 @@ riak.node.2=riak2.yourdomain.com
 riak.node.3=riak3.yourdomain.com
 ```
 
-## Running
-
-To start a web server for the application, run:
-
-    lein cljsbuild once
-
-    lein run
-
-
-
-## Admin Console
-
-     Browse to http://localhost:3000/index.html
-
-
-
-## Testing
-
-To run the test suite:
-
-```bash
-lein repl
-=> (use 'midje.sweet)
-=> (autotest)
-```
-
-
-Alternatively, create a test photon client to interact with photon event store:
-
-```bash
-lein new muon-clojure photon-test-client
-```
 
 ## License
 
