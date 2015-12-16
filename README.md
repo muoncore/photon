@@ -1,3 +1,6 @@
+# Photon Event Store
+
+Photon is an event store with cold+hot event streaming.
 
 ## Dependencies
 
