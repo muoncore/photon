@@ -38,7 +38,9 @@ https://wiki.debian.org/JavaPackage
 #### The General Way (aka the clean way)
 
 untar jdk-8u65-linux-x64.tar.gz to /opt
+
 symlink /opt/jdk-1.8<.ver> to /opt/java
+
 Edit /etc/profile (or add a file in /etc/profile.d) to contain the following
 
 ```
