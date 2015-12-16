@@ -5,7 +5,7 @@ Photon is an event store with cold+hot event streaming.
 ## Dependencies
 
 * Java JDK (preferably 8)
-* [Leiningen][] (2.0.0 or greater)
+* [Leiningen](https://github.com/technomancy/leiningen) (2.0.0 or greater)
 * RabbitMQ, either remote or local
 
 ## Other database backends
@@ -48,7 +48,7 @@ PATH="$PATH:/opt/java/bin"
 
 ### Install Leiningen
 
-See the guide here: https://github.com/technomancy/leiningen/tree/stable
+See the [Leiningen install guide](https://github.com/technomancy/leiningen/tree/stable)
 
 ### Install Photon
 
