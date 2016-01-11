@@ -3,16 +3,31 @@
             [photon.db :as db]
             [muon-clojure.server :as mcs]
             [clojure.core.async :as async :refer [<!!]]
+            [com.stuartsierra.component :as component]
             [photon.current.common :refer :all]
+            [photon.core :as core]
             [clojure.tools.logging :as log])
   (:use midje.sweet))
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
-(def d (->TempDBFile (.getAbsolutePath temp-file)))
-(def conf {:projections.port 9998
-           :events.port 9999
-           :parallel.projections 2})
-(def s (streams/new-async-stream nil d conf))
+(def conf {:amqp.url "amqp://localhost"
+           :microservice.name (str "photon-integration-test-" (db/uuid))
+           :projections.path "/tmp/non-existing-path"
+           :parallel.projections 2
+           :db.backend "file"
+           :file.path (.getAbsolutePath temp-file)
+           :projections.port 9998
+           :events.port 9999})
+#_(def s (streams/new-async-stream nil d conf))
+(def c
+  (component/start (component/system-map
+                    :database (component/using
+                               (core/db-component conf) [])
+                    :stream-manager (component/using
+                                     (streams/stream-manager conf)
+                                     [:database]))))
+(def d (:driver (:database c)))
+(def s (:manager (:stream-manager c)))
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]
     (if (nil? elem)

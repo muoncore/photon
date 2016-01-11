@@ -2,6 +2,8 @@
   (:require [clojure.test :refer :all]
             [clojure.core.async :refer [go-loop go <! >! chan buffer <!! close!]]
             [ring.mock.request :as mock]
+            [com.stuartsierra.component :as component]
+            [photon.core :as core]
             [clojure.tools.logging :as log]
             [muon-clojure.client :as cl]
             [photon.current.common :refer :all]
@@ -9,24 +11,23 @@
             [photon.muon :as m])
   (:use midje.sweet))
 
-(def amazon-url "amqp://localhost")
-(def db (->TempDBFile "/tmp/temporalphoton.log"))
-#_(def db (cassandra/->DBCassandra
-         "127.0.0.1" "photon"
-         (first (clojure.string/split
-                 (.toString (java.util.UUID/randomUUID)) #"-"))))
 (def uuid (java.util.UUID/randomUUID))
+(def amazon-url "amqp://localhost")
+(def conf {:amqp.url "amqp://localhost"
+           :microservice.name (str "photon-test-" uuid)
+           :projections.path "/tmp/non-existing-path"
+           :projections.port 9998
+           :events.port 9999
+           :db.backend "file"
+           :file.path "/tmp/temporalphoton.log"
+           :parallel.projections 2})
+(def c
+  (component/start (core/photon-system conf)))
 
 (defn prepare! []
-  (let [conf {:amqp.url "amqp://localhost"
-              :microservice.name (str "photon-test-" uuid)
-              :projections.path "/tmp/non-existing-path"
-              :projections.port 9998
-              :events.port 9999
-              :parallel.projections 2}
-        ms (m/start-server! db conf)]
-    (streams/clean! (:stream ms))
-    ms))
+  (let [s (:manager (:stream-manager c))]
+    (streams/clean! s)
+    s))
 
 (defn test-cold []
   (log/info "test-cold :: 1")
@@ -35,8 +36,8 @@
                                (java.util.UUID/randomUUID))
                           "monitor" "client")
         _ (log/info "test-cold :: 2")
-        c (cl/with-muon b (cl/stream-subscription
-                           (str "muon://photon-test-" uuid "/stream")
+        c (cl/with-muon b (cl/subscribe!
+                           (str "stream://photon-test-" uuid "/stream")
                            :stream-name "dummy"
                            :stream-type :cold
                            :from 0))
@@ -58,8 +59,8 @@
 
 (defn test-hot-cold []
   (let [b (cl/muon-client amazon-url "1monitor-client" "2monitor" "3lient")
-        c (cl/with-muon b (cl/stream-subscription
-                           (str "muon://photon-test-" uuid "/stream")
+        c (cl/with-muon b (cl/subscribe!
+                           (str "stream://photon-test-" uuid "/stream")
                            :stream-name "dummy"
                            :stream-type :hot-cold
                            :from 0))]
@@ -81,19 +82,20 @@
 
 (log/info "stream-test :: 2")
 (let [a (cl/muon-client amazon-url "asap-client" "asap" "client")]
-  (Thread/sleep 3000)
+  #_(Thread/sleep 3000)
   (dorun
    (take 4 (repeatedly
-            #(cl/with-muon a (cl/post-event
-                              (str "muon://photon-test-" uuid "/events")
+            #(cl/with-muon a (cl/request!
+                              (str "request://photon-test-" uuid "/events")
                               {:payload {:test :ok}
                                :service-id "muon://client"
                                :local-id (java.util.UUID/randomUUID)
                                :stream-name "dummy"})))))
-  (Thread/sleep 5000)
+  #_(Thread/sleep 120000)
   (fact "Correct count" (test-cold) => 4))
 
 (log/info "stream-test :: 3")
+#_(Thread/sleep 60000)
 (let [n1 (test-cold)
       n2 (test-cold)]
   (fact "Consistent behaviour in cold streaming after posts" n1 => n2))
