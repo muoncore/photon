@@ -288,7 +288,7 @@
                                                          :active-projection
                                                          new-active-projection))))]
         (dom/div #js {:className "projections"}
-          (dom/h1 #js {:className "view-title"} "Rrojections")
+          (dom/h1 #js {:className "view-title"} "Projections")
           (dom/div
            #js {:className "button"
                 :onClick (fn [_]
@@ -444,10 +444,10 @@
             #js {:className "widget-box"}
             (dom/span
               #js {:className "title"}
-                "title")
+                "Control Panel")
             (dom/span
               #js {:className "large-value"}
-                "4")))
+              (dom/button #js {:onClick (fn [_])} "Restart"))))
         #_(dom/div
           #js {:className "col-sm-12 col-md-6 col-lg-4"}
           (dom/div
