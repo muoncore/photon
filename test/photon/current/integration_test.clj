@@ -28,7 +28,6 @@
                           :stream-type "cold"
                           :from 0))]
   (fact "Post works correctly" res => {:correct true})
-  (Thread/sleep 60000)
   (fact "One event on stream" (elem-count ch) => 1)
   (dorun (take 10 (repeatedly
                    (fn []
@@ -40,7 +39,6 @@
                             :stream-name "__all__"
                             :stream-type "cold"
                             :from 0))]
-    (Thread/sleep 60000)
     (fact "11 events on stream" (elem-count ch) => 11))
   (dorun (take 100 (repeatedly
                      (fn []
@@ -52,7 +50,6 @@
                             :stream-name "__all__"
                             :stream-type "cold"
                             :from 0))]
-    (Thread/sleep 60000)
     (fact "111 events on stream" (elem-count ch) => 111))
   #_(dorun (take 10000 (repeatedly
                       (fn []
@@ -64,6 +61,5 @@
                               :stream-name "__all__"
                               :stream-type "cold"
                               :from 0))]
-    (Thread/sleep 20000)
     (fact "11011 events on stream" (elem-count ch) => 11011)))
 

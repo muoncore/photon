@@ -1,9 +1,12 @@
-(defproject tranchis/photon "0.9.3"
+(defproject tranchis/photon "0.9.4"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
-  :repositories [["muoncore" "http://dl.bintray.com/muoncore/muon-java"]
-                 ["reactor" "http://repo.spring.io/libs-release"]]
+  :repositories [["snapshots"
+                  {:url
+                   "https://simplicityitself.artifactoryonline.com/simplicityitself/muon/"
+                   :creds :gpg}]
+                 ["releases" "https://simplicityitself.artifactoryonline.com/simplicityitself/repo/"]]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [http-kit "2.1.19"]
                  [ring "1.4.0"
@@ -22,7 +25,7 @@
                                commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.32"]
-                 [io.muoncore/muon-clojure "6.0.3"]
+                 [io.muoncore/muon-clojure  "6.4-20160113114701"]
                  [prismatic/schema "1.0.3"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [org.clojure/tools.reader]]
