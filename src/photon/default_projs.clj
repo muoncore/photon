@@ -10,10 +10,13 @@
     (let [ps (get p (:stream-name n) {})
           old-total (get ps :total-events 0)
           old-schema (get ps :schema {})
-          schema (if (< (rand) 0.02)
-                   (clj-schema-inspector.core/add-map
-                    old-schema (:payload n))
-                   old-schema)]
+          ;; TODO: Temporarily deactivate schema inference
+          ;;       until we solve conflict with GSON
+          schema old-schema
+          #_#_schema (if (< (rand) 0.02)
+                       (clj-schema-inspector.core/add-map
+                        old-schema (:payload n))
+                       old-schema)]
       (assoc p (:stream-name n) {:total-events (inc old-total)
                                  :schema schema}))))
 

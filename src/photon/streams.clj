@@ -117,6 +117,8 @@
       (alter running-query assoc :status :finished)
       (let [nrq (alter running-query updated-value
                        function current-event)]
+        (log/trace "!!!!!!!! Processing event in projection:"
+                   (pr-str current-event))
         (>!! ch nrq)
         (when (= (:status nrq) :failed)
           (close! ch)
@@ -147,16 +149,17 @@
                            (conj real-streams stream-name))))))))
 
 (defn as-create-virtual-stream-endpoint!
-  [{:keys [muon state]} stream-name]
+  [{:keys [muon state projections]} stream-name]
   (let [ch (chan (sliding-buffer 1))
-        ch-mult (mult ch)
+        ch-muon-mult (mult ch)
+        copy-ch (chan (sliding-buffer 1))
+        ch-mult (mult copy-ch)
         t-ch (chan)]
-    (when-not (nil? muon) ;; TODO: Abstract this somehow
-      (mcc/stream-source
-       {:m muon} (str "projection/" stream-name)
-       (fn [params]
-         (let [t-ch (chan)]
-           (tap ch-mult t-ch)))))
+    (tap ch-muon-mult copy-ch)
+    (tap ch-mult t-ch)
+    (>!! projections {:stream-name stream-name
+                      :projection-name stream-name
+                      :mult ch-muon-mult})
     (dosync (alter state
                    (fn [old-state]
                      (assoc (assoc-in old-state
@@ -268,8 +271,8 @@
       (db/store db new-msg)))
   {:correct true})
 
-(defrecord AsyncStream [db global-channel telnet-mix
-                        projection-mix state stats conf]
+(defrecord AsyncStream [db global-channel telnet-mix projection-mix
+                        state stats projections conf]
   StreamProtocol
   (init-stream-manager! [this path] (as-init-stream-manager! this path))
   (update-streams! [this stream-name]
@@ -415,7 +418,8 @@
   (log/trace "Channel" ch "empty, closing")
   (close! ch))
 
-(defrecord StreamManager [options database manager channels sockets]
+(defrecord StreamManager [options database manager channels
+                          sockets projections]
   component/Lifecycle
   (start [component]
     (if (nil? manager)
@@ -440,6 +444,7 @@
                               telnet-mix projection-mix
                               (ref initial-state)
                               (atom {:incoming 0 :processed 0})
+                              (chan 1024)
                               options)]
         (init-stream-manager! as (:projections.path options))
         (tap mult-global telnet-events-channel)
@@ -460,6 +465,8 @@
     (if (nil? manager)
       component
       (do
+        (empty! (:projections manager))
+        (close! (:projections manager))
         (dorun (map empty! channels))
         (dorun (map #(.close %) sockets))
         (dorun (map empty! (:all-channels @(:state manager))))

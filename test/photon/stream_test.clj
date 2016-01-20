@@ -12,8 +12,8 @@
   (:use midje.sweet))
 
 (def uuid (java.util.UUID/randomUUID))
-(def amazon-url "amqp://localhost")
-(def conf {:amqp.url "amqp://localhost"
+(def amazon-url :local)
+(def conf {:amqp.url :local
            :microservice.name (str "photon-test-" uuid)
            :projections.path "/tmp/non-existing-path"
            :projections.port 9998

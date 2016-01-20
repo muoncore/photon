@@ -56,22 +56,21 @@
         '())))
   (db/lazy-events-page [this stream-name date page] []))
 
-
 (defn post-one-event
   ([m url]
    (cl/with-muon m
      (cl/request! (str "request://" url "/events")
-                 {"service-id","request://chatter",
-                  "local-id", (java.util.UUID/randomUUID),
-                  "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
-                             "text","substitutable",
-                             "textanalysis",
-                             {"aggregateSentiment",40,
-                              "keyphrases",[{"phrase",
-                                             "substitutable",
-                                             "count",1}]}},
-                  "stream-name","chatter",
-                  "server-timestamp",1420660080000})
+                  {"service-id","request://chatter",
+                   "local-id", (java.util.UUID/randomUUID),
+                   "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
+                              "text","substitutable",
+                              "textanalysis",
+                              {"aggregateSentiment",40,
+                               "keyphrases",[{"phrase",
+                                              "substitutable",
+                                              "count",1}]}},
+                   "stream-name","chatter",
+                   "server-timestamp",1420660080000})
      #_(cl/query-event "request://photon/projection"
                        {:projection-name "count"}))) 
   ([m]
@@ -80,7 +79,7 @@
 (defn new-server [uuid]
   (let [temp-file (.getAbsolutePath
                    (java.io.File/createTempFile "muon" ".json"))
-        conf {:amqp.url "amqp://localhost"
+        conf {:amqp.url :local
               :microservice.name (str "photon-integration-test-" uuid)
               :projections.path "/tmp/non-existing-path"
               :parallel.projections 2

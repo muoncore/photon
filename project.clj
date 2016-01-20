@@ -25,7 +25,7 @@
                                commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.32"]
-                 [io.muoncore/muon-clojure  "6.4-20160113114701"]
+                 [io.muoncore/muon-clojure "6.4-20160119133830"]
                  [prismatic/schema "1.0.3"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [org.clojure/tools.reader]]

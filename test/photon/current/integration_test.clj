@@ -18,9 +18,12 @@
 
 (let [uuid (java.util.UUID/randomUUID)
       ms (new-server uuid)
-      m (cl/muon-client "amqp://localhost" "client-test"
+      m (cl/muon-client :local "client-test"
                         "client" "test")
+      _ (Thread/sleep 5000)
       res (post-one-event m (str "photon-integration-test-" uuid))
+      res (post-one-event m (str "photon-integration-test-" uuid))
+      _ (Thread/sleep 5000)
       ch (cl/with-muon m
            (cl/subscribe! (str "stream://photon-integration-test-"
                                uuid "/stream")
@@ -28,8 +31,8 @@
                           :stream-type "cold"
                           :from 0))]
   (fact "Post works correctly" res => {:correct true})
-  (fact "One event on stream" (elem-count ch) => 1)
-  (dorun (take 10 (repeatedly
+  (fact "Two events on stream" (elem-count ch) => 2)
+  (dorun (take 9 (repeatedly
                    (fn []
                       (post-one-event
                       m (str "photon-integration-test-" uuid))))))

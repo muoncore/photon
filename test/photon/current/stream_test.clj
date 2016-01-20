@@ -10,7 +10,7 @@
   (:use midje.sweet))
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
-(def conf {:amqp.url "amqp://localhost"
+(def conf {:amqp.url :local
            :microservice.name (str "photon-integration-test-" (db/uuid))
            :projections.path "/tmp/non-existing-path"
            :parallel.projections 2
