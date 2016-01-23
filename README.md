@@ -75,7 +75,7 @@ lein new muon-clojure photon-test-client
 
 ## License
 
-Copyright 2015 Simplicity Itself Ltd.
+Copyright 2015, The authors.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
