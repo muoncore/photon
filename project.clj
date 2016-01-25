@@ -46,7 +46,7 @@
                                com.cognitect/transit-java
                                org.clojure/tools.reader]]
                  [org.slf4j/slf4j-log4j12 "1.7.12"]
-                 [tranchis/clj-schema-inspector "0.2.0"]
+                 [tranchis/clj-schema-inspector "0.4.0"]
                  [com.stuartsierra/component "0.3.0"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.170"

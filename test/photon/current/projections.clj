@@ -86,7 +86,12 @@
     (post-one-event m s-name)
     (let [val (time-limited 3000 (<!! sc))]
       (fact "There are 4 events proccesed in chatter-proj"
-            (:current-value val) => 4.0))
+            (:current-value val) => 4.0)
+      (dorun (take 1000 (repeatedly #(post-one-event m s-name))))
+      (let [res (cl/with-muon m
+                  (cl/request! (str url-req "/projection")
+                               {:projection-name "chatter-proj"}))]
+        (fact (:current-value res) => 1004.0)))
     (fact "The dummy-proj stream has generated nothing as of yet"
           (time-limited 3000 (<!! sd)) => (throws Exception)))
   (component/stop ms))
