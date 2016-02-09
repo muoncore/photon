@@ -69,7 +69,7 @@
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
-(defn -main [& args]
+(defn photon-component [& args]
   (log/info "Starting photon...")
   (try
     (let [conf (apply conf/config args)
@@ -79,6 +79,9 @@
       (component/start web-system))
     (catch UnsupportedOperationException e
       (println (.getMessage e)))))
+
+(defn -main [& args]
+  (apply photon-component args))
 
 (defonce figwheel-instance (ref nil))
 

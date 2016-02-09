@@ -468,7 +468,7 @@
         (empty! (:projections manager))
         (close! (:projections manager))
         (dorun (map empty! channels))
-        (dorun (map #(.close %) sockets))
+        (dorun (map #(if (not (nil? %)) (.close %)) sockets))
         (dorun (map empty! (:all-channels @(:state manager))))
         (let [new-comp (merge component {:manager nil :channels nil :sockets nil})]
           (log/info "new-comp" new-comp)
