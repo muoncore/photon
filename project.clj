@@ -33,7 +33,7 @@
                                com.cognitect/transit-cljs
                                com.cognitect/transit-clj]]
                  [org.slf4j/slf4j-log4j12 "1.7.14"]
-                 [tranchis/clj-schema-inspector "0.4.0"]
+                 [tranchis/clj-schema-inspector "0.5.0"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.228"]
