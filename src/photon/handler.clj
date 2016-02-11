@@ -105,6 +105,15 @@
                :data {:info {:title "Photon API"
                              :description "Photon API"}
                       :tags [{:name "api", :description "Core API"}]}}}
+    (context "/export" []
+             :no-doc true
+             (GET "/stream/:stream-name" [stream-name]
+                  :path-params [stream-name :- s/Str]
+                  (let [f (api/stream->file ms stream-name)]
+                    (-> (response/file-response (.getAbsolutePath f))
+                      (header "Content-Type" "application/octet-stream")
+                      (header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
+                      (header "Content-Length" (.length f))))))
     (context "/api" []
              :tags ["api"]
              (GET "/streams" []
