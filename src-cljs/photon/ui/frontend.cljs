@@ -15,6 +15,7 @@
 (defonce app-state (atom {:stream nil
                           :current nil
                           :initial-value ""
+                          :active-page "Dashboard"
                           :reduction ""
                           :projections []
                           :new-projection false}))
@@ -243,6 +244,7 @@
 
 (def k->header {:stream "Stream name"
                 :fn "Function"
+                :export "Export"
                 :last-error "Last error"
                 :current-value "Current value"
                 :avg-time "Avg. time/event"
@@ -557,7 +559,12 @@
                           (fn [_]
                             ((:fn-update data) (val %)))}
                          (val %))
-                       (val %)))
+                       (if (= (val %) :action/export-stream)
+                         (dom/a
+                             #js {:href (str "/export/stream/"
+                                             (:stream (:stream data)))}
+                           "Export")
+                         (val %))))
                   (:stream data))))))
 
 (defn add-select-state [option entry]
@@ -594,69 +601,87 @@
   (reify
     om/IInitState
     (init-state [_]
-                {:name ""
-                 :select-value "file"
-                 :upload-status ""
-                 :stream-file nil})
+      {:name ""
+       :select-value "pev"
+       :upload-status ""
+       :stream-file nil})
     om/IRenderState
     (render-state [_ state]
-        (dom/div
-         #js {:className "new-stream"}
-           (dom/form #js {:ref "upload-form"
-                         :method "POST"
-                         :encType "multipart/form-data"
-                         :onSubmit (fn [e]
-                                     (.preventDefault e)
-                                     (om/update-state! owner
-                                                       (fn [state]
-                                                         (assoc state
-                                                                :upload-status
-                                                                "Uploading...")))
-                                     (iframeio-upload-file "upload-form"
-                                                           owner))
-                         :action "/api/new-stream"}
-              (dom/h1 #js {:className "view-title"} "New Stream")
-              (:upload-status state)
-              (dom/div
-                  #js {:className "box"}
-                  (dom/div
-                  nil
-                  (dom/label #js {:className "input-label"} "Stream name (optional)")
-                  (dom/input
-                      #js {:className "wide-input"
-                           :name "stream-name"
-                           :type "text"
-                           :ref "name"
-                           :value (:name state)
-                           :onChange
-                           (fn [ev]
-                             (om/update-state!
-                              owner
-                              (fn [state]
-                                (assoc state :name (.-value (.-target ev))))))}))
-                  (dom/div
-                  #js {:className "radio"}
-                  "Source type:"
-                  (dom/select
-                      #js {:onChange
-                          (fn [ev]
-                            (om/update-state!
-                             owner
-                             (fn [state]
-                               (assoc state :select-value (.-value (.-target ev))))))}
-                      (dom/option
-                      (add-select-state "file"
-                                      (:select-value state))
-                      "JSON sequence file")))
-                  (condp = (:select-value state)
-                      "file" (dom/div nil
-                                  (dom/input #js
-                                      {:type "file"
-                                       :name "upload-file-name"})
-                                  (dom/button
-                                    #js {:type "submit"
-                                         :value "submit"}
-                                      "Declare stream")))))))))
+      (dom/div
+          #js {:className "new-stream"}
+        (dom/form #js {:ref "upload-form"
+                       :method "POST"
+                       :encType "multipart/form-data"
+                       :onSubmit (fn [e]
+                                   (.preventDefault e)
+                                   (om/update-state! owner
+                                                     (fn [state]
+                                                       (assoc state
+                                                              :upload-status
+                                                              "Uploading...")))
+                                   (iframeio-upload-file "upload-form"
+                                                         owner))
+                       :action "/api/new-stream"}
+          (dom/h1 #js {:className "view-title"} "New Stream")
+          (:upload-status state)
+          (dom/div
+              #js {:className "box"}
+            (dom/div
+                nil
+              (dom/label #js {:className "input-label"} "Stream name (optional)")
+              (dom/input
+                  #js {:className "wide-input"
+                       :name "stream-name"
+                       :type "text"
+                       :ref "name"
+                       :value (:name state)
+                       :onChange
+                       (fn [ev]
+                         (om/update-state!
+                          owner
+                          (fn [state]
+                            (assoc state :name (.-value (.-target ev))))))}))
+            (dom/div
+                #js {:className "radio"}
+              "Source type:"
+              (dom/select
+               #js {:onChange
+                    (fn [ev]
+                      (om/update-state!
+                       owner
+                       (fn [state]
+                         (assoc state :select-value
+                                (.-value (.-target ev))))))}
+               (dom/option
+                (add-select-state "pev"
+                                  (:select-value state))
+                "PEV file")
+               (dom/option
+                (add-select-state "file"
+                                  (:select-value state))
+                "JSON sequence file")))
+            (condp = (:select-value state)
+              "file" (dom/div nil
+                       (dom/input #js
+                           {:type "file"
+                            :name "upload-file-name"})
+                       (dom/button
+                           #js {:type "submit"
+                                :value "submit"}
+                         "Declare stream"))
+              "pev" (dom/div nil
+                      (dom/input #js
+                          {:type "file"
+                           :name "upload-pev-name"})
+                      (dom/button
+                          #js {:type "submit"
+                               :value "submit"}
+                        "Declare stream")))))))))
+
+(defn clean-stream [stream]
+  (-> stream
+      (dissoc :schema)
+      (assoc :export :action/export-stream)))
 
 (defn widget-streams [data owner]
   (reify
@@ -665,50 +690,51 @@
       {:active-stream nil})
     om/IRenderState
     (render-state [_ state]
-      (let [fn-update (fn [new-active-stream]
+      (let [streams (map clean-stream (:streams data))
+            fn-update (fn [new-active-stream]
                         (om/update-state! owner (fn [state]
                                                   (assoc state
                                                          :active-stream
                                                          new-active-stream))))]
         (dom/div #js {:className "streams"}
-           (dom/h1 #js {:className "view-title"} "Streams")
-           (dom/div
-            #js {:className "button"
-                 :onClick (fn [_]
-                            (om/update-state! (:full-page-owner data)
-                                              (fn [state]
-                                                #_(.log js/console (pr-str state))
-                                                (assoc state :active-page "New Stream"))))}
+          (dom/h1 #js {:className "view-title"} "Streams")
+          (dom/div
+              #js {:className "button"
+                   :onClick (fn [_]
+                              (swap! app-state
+                                     (fn [state]
+                                       #_(.log js/console (pr-str state))
+                                       (assoc state :active-page "New Stream"))))}
             "+ New Stream")
-           (apply dom/table #js
-             {:className (str "table table-striped table-bordered "
-                              "table-hover table-heading streams-table")}
-             (apply dom/tr nil
-               (map #(dom/th nil
-                             (k->header %))
-                    (keys (dissoc (first (:streams data)) :schema))))
-             (map #(om/build row-stream {:data (:data data)
-                                         :stream %
-                                         :fn-update fn-update})
-                  (map #(dissoc % :schema) (:streams data))))
-           (if (not (nil? (:active-stream state)))
-             (om/build event-list
-                       {:data (:data data)
-                        :stream (:active-stream state)})))))))
+          (apply dom/table #js
+                 {:className (str "table table-striped table-bordered "
+                                  "table-hover table-heading streams-table")}
+                 (apply dom/tr nil
+                        (map #(dom/th nil
+                                (k->header %))
+                             (keys (first streams))))
+                 (map #(om/build row-stream {:data (:data data)
+                                             :stream %
+                                             :fn-update fn-update})
+                      streams))
+          (if (not (nil? (:active-stream state)))
+            (om/build event-list
+                      {:data (:data data)
+                       :stream (:active-stream state)})))))))
 
 (defn menu-item [data owner]
   (reify
     om/IRender
     (render [_]
-      (let [class (if (= (:active-page (:data data)) (:item data))
+      (let [class (if (= (:active-page @app-state) (:item data))
                     "menu-item active" "menu-item")]
         (dom/a #js
           {:className class
            :href "#"
            :onClick (fn [_]
-                      (om/update-state! (:root-owner (:data data))
-                                        (fn [state]
-                                          (assoc state :active-page (:item data)))))}
+                      (swap! app-state
+                             (fn [state]
+                               (assoc state :active-page (:item data)))))}
         (:item data))))))
 
 (defn main-menu [data owner]
@@ -730,7 +756,7 @@
   (reify
     om/IInitState
     (init-state [_]
-      (assoc data :root-owner owner :active-page "Dashboard"))
+      (assoc data :root-owner owner))
     om/IDidMount
     (did-mount [_]
       (subscribe-streams! owner)
@@ -744,7 +770,7 @@
                   {:data state
                    :items ["Dashboard" "Streams" "Projections" "Analyse Data"]})
         (dom/div nil
-          (condp = (:active-page state)
+          (condp = (:active-page @app-state)
             "Dashboard" (om/build widget-dashboard state)
             "Streams" (om/build widget-streams (assoc state :full-page-owner owner))
             "Projections" (om/build widget-projections (assoc state :full-page-owner owner))

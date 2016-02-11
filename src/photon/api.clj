@@ -7,7 +7,7 @@
             [clojure.core.async :as async])
   (:import (java.util Map)
            (java.io File FileInputStream FileOutputStream)
-           (java.util.zip GZIPOutputStream)
+           (java.util.zip GZIPInputStream GZIPOutputStream)
            (java.lang.management ManagementFactory)))
 
 ;; Schemas
@@ -235,7 +235,9 @@
           (recur (inc i) (disj stms name)))))))
 
 (defn new-stream [stm params]
-  (let [file (get params "upload-file-name")
+  (println (pr-str params))
+  (let [type (if (contains? params "upload-pev-name") :pev :json)
+        file (get params "upload-pev-name" (get params "upload-file-name"))
         filename (:filename file)
         stream-name (get params "stream-name")
         stream-name (if (or (nil? stream-name)
@@ -245,11 +247,18 @@
                        (drop-last (clojure.string/split
                                    filename #"[.]")))
                       stream-name)
-        stream-name (find-name stm stream-name)
-        lazy-events (json/parsed-seq
-                     (clojure.java.io/reader (:tempfile file)) true)]
-    (dorun (map #(streams/process-event! stm (assoc % :stream-name stream-name))
-                lazy-events))
+        stream-name (find-name stm stream-name)]
+    (if (= :pev type)
+      (let [f (:tempfile file)
+            gzis (GZIPInputStream. (FileInputStream. f))]
+        (with-open [r (io/reader gzis)]
+          (let [ls (map read-string (line-seq r))]
+            (dorun (map #(streams/process-event! stm (assoc % :stream-name stream-name))
+                        ls)))))
+      (let [lazy-events (json/parsed-seq
+                         (clojure.java.io/reader (:tempfile file)) true)]
+        (dorun (map #(streams/process-event! stm (assoc % :stream-name stream-name))
+                    lazy-events))))
     stream-name))
 
 (defn runtime-stats [_]
