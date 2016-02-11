@@ -18,7 +18,8 @@
             [ring.middleware.multipart-params :as mp]
             [photon.api :as api]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            [compojure.handler :refer [site]]))
+            [compojure.handler :refer [site]])
+  (:import (java.io ByteArrayInputStream)))
 
 (defn f-ws-handler [ms]
   (fn [{:keys [ws-channel] :as req}]

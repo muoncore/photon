@@ -88,10 +88,10 @@
                         :asset-path "ui/js/out"
                         :output-to "resources/public/ui/js/main.js"
                         :output-dir "resources/public/ui/js/out"
-                        :source-map "resources/public/ui/js/out.js.map"
+                        :source-map true
                         :preamble ["react/react.min.js"]
                         :optimizations :none
-                        :pretty-print  true}}]}
+                        :pretty-print true}}]}
   :docker {:image-name "myregistry.example.org/myimage"
            :dockerfile "target/dist/Dockerfile"
            :build-dir  "target"}

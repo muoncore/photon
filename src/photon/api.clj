@@ -2,9 +2,12 @@
   (:require [photon.streams :as streams]
             [schema.core :as s]
             [cheshire.core :as json]
+            [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async])
   (:import (java.util Map)
+           (java.io File FileInputStream FileOutputStream)
+           (java.util.zip GZIPOutputStream)
            (java.lang.management ManagementFactory)))
 
 ;; Schemas
@@ -190,6 +193,34 @@
                                        :limit limit
                                        :stream-type "cold"})))]
     {:results res}))
+
+(defn gzip-compress [f]
+  (let [buffer (byte-array 1024)
+        g (File/createTempFile "compressed" ".pev")
+        gzos (GZIPOutputStream. (FileOutputStream. g))
+        in (FileInputStream. f)]
+    (loop [len (.read in buffer)]
+      (when (> len 0)
+        (.write gzos buffer 0 len)
+        (recur (.read in buffer))))
+    (.close in)
+    (.finish gzos)
+    (.close gzos)
+    g))
+
+(defn stream->file [stm stream-name]
+  (let [f (File/createTempFile stream-name ".edn")]
+    (with-open [w (io/writer f)]
+      (async/<!!
+       (async/reduce
+        (fn [prev n]
+          (do
+            (.write w (str (pr-str n) "\n"))
+            {:ok true})) []
+        (streams/stream->ch stm {:from 0
+                                 :stream-type "cold"
+                                 :stream-name stream-name}))))
+    (gzip-compress f)))
 
 (defn find-name [stm stream-name]
   (loop [i -1 stms (into #{}
