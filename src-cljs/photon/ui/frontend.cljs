@@ -294,10 +294,10 @@
           (dom/div
            #js {:className "button"
                 :onClick (fn [_]
-                           (om/update-state! (:full-page-owner data)
-                                             (fn [state]
-                                               #_(.log js/console (pr-str state))
-                                               (assoc state :active-page "New Projection"))))}
+                           (swap! app-state
+                                  (fn [state]
+                                    #_(.log js/console (pr-str state))
+                                    (assoc state :active-page "New Projection"))))}
            "+ New Projection")
           (apply dom/table #js
             {:className "table table-striped table-bordered table-hover table-heading"}
