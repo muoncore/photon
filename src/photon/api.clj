@@ -165,7 +165,7 @@
              (:current-value (projection stm "__streams__"))))})
 
 (defn projections [stm]
-  (projections-without-val (:queries @(:state stm))))
+  (projections-without-val stm))
 
 (defn map->hashmap [^Map m]
   (java.util.HashMap. m))
