@@ -27,7 +27,7 @@
 
 (s/def Encoding
   ;; TODO: Extend
-  (s/enum "application/json"))
+  s/Str #_(s/enum "application/json"))
 
 (s/def Provenance
   ;; TODO: Improve
