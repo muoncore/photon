@@ -5,6 +5,7 @@
             [cljs.core.async :refer [<! >! put! close!]]
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
+            [goog.net.cookies :as ck]
             [goog.events :as events]
             [cljs.pprint :as pprint]
             [om.core :as om]
@@ -26,6 +27,27 @@
 (defonce ws-localhost (let [tokens (clojure.string/split localhost #":")]
                         (clojure.string/join
                          ":" (conj (rest tokens) "ws"))))
+
+(defn call-api
+  ([f url]
+   (call-api f url ""))
+  ([f url qs]
+   (let [token (ck/get "token")
+         tk (str "access_token=" token)
+         query (str url "?" (clojure.string/join "&" [qs tk]))]
+     (f query))))
+
+(defn call-oauth [f & args]
+  (let [token (ck/get "token")
+        new-m {:default-headers {"authorization" (str "Token " token)}}
+        m (if (> (count args) 1)
+            (merge (second args) new-m)
+            new-m)]
+    (f (first args) m)))
+
+(defn ws-api   [& args] (apply call-api ws-ch args))
+(defn get-api  [& args] (apply call-oauth client/get args))
+(defn post-api [& args] (apply call-oauth client/post args))
 
 (defn clj->str [c]
   (let [res (clojure.string/replace
@@ -123,21 +145,20 @@
                 #js {:onClick
                      (fn [_]
                        (go
-                         (<! (client/post
-                              "/api/projection"
-                              {:json-params
-                               (select-keys data
-                                            [:projection-name
-                                             :stream-name
-                                             :initial-value
-                                             :reduction
-                                             :language])}))))}
-              "Register projection")))))))
+                         (<! (post-api "/api/projection"
+                                       {:json-params
+                                        (select-keys data
+                                                     [:projection-name
+                                                      :stream-name
+                                                      :initial-value
+                                                      :reduction
+                                                      :language])}))))}
+                "Register projection")))))))
 
 (defn subscribe-projections! [owner]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch (str ws-localhost "/ws/ws-projections")))]
+          (<! (ws-api (str ws-localhost "/ws/ws-projections")))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
@@ -161,7 +182,7 @@
 (defn subscribe-stats! [owner]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch (str ws-localhost "/ws/ws-stats")))]
+          (<! (ws-api (str ws-localhost "/ws/ws-stats")))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
@@ -198,7 +219,7 @@
 (defn subscribe-streams! [owner]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch (str ws-localhost "/ws/ws-projections")))]
+          (<! (ws-api (str ws-localhost "/ws/ws-projections")))]
       (if-not error
         (do
           (>! ws-channel {:projection-name "__streams__"})
@@ -499,9 +520,8 @@
 
 (defn fn-update [owner stream-name]
   (go (let [response
-            (:body (<! (client/get
-                        (str "/api/stream-contents/"
-                             stream-name))))]
+            (:body (<! (get-api (str "/api/stream-contents/"
+                                     stream-name))))]
         #_(.log js/console response)
         (om/update-state!
          owner
@@ -752,6 +772,54 @@
             (om/build menu-item {:data (:data data) :item %}))
          (:items data))))))
 
+(defn login-page [data owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:username ""
+       :auth nil
+       :password ""})
+    om/IRenderState
+    (render-state [_ state]
+      (let [upd (fn [k v]
+                  (om/update-state! owner (fn [old] (assoc old k v))))
+            g (fn [k] (get state k))
+            fn-post (fn []
+                      (client/get "/auth/token"
+                                  {:basic-auth {:username (g :username)
+                                                :password (g :password)}}))
+            fn-clk (fn [_]
+                     (go (let [res (<! (fn-post))]
+                           (upd :auth res)
+                           (ck/set "token" (:token (:body res))))))]
+        (if (= 200 (:status (:auth state)))
+          (set! (.-location js/window) "/ui")
+          (dom/div nil
+                   (dom/p nil (if (= 401 (:status (:auth state)))
+                                "Wrong credentials"))
+                   (dom/label nil "Username")
+                   (dom/input
+                    #js {:name "username"
+                         :value (g :username)
+                         :onChange (fn [ev]
+                                     (upd :username
+                                          (.-value (.-target ev))))
+                         :onKeyDown (fn [ev]
+                                      (if (= 13 (.-keyCode ev))
+                                        (fn-clk nil)))})
+                   (dom/label nil "Password")
+                   (dom/input
+                    #js {:type "password" :name "password"
+                         :value (g :password)
+                         :onKeyDown (fn [ev]
+                                      (if (= 13 (.-keyCode ev))
+                                        (fn-clk nil)))
+                         :onChange (fn [ev]
+                                     (upd :password
+                                          (.-value (.-target ev))))})
+                   (dom/button #js {:type "Submit" :onClick fn-clk}
+                               "Login")))))))
+
 (defn full-page [data owner]
   (reify
     om/IInitState
@@ -777,6 +845,9 @@
             "New Projection" (om/build widget-new-projection state)
             "New Stream" (om/build widget-new-stream state)))))))
 
-(om/root full-page app-state
-         {:target (. js/document
-                     (getElementById "main-area"))})
+(go
+  (let [res (<! (get-api "/api/ping"))
+        page (if (= (:status res) 401) login-page full-page)]
+    (om/root page app-state
+             {:target (. js/document
+                         (getElementById "main-area"))})))

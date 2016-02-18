@@ -10,6 +10,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [http-kit "2.1.19"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
+                 [buddy "0.10.0"]
                  [ring/ring-json "0.4.0"]
                  [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
