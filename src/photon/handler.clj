@@ -14,11 +14,17 @@
             [ring.swagger.swagger2 :as rs]
             [ring.swagger.json-schema-dirty :refer :all]
             [clojure.core.async :refer [go-loop go timeout <! >! close!]]
+            [ring.middleware.cookies :as ck]
+            [ring.middleware.session :as ss]
             [ring.middleware.params :as pms]
+            [ring.middleware.keyword-params :as kp]
             [ring.middleware.multipart-params :as mp]
             [photon.api :as api]
+            [photon.security :as sec]
+            [clauth.middleware :as clm]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            [compojure.handler :refer [site]])
+            [compojure.handler :refer [site]]
+            [clojure.pprint :as ppr])
   (:import (java.io ByteArrayInputStream)))
 
 (defn f-ws-handler [ms]
@@ -98,24 +104,48 @@
              (fn [c json-generator]
                (.writeString json-generator (.getSimpleName c))))
 
-(defn app [ms]
+(defn dummy [app]
+  (fn [req]
+    (ppr/pprint req)
+    (ppr/pprint app)
+    (app req)))
+
+(defn add-session-middlewares [handler]
+  (-> handler kp/wrap-keyword-params pms/wrap-params
+      ck/wrap-cookies ss/wrap-session))
+
+(defn app [ms m-security]
+  "Input parameters: async-stream & map-security"
   (defapi app-no-reload
     {:swagger {:ui "/api"
                :spec "/swagger.json"
                :data {:info {:title "Photon API"
                              :description "Photon API"}
                       :tags [{:name "api", :description "Core API"}]}}}
+    (add-session-middlewares
+     (routes (GET "/login" req
+                  (sec/login m-security req))
+             (POST "/login" req
+                   (sec/login m-security req))))
     (context "/export" []
              :no-doc true
              (GET "/stream/:stream-name" [stream-name]
                   :path-params [stream-name :- s/Str]
                   (let [f (api/stream->file ms stream-name)]
                     (-> (response/file-response (.getAbsolutePath f))
-                      (header "Content-Type" "application/octet-stream")
-                      (header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
-                      (header "Content-Length" (.length f))))))
+                        (header "Content-Type" "application/octet-stream")
+                        (header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
+                        (header "Content-Length" (.length f))))))
+    (context "/admin" []
+             :tags ["API management"]
+             (POST "/authorize" req
+                   (sec/authorize m-security req))
+             (POST "/token" req
+                   (sec/token m-security req)))
     (context "/api" []
              :tags ["api"]
+             :middleware [kp/wrap-keyword-params pms/wrap-params
+                          ck/wrap-cookies ss/wrap-session clm/require-bearer-token!]
              (GET "/streams" []
                   :return api/StreamInfoMap
                   :summary "Obtain a list of active streams

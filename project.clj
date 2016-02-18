@@ -9,6 +9,7 @@
                  ["releases" "https://simplicityitself.artifactoryonline.com/simplicityitself/repo/"]]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [http-kit "2.1.19"]
+                 [tranchis/clauth "1.0.0-rc19-SNAPSHOT"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
                  [tranchis/photon-db "0.9.31"]
@@ -20,7 +21,7 @@
                  [clj-time "0.11.0"]
                  [compojure "1.4.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.32"]
+                 [tranchis/photon-config "0.9.33"]
                  [io.muoncore/muon-clojure "6.4-20160119133830"]
                  [prismatic/schema "1.0.4"]
                  [metosin/ring-http-response "0.6.5"
