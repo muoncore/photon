@@ -21,7 +21,7 @@
                  [clj-time "0.11.0"]
                  [compojure "1.4.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.32"]
+                 [tranchis/photon-config "0.9.34"]
                  [io.muoncore/muon-clojure "6.4-20160119133830"]
                  [prismatic/schema "1.0.4"]
                  [metosin/ring-http-response "0.6.5"

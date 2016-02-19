@@ -6,17 +6,19 @@
             [photon.muon :as m]
             [photon.config :as conf]
             [photon.streams :as streams]
+            [photon.security :as sec]
             [com.stuartsierra.component :as component]
             [clojure.tools.logging :as log])
   (:import (java.net ServerSocket)))
 
-(defrecord UIHandler [options stream-manager handler]
+(defrecord UIHandler [options stream-manager security handler]
   component/Lifecycle
   (start [component]
     (if (nil? handler)
       (do
         (log/info "Initialising endpoints...")
-        (assoc component :handler (h/app (:manager stream-manager))))
+        (assoc component :handler (h/app (:manager stream-manager)
+                                         (:m-sec security))))
       component))
   (stop [component]
     (if (nil? handler)
@@ -60,12 +62,13 @@
 
 (defn photon-system [conf]
   (component/system-map
+   :security (component/using (sec/security conf) [])
    :database (component/using (db-component conf) [])
    :stream-manager (component/using (streams/stream-manager conf)
                                     [:database])
    :muon-service (component/using (m/muon-service conf)
                                   [:stream-manager])
-   :ui (component/using (ui-handler conf) [:stream-manager])))
+   :ui (component/using (ui-handler conf) [:stream-manager :security])))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
