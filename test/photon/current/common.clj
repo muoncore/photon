@@ -2,8 +2,10 @@
   (:require [muon-clojure.client :as cl]
             [photon.db :as db]
             [photon.core :as core]
+            [photon.config :as conf]
             [com.stuartsierra.component :as component]
             [cheshire.core :as json]
+            [buddy.hashers :as hashers]
             [photon.muon :as muon])
   (:import (java.io File)))
 
@@ -76,22 +78,32 @@
   ([m]
    (post-one-event m "photon-integration-test")))
 
-(defn new-server [uuid]
+(defn new-component [c uuid]
   (let [temp-file (.getAbsolutePath
                    (java.io.File/createTempFile "muon" ".json"))
         conf {:amqp.url :local
+              :rest.port 9997
               :microservice.name (str "photon-integration-test-" uuid)
               :projections.path "/tmp/non-existing-path"
               :parallel.projections 2
+              :admin.user "test"
+              :admin.pass (hashers/encrypt "test")
               :projections.port 9998
               :events.port 9999}
         comp (component/start
-              (core/photon-system (merge conf {:db.backend "file"
-                                               :file.path temp-file})))
-        d (:driver (:database comp))
-        ms (:muon (:muon-service comp))]
+              (c (merge conf/default-config
+                        (merge conf {:db.backend "file"
+                                     :file.path temp-file}))))
+        d (:driver (:database comp))]
     (db/delete-all! d)
-    ms))
+    comp))
+
+(defn new-server [uuid]
+  (let [comp (new-component core/photon-system uuid)]
+    (:muon (:muon-service comp))))
+
+(defn new-web-server [uuid]
+  (new-component core/photon-component uuid))
 
 (defmacro time-limited [ms & body]
   `(let [f# (future ~@body)]
