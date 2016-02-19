@@ -104,10 +104,6 @@
       (GET "/ws-stats" []
            (wrap-websocket-handler ws-stats-handler)))))
 
-(add-encoder java.lang.Class
-             (fn [c json-generator]
-               (.writeString json-generator (.getSimpleName c))))
-
 (defn authenticated-mw [handler]
   (fn [request]
     (if (authenticated? request)
@@ -180,7 +176,6 @@
     false))
 
 (defn auth-credentials-response [req]
-  (println req)
   (let [user          (:identity req)
         refresh-token (str (java.util.UUID/randomUUID))]
     (dosync
