@@ -23,10 +23,10 @@
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.34"]
                  [io.muoncore/muon-clojure "6.4-20160119133830"]
-                 [prismatic/schema "1.0.4"]
+                 [prismatic/schema "1.0.5"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [potemkin]]
-                 [metosin/compojure-api "1.0.0-RC1"]
+                 [metosin/compojure-api "1.0.0"]
                  [dire "0.5.4"]
                  [jarohen/chord "0.7.0"
                   :exclusions [org.clojure/tools.reader
