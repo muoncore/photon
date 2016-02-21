@@ -74,16 +74,16 @@
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn photon-component [conf]
   (log/info "Starting photon...")
-  (try
-    (let [system (photon-system conf)
-          comp {:web-server (component/using (web-server conf) [:ui])}
-          web-system (merge system comp)]
-      (component/start web-system))
-    (catch UnsupportedOperationException e
-      (println (.getMessage e)))))
+  (let [system (photon-system conf)
+        comp {:web-server (component/using (web-server conf) [:ui])}
+        web-system (merge system comp)]
+    (component/start web-system)))
 
 (defn -main [& args]
-  (photon-component (apply conf/config args)))
+  (try
+    (photon-component (apply conf/config args))
+    (catch UnsupportedOperationException e
+      (println (.getMessage e)))))
 
 (defonce figwheel-instance (ref nil))
 
