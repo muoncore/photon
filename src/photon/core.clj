@@ -45,9 +45,15 @@
 (defrecord WebServer [options ui server]
   component/Lifecycle
   (start [component]
+    (println ":::::::::::::::::::: " (javax.net.ssl.KeyManagerFactory/getDefaultAlgorithm))
     (if (nil? server)
-      (let [server (web/run (:handler ui)
-                     {:port (:rest.port options)})]
+      (let [m-conf (if (nil? (:rest.keystore options))
+                     {:port (:rest.port options)}
+                     (immutant.web.undertow/options
+                      {:ssl-port (:rest.port options)
+                       :keystore (:rest.keystore options)
+                       :key-password (:rest.keypass options)}))
+            server (web/run (:handler ui) m-conf)]
         (assoc component :server server))
       component))
   (stop [component]
