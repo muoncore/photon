@@ -24,9 +24,11 @@
                      (clojure.string/join
                       "/"
                       (drop-last (clojure.string/split href #"/")))))
-(defonce ws-localhost (let [tokens (clojure.string/split localhost #":")]
+(defonce ws-localhost (let [tokens (clojure.string/split localhost #":")
+                            prefix (if (= (first tokens) "https")
+                                     "wss" "ws")]
                         (clojure.string/join
-                         ":" (conj (rest tokens) "ws"))))
+                         ":" (conj (rest tokens) prefix))))
 
 (defn call-api
   ([f url]
