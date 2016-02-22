@@ -8,7 +8,11 @@
                    :creds :gpg}]
                  ["releases" "https://simplicityitself.artifactoryonline.com/simplicityitself/repo/"]]
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [http-kit "2.1.19"]
+                 [org.immutant/web "2.1.2"
+                  :exclusions [potemkin ring/ring-core
+                               commons-fileupload
+                               org.jboss.logging/jboss-logging]]
+                 [org.jboss.logging/jboss-logging "3.2.1.Final"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [buddy "0.10.0"]
                  [ring/ring-json "0.4.0"]
@@ -28,16 +32,15 @@
                   :exclusions [potemkin]]
                  [metosin/compojure-api "1.0.0"]
                  [dire "0.5.4"]
-                 [jarohen/chord "0.7.0"
-                  :exclusions [org.clojure/tools.reader
-                               com.cognitect/transit-java
-                               com.cognitect/transit-cljs
-                               com.cognitect/transit-clj]]
                  [org.slf4j/slf4j-log4j12 "1.7.14"]
                  [tranchis/clj-schema-inspector "0.5.1"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.228"]
+                 [jarohen/chord "0.7.0"
+                  :exclusions [com.cognitect/transit-clj
+                               com.cognitect/transit-cljs
+                               com.cognitect/transit-java]]
                  [tailrecursion/cljson "1.0.7"]
                  [cljs-http "0.1.39"]
                  [org.omcljs/om "1.0.0-alpha23"]

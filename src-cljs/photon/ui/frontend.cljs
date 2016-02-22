@@ -34,15 +34,21 @@
   ([f url qs]
    (let [token (ck/get "token")
          tk (str "access_token=" token)
-         query (str url "?" (clojure.string/join "&" [qs tk]))]
+         query (str url "?" (if (or (nil? qs) (= "" qs))
+                              tk
+                              (clojure.string/join "&" [qs tk])))]
+     (.log js/console query)
      (f query))))
 
 (defn call-oauth [f & args]
   (let [token (ck/get "token")
-        new-m {:default-headers {"authorization" (str "Token " token)}}
+        new-m (if (nil? token)
+                {}
+                {:default-headers {"authorization" (str "Token " token)}})
         m (if (> (count args) 1)
             (merge (second args) new-m)
             new-m)]
+    (.log js/console (pr-str m))
     (f (first args) m)))
 
 (defn ws-api   [& args] (apply call-api ws-ch args))
@@ -50,10 +56,8 @@
 (defn post-api [& args] (apply call-oauth client/post args))
 
 (defn clj->str [c]
-  (let [res (clojure.string/replace
-             (with-out-str (pprint/pprint c)) #"}nil" "}")]
-    #_(.log js/console res)
-    res))
+  (clojure.string/replace
+   (with-out-str (pprint/pprint c)) #"}nil" "}"))
 
 (defn proj->streams [reg]
   (map #(assoc (val %) :stream (key %)) reg))
@@ -219,7 +223,8 @@
 (defn subscribe-streams! [owner]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-api (str ws-localhost "/ws/ws-projections")))]
+          (<! (ws-api (str ws-localhost "/ws/ws-projections")
+                      "projection-name=__streams__"))]
       (if-not error
         (do
           (>! ws-channel {:projection-name "__streams__"})
@@ -847,7 +852,8 @@
 
 (go
   (let [res (<! (get-api "/api/ping"))
-        page (if (= (:status res) 401) login-page full-page)]
+        page (if (or (= (:status res) 500) (= (:status res) 401))
+               login-page full-page)]
     (om/root page app-state
              {:target (. js/document
                          (getElementById "main-area"))})))

@@ -1,12 +1,12 @@
 (ns photon.core
   (:gen-class)
-  (:use org.httpkit.server)
   (:require [photon.handler :as h]
             [photon.db :as db]
             [photon.muon :as m]
             [photon.config :as conf]
             [photon.streams :as streams]
             [photon.security :as sec]
+            [immutant.web :as web]
             [com.stuartsierra.component :as component]
             [clojure.tools.logging :as log])
   (:import (java.net ServerSocket)))
@@ -17,7 +17,8 @@
     (if (nil? handler)
       (do
         (log/info "Initialising endpoints...")
-        (assoc component :handler (h/app (:manager stream-manager)
+        (assoc component :handler (h/app (:http-kit? options)
+                                         (:manager stream-manager)
                                          (:m-sec security))))
       component))
   (stop [component]
@@ -45,16 +46,15 @@
   component/Lifecycle
   (start [component]
     (if (nil? server)
-      (let [server (run-server (:handler ui)
-                               {:port (:rest.port options)
-                                :max-body 600000000})]
+      (let [server (web/run (:handler ui)
+                     {:port (:rest.port options)})]
         (assoc component :server server))
       component))
   (stop [component]
     (if (nil? server)
       component
       (do
-        (server :timeout 100)
+        (web/stop server)
         (assoc component :server nil)))))
 
 (defn web-server [options]
@@ -92,7 +92,8 @@
   (let [h (dosync
             (if-let [instance @figwheel-instance]
               instance
-              (let [system (photon-system (conf/config))
+              (let [system (photon-system (assoc (conf/config)
+                                                 :http-kit? true))
                     m-photon (component/start system)
                     handler (:handler (:ui m-photon))]
                 (alter figwheel-instance (fn [_] handler))

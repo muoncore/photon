@@ -10,31 +10,25 @@
             [ring.middleware.json :as rjson]
             [cheshire.core :as json]
             [cheshire.generate :refer [add-encoder]]
+            [clojure.pprint :as pp]
             [compojure.api.sweet :refer :all]
             [ring.swagger.swagger2 :as rs]
             [ring.swagger.json-schema-dirty :refer :all]
             [clojure.core.async :refer [go-loop go timeout <! >! close!]]
+            [chord.http-kit :refer [wrap-websocket-handler]]
             [ring.middleware.params :as pms]
             [ring.middleware.multipart-params :as mp]
+            [immutant.web.async :as async]
+            [immutant.web.middleware :as iwm]
             [photon.api :as api]
             [photon.security :as sec]
-            [chord.http-kit :refer [wrap-websocket-handler]]
-            [clojure.pprint :as pp]
             [compojure.handler :refer [site]])
   (:import (java.io ByteArrayInputStream)))
 
-(defn f-ws-handler [ms]
-  (fn [{:keys [ws-channel] :as req}]
-    (go-loop []
-      (if-let [{:keys [message]} (<! ws-channel)]
-        (do
-          (spit "/tmp/messages.txt" (str (pr-str {:message message}) "\n") :append true)
-          (prn {:message message})
-          (>! ws-channel (str "You said: " message))
-          (recur))
-        (prn "closed.")))))
+(defn ws-send! [ch msg]
+  (async/send! ch (pr-str msg)))
 
-(defn f-ws-projections-handler [stream]
+(defn f-ws-projections-handler-hk [stream]
   (fn [{:keys [ws-channel] :as req}]
     (go
       (loop [t 0]
@@ -50,7 +44,7 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
-(defn f-ws-stats-handler [stream]
+(defn f-ws-stats-handler-hk [stream]
   (fn [{:keys [ws-channel] :as req}]
     (go
       (loop [t 0]
@@ -66,37 +60,62 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
-(defn f-ws-streams-handler [stream]
-  (fn [{:keys [ws-channel] :as req}]
-    (let [ch (streams/stream->ch stream
-                                 {"from" "0"
-                                  "stream-name" "__streams__"
-                                  "stream-type" "hot-cold"})
-          current-value (atom (streams/streams stream))]
-      (go-loop [t 0]
-        (if-let [{:keys [message]} (<! ws-channel)]
-          (do
-            (<! (timeout t))
-            (>! ws-channel (<! ch))
-            (recur 1000))
-          (do
-            (close! ch)
-            (close! ws-channel)
-            (prn "closed.")))))))
-
-(defn ws-route-projections [stm]
+(defn ws-route-projections-hk [stm]
   (cc/defroutes m-ws-route-projections
-    (let [ws-projections-handler (f-ws-projections-handler stm)]
+    (let [ws-projections-handler (f-ws-projections-handler-hk stm)]
       (GET "/ws-projections" []
            (wrap-websocket-handler ws-projections-handler)))))
 
-(defn ws-route-stats [stm]
+(defn ws-route-stats-hk [stm]
   (cc/defroutes m-ws-route-stats
-    (let [ws-stats-handler (f-ws-stats-handler stm)]
+    (let [ws-stats-handler (f-ws-stats-handler-hk stm)]
       (GET "/ws-stats" []
            (wrap-websocket-handler ws-stats-handler)))))
 
-(defn app [ms m-sec]
+(defmulti on-open (fn [ch stream]
+                    (let [req (async/originating-request ch)]
+                      (apply str (rest (:path-info req))))))
+
+(defmethod on-open "ws-stats" [ch stream]
+  (let [req (async/originating-request ch)
+        stats-stream @(:stats stream)]
+    (go
+      (loop [t 0]
+        (<! (timeout t))
+        (when (async/open? ch)
+          (let [stats-rt (api/runtime-stats stream)
+                all-stats {:stats (merge stats-stream stats-rt)}]
+            (ws-send! ch all-stats)
+            (recur 1000)))))))
+
+(defmethod on-open "ws-projections" [ch stream]
+  (let [req (async/originating-request ch)
+        projection-name (:projection-name (:params req))]
+    (go
+      (loop [t 0]
+        (<! (timeout t))
+        (when (async/open? ch)
+          (ws-send! ch
+                    (if (nil? projection-name)
+                      (api/projections-without-val stream)
+                      (api/projection stream projection-name)))
+          (recur 1000))))))
+
+(defn f-ws-handler [stream]
+  {:on-open (fn [ch] (on-open ch stream))
+   :on-close (fn [ch {:keys [code reason]}])
+   :on-error (fn [ch t])
+   :on-message (fn [ch msg])})
+
+(defn ws-route [stm]
+  (iwm/wrap-websocket
+   (cc/defroutes m-ws-route
+     (let [ws-handler (f-ws-handler stm)]
+       (GET "/ws-stats" [] {:connected "ok"})
+       (GET "/ws-projections" [] {:connected "ok"})))
+   (f-ws-handler stm)))
+
+(defn app [http-kit? ms m-sec]
   (defapi app-no-reload
     {:swagger {:ui "/api-docs"
                :spec "/swagger.json"
@@ -190,8 +209,11 @@
                           (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
              (routes (rjson/wrap-json-body
                       (pms/wrap-params
-                       (site (routes (ws-route-projections ms)
-                                     (ws-route-stats ms))))
+                       (site (if http-kit?
+                               (routes (ws-route-projections-hk ms)
+                                       (ws-route-stats-hk ms))
+                               (routes (ws-route ms)))))
                       {:keywords? true})))
-    (route/resources "/"))
+    (route/resources "/")
+    (route/not-found (http/not-found "Not found")))
   (reload/wrap-reload #'app-no-reload))
