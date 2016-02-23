@@ -25,15 +25,15 @@
 (defn basic-backend [user-info]
   (http-basic-backend {:authfn (basic-auth user-info)}))
 
-(defn create-token [user]
+(defn create-token [secret user]
   (let [stringify-user
         (-> user
             (update-in [:username] str)
             (update-in [:email] str)
-            (assoc     :exp (time/plus (time/now) (time/seconds 86400))))
+            (assoc     :exp (time/plus (time/now) (time/years 5))))
         token-contents
         (select-keys stringify-user [:permissions :username :email :id :exp])]
-    (jws/sign token-contents "secret" {:alg :hs512})))
+    (jws/sign token-contents secret {:alg :hs512})))
 
 (defn create-simple-token [tokens user]
   (let [stringify-user
@@ -47,8 +47,8 @@
     (dosync (alter tokens assoc simple-token token-contents))
     simple-token))
 
-(def jws-token-backend
-  (jws-backend {:secret "secret" :options {:alg :hs512}}))
+(defn jws-token-backend [secret]
+  (jws-backend {:secret secret :options {:alg :hs512}}))
 
 (defn simple-token-fn [tokens]
   (fn [req token]
@@ -93,7 +93,7 @@
   (token-auth-mw [this]
     (fn [handler]
       (wrap-authentication
-       handler jws-token-backend
+       handler (jws-token-backend secret)
        (token-backend {:authfn (simple-token-fn tokens)}))))
   (auth-credentials-response [this req]
     (let [user          (:identity req)
@@ -103,7 +103,7 @@
       {:id            (:id user)
        :username      (:username user)
        :permissions   (:permissions user)
-       :token         (create-token user)
+       :token         (create-token secret user)
        :simple-token  (create-simple-token tokens user)
        :refreshToken  refresh-token}))
   (qs->token-mw [this]
