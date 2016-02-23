@@ -798,7 +798,7 @@
             fn-clk (fn [_]
                      (go (let [res (<! (fn-post))]
                            (upd :auth res)
-                           (ck/set "token" (:token (:body res))))))]
+                           (ck/set "token" (:simple-token (:body res))))))]
         (if (= 200 (:status (:auth state)))
           (set! (.-location js/window) "/ui")
           (dom/div nil
