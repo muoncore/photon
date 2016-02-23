@@ -132,6 +132,9 @@
                   (http/ok (sec/auth-credentials-response m-sec req))))
     (context "/export" []
              :no-doc true
+             :middleware [(sec/basic-auth-mw m-sec)
+                          (sec/cors-mw m-sec)
+                          (sec/authenticated-mw m-sec)]
              (GET "/stream/:stream-name" [stream-name]
                   :path-params [stream-name :- s/Str]
                   (let [f (api/stream->file ms stream-name)]
