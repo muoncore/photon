@@ -2,41 +2,68 @@
   (:require [clojure.test :refer :all]
             [clojure.core.async :refer [go-loop go <! >! chan buffer <!! close!]]
             [ring.mock.request :as mock]
+            [com.stuartsierra.component :as component]
+            [photon.core :as core]
             [clojure.tools.logging :as log]
             [muon-clojure.client :as cl]
-            [photon.riak :as riak]
+            [photon.current.common :refer :all]
             [photon.streams :as streams]
             [photon.muon :as m])
   (:use midje.sweet))
 
-(def amazon-url "amqp://localhost")
+(def uuid (java.util.UUID/randomUUID))
+(def amazon-url :local)
+(def conf {:amqp.url :local
+           :microservice.name (str "photon-test-" uuid)
+           :projections.path "/tmp/non-existing-path"
+           :projections.port 9998
+           :events.port 9999
+           :db.backend "file"
+           :file.path "/tmp/temporalphoton.log"
+           :parallel.projections 2})
+(def c
+  (component/start (core/photon-system conf)))
 
 (defn prepare! []
-  (let [ms (m/start-server! "bucket-test-1")]
-    (streams/clean! (:stm ms))
-    ms))
+  (let [s (:manager (:stream-manager c))]
+    (streams/clean! s)
+    s))
 
 (defn test-cold []
-  (let [b (cl/muon-client amazon-url "monitor-client" "monitor" "client")
-        c (cl/with-muon b (cl/stream-subscription "muon://photon/stream"
-                                                  :stream-name "dummy"
-                                                  :stream-type :cold
-                                                  :from 0))]
-    (loop [ev (<!! c) n 0]
-      (if (nil? ev)
-        (do
-          (log/info "Total:" n "events.")
-          n)
-        (do
-          (log/debug "Event received")
-          (recur (<!! c) (inc n)))))))
+  (log/info "test-cold :: 1")
+  (let [b (cl/muon-client amazon-url
+                          (str "monitor-client-"
+                               (java.util.UUID/randomUUID))
+                          "monitor" "client")
+        _ (log/info "test-cold :: 2")
+        c (cl/with-muon b (cl/subscribe!
+                           (str "stream://photon-test-" uuid "/stream")
+                           :stream-name "dummy"
+                           :stream-type :cold
+                           :from 0))
+        res (do
+              (log/info "test-cold :: 3")
+              (loop [ev (<!! c) n 0]
+                (log/info "test-cold :: 4")
+                (if (nil? ev)
+                  (do
+                    (log/info "test-cold :: 5")
+                    (log/info "Total:" n "events.")
+                    n)
+                  (do
+                    (log/info "test-cold :: 6")
+                    (log/debug "Event received")
+                    (recur (<!! c) (inc n))))))]
+    (log/info "test-cold :: 7")
+    res))
 
 (defn test-hot-cold []
   (let [b (cl/muon-client amazon-url "1monitor-client" "2monitor" "3lient")
-        c (cl/with-muon b (cl/stream-subscription "muon://photon/stream"
-                                                  :stream-name "dummy"
-                                                  :stream-type :hot-cold
-                                                  :from 0))]
+        c (cl/with-muon b (cl/subscribe!
+                           (str "stream://photon-test-" uuid "/stream")
+                           :stream-name "dummy"
+                           :stream-type :hot-cold
+                           :from 0))]
     (go
       (loop [ev (<! c) n 0]
         (if (nil? ev)
@@ -45,32 +72,30 @@
             n)
           (do
             (log/info "Event received")
-            (recur (<! c) (inc n))))))
-    (Thread/sleep 10000)
-    (close! c)))
+            (recur (<! c) (inc n))))))))
 
-#_(let [ms (prepare!)
+(log/info "stream-test :: 1")
+(let [ms (prepare!)
       n1 (test-cold)
       n2 (test-cold)]
   (fact "Consistent behaviour in cold streaming" n1 => n2))
 
-#_(let [ms (prepare!)
-      a (cl/muon-client amazon-url "asap-client" "asap" "client")]
-  (cl/with-muon a (cl/post-event "muon://photon/events" "dummy" {:test :ok}))
-  (cl/with-muon a (cl/post-event "muon://photon/events" "dummy" {:test :ok}))
-  (cl/with-muon a (cl/post-event "muon://photon/events" "dummy" {:test :ok}))
-  (cl/with-muon a (cl/post-event "muon://photon/events" "dummy" {:test :ok}))
+(log/info "stream-test :: 2")
+(let [a (cl/muon-client amazon-url "asap-client" "asap" "client")]
+  #_(Thread/sleep 3000)
+  (dorun
+   (take 4 (repeatedly
+            #(cl/with-muon a (cl/request!
+                              (str "request://photon-test-" uuid "/events")
+                              {:payload {:test :ok}
+                               :service-id "muon://client"
+                               :local-id (java.util.UUID/randomUUID)
+                               :stream-name "dummy"})))))
+  #_(Thread/sleep 120000)
   (fact "Correct count" (test-cold) => 4))
 
-#_(Thread/sleep 20000)
-
-#_(let [n1 (test-cold)
+(log/info "stream-test :: 3")
+#_(Thread/sleep 60000)
+(let [n1 (test-cold)
       n2 (test-cold)]
-  (fact "Consistent behaviour in cold streaming" n1 => n2))
-
-#_(let [ms (m/start-server! "rxriak-events-v1")]
-  (streams/clean! (:stm ms)))
-
-
-
-
+  (fact "Consistent behaviour in cold streaming after posts" n1 => n2))

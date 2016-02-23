@@ -18,10 +18,21 @@ The endpoints and expected schemas to interact with `photon` can be found
 create file resources/config.properties with your environment settings:
 
 ```
-db.backend={file,mongodb,riak}
+# Microservice identifier (default = photon):
 microservice.name=photon
-file.path=/path/to/file.json
+# AMQP endpoint (default = amqp://localhost):
 amqp.url=amqp://username:password@localhost
+# Number of cores assigned for parallel stream processing
+# (default = number of cores on your machine):
+parallel.projections=8
+# Local folder with projections, in EDN format, to pre-load on start
+# (default = /tmp/photon):
+file.path=/path/to/edn-files/
+# DB backend plugin to use, several options currently available:
+db.backend={file,mongodb,riak,cassandra}
+# Depending on the backend, you'll need to set up the DB plugin:
+cassandra.ip=127.0.0.1
+file.path=/path/to/file.json
 mongodb.host=localhost
 riak.default_bucket=photon-eventstore-v1
 riak.node.1=riak1.yourdomain.com
@@ -64,4 +75,10 @@ lein new muon-clojure photon-test-client
 
 ## License
 
-Copyright © 2015 FIXME
+Copyright 2015, The authors.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.

@@ -1,5 +1,19 @@
 # photon schemas
 
+## Message format
+
+```clojure
+{:sender "muon://foo"
+ :receiver "muon://photon"
+ :uuid "0d35c44f-89a7-4abd-b4ce-e313aaa75c37"
+ :in-reply-to "c0687d0c-9219-45fe-9990-fa12e2f95736"
+ :server-timestamp 1437646327886
+ :schema "http://cistechfutures.net/foo.schema"
+ :protocol "fire-and-forget"
+ :encoding "application/json"
+ :payload "{\"this\": \"is\", \"a\": \"payload\"}”}
+```
+
 ## Event management
 
 ### Posting events
@@ -22,7 +36,8 @@
  "provenance" : {"service-id" : "muon://some-service",
                  "local-id" : "some-uuid",
                  "relationship-type" : "caused-by"},
- "schema-url" : "http://some.url/some.schema.javascript",
+ "encoding" : "application/json",
+ "schema" : "http://some.url/some.schema.javascript",
  "stream-name" : "target-stream",
  "payload" : {"any" : "object"}}
 ```
@@ -52,13 +67,13 @@
  "stream-name" : "any-stream or __all__",
  "language" : "javascript or clojure",
  "reduction" : "(fn [prev next] ...) or function(prev,next) {... return x;}",
- "initial-value" : value_of_first_prev}
+ "initial-value" : "value_of_first_prev"}
 ```
 
 * Response:
 
 ```javascript
-"Ok"
+{"correct" : "true"}
 ```
 
 ### Querying active projections

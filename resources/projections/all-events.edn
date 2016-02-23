@@ -1,0 +1,71 @@
+{:projection-name "all-events",
+ :stream-name "cambio",
+ :language :clojure,
+ :reduction
+ (serializable.fn/fn
+  [p n]
+  (let
+   [hash-amount
+    5000
+    ignored
+    ["/favicon.ico"
+     "/fonts/"
+     "/learn.json"
+     "/images/learn.json"
+     "/apple-touch-icon.png"
+     "/browserconfig.xml"
+     "/views-react//remarkable-react.jsx"
+     "/apple-touch-icon-precomposed.png"]
+    payload
+    (:payload n)
+    user-agent
+    (:user-agent (:headers payload))
+    starts-with
+    (fn [s b] (.startsWith s b))
+    user
+    (mod (hash (:session_id payload)) hash-amount)]
+   (if
+    (and
+     (not (nil? user))
+     (= "get-html" (:commandName payload))
+     (not (nil? user-agent))
+     (not (starts-with user-agent "Apache")))
+    (let
+     [matrix
+      (:matrix p)
+      origin
+      (get (:user-last p) user)
+      destination
+      (:url payload)
+      index-of
+      (fn [s b] (.indexOf s b))
+      ignore
+      (map
+       (fn* [p1__697#] (= 0 (index-of destination p1__697#)))
+       ignored)
+      ignore
+      (reduce
+       (fn* [p1__698# p2__699#] (or p1__698# p2__699#))
+       false
+       ignore)]
+     (if
+      ignore
+      p
+      (let
+       [new-matrix
+        (if
+         (nil? origin)
+         matrix
+         (let
+          [by-origin
+           (get matrix origin {})
+           new-d
+           (merge-with + by-origin {destination 1})]
+          (assoc matrix origin new-d)))
+        new-keys
+        (into [] (conj (into #{} (:keys p)) destination))]
+       {:matrix new-matrix,
+        :keys new-keys,
+        :user-last (assoc (:user-last p) user destination)})))
+    p))),
+ :initial-value {:user-last {}, :keys [], :matrix {}}}

@@ -1,60 +1,86 @@
 (ns photon.muon
-  (:require #_[photon.riak :as riak]
-            [photon.streams :as streams]
+  (:require [photon.streams :as streams]
             [muon-clojure.common :as mcc]
             [muon-clojure.server :as mcs]
-            [muon-clojure.rx :as rx]
-            [clojure.data.json :as json]
-            [clojure.java.data :as j]
+            [com.stuartsierra.component :as component]
             [photon.api :as api]
-            [photon.config :as conf]
-            [clojure.data.json :as json]
+            [clojure.core.async :refer [go <! chan tap]]
             [clojure.tools.logging :as log])
-  (:import (io.muoncore Muon MuonStreamGenerator)
-           (io.muoncore.future MuonFuture ImmediateReturnFuture)
-           (io.muoncore.transport.resource MuonResourceEvent)
-           (io.muoncore.extension.amqp AmqpTransportExtension)
-           (io.muoncore.extension.amqp.discovery AmqpDiscovery)
-           (org.reactivestreams Publisher)
+  (:import (org.reactivestreams Publisher)
            (java.util Map)))
 
-(defmulti decode-event #(.getContentType %))
-
-(defmethod decode-event "application/json" [queryEvent]
-  (into {} (.getDecodedContent queryEvent)))
-
-(defrecord PhotonMicroservice [m stm]
+(defrecord PhotonMicroservice [stream-manager]
   mcs/MicroserviceStream
-  (expose-stream! [this]
-    (mcc/stream-source this "stream" (fn [params] (streams/stream stm params))))
-  mcs/MicroserviceQuery
-  (expose-get [this]
-    #_(mcc/on-query this "projection" (fn [resource]
-                                      (log/info ":::: QUERY " (pr-str resource))
-                                      (api/projection (:projection-name resource))))
-    #_(mcc/on-query this "projection-keys" (fn [resource]
-                                           (api/projection-keys))))
-  mcs/MicroserviceCommand
-  (expose-post! [this]
-    #_(let [listener (fn [ev] (streams/process-event! stm (clojure.walk/keywordize-keys ev)))
-          listener-projections
-          (fn [resource]
-            (let [params (clojure.walk/keywordize-keys resource)]
-              (api/post-projection! stm params)))]
-      (mcc/on-command this "events" listener)
-      (mcc/on-command this "projections" listener-projections))))
+  (stream-mappings [this]
+    ;; TODO: Explore the case of pure hot/cold streams
+    [{:endpoint "test" :type :cold
+      :fn-process (fn [params]
+                    (log/info "Test:" params)
+                    (clojure.core.async/to-chan [{:val 1} {:val 2}]))}
+     {:endpoint "stream" :type :hot-cold
+      :fn-process (fn [params]
+                    (log/info "PhotonMS:" params)
+                    (streams/stream->ch stream-manager params))}])
+  mcs/MicroserviceRequest
+  (request-mappings [this]
+    [{:endpoint "projection"
+      :fn-process (fn [resource]
+                    (log/info ":::: QUERY " (pr-str resource))
+                    (api/projection stream-manager
+                                    (:projection-name resource)))}
+     {:endpoint "projection-keys"
+      :fn-process (fn [resource]
+                    (api/projection-keys stream-manager))}
+     {:endpoint "events"
+      :fn-process (fn [ev]
+                    (log/trace ":::: EVENTS" (pr-str ev))
+                    (api/post-event!
+                     stream-manager
+                     (clojure.walk/keywordize-keys ev)))}
+     {:endpoint "projections"
+      :fn-process (fn [resource]
+                    (let [params (clojure.walk/keywordize-keys resource)]
+                      (api/post-projection! stream-manager params)))}]))
 
-(defn start-server! 
-  ([server-name db]
-   (println conf/config)
-   (start-server! server-name db
-                  (if (nil? (:amqp.url conf/config))
-                    "amqp://localhost"
-                    (:amqp.url conf/config))))
-  ([server-name db url]
-   (log/info "Connecting to" url)
-   (let [ms (->PhotonMicroservice (mcs/muon url server-name ["photon" "helios"])
-                                  (streams/new-async-stream db))]
-     (mcs/start-server! ms)
-     ms)))
+(defrecord MuonService [options stream-manager]
+  component/Lifecycle
+  (start [component]
+    (if (nil? (:muon component))
+      (try
+        (let [stream-manager (:manager stream-manager)
+              impl (PhotonMicroservice. stream-manager)
+              projections (:projections stream-manager)
+              conf {:rabbit-url (:amqp.url options)
+                    :service-identifier (:microservice.name options)
+                    :tags ["photon" "eventstore"]
+                    :implementation impl}
+              comp (mcs/micro-service conf)
+              ms (component/start comp)]
+          (go
+            (loop [new-proj (<! projections)]
+              (when-not (nil? new-proj)
+                (log/info "Registering new projection"
+                          (:projection-name new-proj) "into muon...")
+                (mcc/stream-source (:muon ms)
+                                   (str "projection/" (:projection-name new-proj))
+                                   :hot
+                                   (fn [resource]
+                                     (let [ch (chan)]
+                                       (tap (:mult new-proj) ch)
+                                       ch)))
+                (recur (<! projections)))))
+          (assoc component :muon ms))
+        (catch Exception e
+          (log/info "Muon could not be started:" (.getMessage e))
+          (log/info "Falling back to muon-less mode!")
+          component))
+      component))
+  (stop [component]
+    (if (nil? (:muon component))
+      component
+      (do
+        (component/stop (:muon component))
+        (assoc component :muon nil)))))
 
+(defn muon-service [options]
+  (map->MuonService {:options options}))

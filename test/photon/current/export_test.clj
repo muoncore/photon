@@ -1,12 +1,16 @@
-(ns photon.current.stream-test
+(ns photon.current.export-test
   (:require [photon.streams :as streams]
             [photon.db :as db]
             [muon-clojure.server :as mcs]
             [clojure.core.async :as async :refer [<!!]]
             [com.stuartsierra.component :as component]
+            [clojure.java.io :as io]
             [photon.current.common :refer :all]
+            [photon.api :as api]
             [photon.core :as core]
             [clojure.tools.logging :as log])
+  (:import (java.util.zip GZIPInputStream)
+           (java.io FileInputStream))
   (:use midje.sweet))
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
@@ -34,14 +38,23 @@
       n
       (recur (<!! ch) (inc n)))))
 
-(fact "Empty stream has 0 elements"
-      (elem-count (streams/stream->ch s {:stream-type "cold"
-                                         :stream-name "__all__"})) => 0)
+(db/delete-all! d)
+(dorun (take 10 (repeatedly #(db/store d {:stream-name "test"}))))
 
-(fact "Clean stream + 1 event stored = 1 element"
-      (do
-        (db/delete-all! d)
-        (db/store d {})
-        (elem-count (streams/stream->ch s {:stream-type "cold"
-                                           :stream-name "__all__"})) => 1))
+(defn count-result []
+  (let [f (api/stream->file s "test")
+        gzis (GZIPInputStream. (FileInputStream. f))]
+    (with-open [r (io/reader gzis)]
+      (let [ls (line-seq r)]
+        (count ls)))))
+
+(fact "Re-check stream size"
+      (elem-count (streams/stream->ch s {:stream-type "cold"
+                                         :stream-name "__all__"}))
+      => 10)
+
+(fact "Exporting a document gives the correct file"
+      (elem-count (streams/stream->ch s {:stream-type "cold"
+                                         :stream-name "__all__"}))
+      => (count-result))
 

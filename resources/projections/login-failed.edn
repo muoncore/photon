@@ -1,0 +1,20 @@
+{:projection-name "login-failed",
+ :stream-name "cambio",
+ :language :clojure,
+ :reduction
+ (serializable.fn/fn
+  [p n]
+  (let
+   [payload (:payload n) session-id (:session_id payload)]
+   (if
+    (nil? session-id)
+    p
+    (if
+     (= (:commandName payload) "login-failed")
+     (into
+      []
+      (conj
+       (into #{} p)
+       (clojure.string/lower-case (:username (:payload payload)))))
+     p)))),
+ :initial-value []}
