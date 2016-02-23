@@ -19,7 +19,9 @@
                           :active-page "Dashboard"
                           :reduction ""
                           :projections []
+                          :analyse-stream nil
                           :new-projection false}))
+
 (defonce localhost (let [href (.-href (.-location js/window))]
                      (clojure.string/join
                       "/"
@@ -39,7 +41,7 @@
          query (str url "?" (if (or (nil? qs) (= "" qs))
                               tk
                               (clojure.string/join "&" [qs tk])))]
-     (.log js/console query)
+     #_(.log js/console query)
      (f query))))
 
 (defn call-oauth [f & args]
@@ -50,7 +52,7 @@
         m (if (> (count args) 1)
             (merge (second args) new-m)
             new-m)]
-    (.log js/console (pr-str m))
+    #_(.log js/console (pr-str m))
     (f (first args) m)))
 
 (defn ws-api   [& args] (apply call-api ws-ch args))
@@ -596,7 +598,7 @@
 
 (defn add-select-state [option entry]
   (if (= option (:text entry))
-    #js {:value option :selected  "selected"}
+    #js {:value option :selected "selected"}
     #js {:value option}))
 
 (defn set-status [class title items]
@@ -827,6 +829,89 @@
                    (dom/button #js {:type "Submit" :onClick fn-clk}
                                "Login")))))))
 
+(defn list-streams [data owner]
+  (let [upd (fn [v] (swap! app-state
+                           (fn [old] (assoc old :analyse-stream v))))]
+    (reify
+      om/IRender
+      (render [_]
+        (dom/div nil
+                 (dom/p nil "Choose stream:")
+                 (apply dom/select
+                        #js {:onChange (fn [x]
+                                         (upd (.-value (.-target x))))}
+                        (map #(dom/option
+                               (add-select-state
+                                % {:text (:analyse-stream data)}) %)
+                             (:streams data))))))))
+
+(defn tree->js [tree]
+  (map #(if (or (nil? (val %)) (= (val %) "[]"))
+          (name (key %))
+          {:text (name (key %))
+           :state {:opened false}
+           :children (tree->js (val %))})
+       tree))
+
+(defn schema->tree [schema]
+  (reduce #(assoc-in %1 (key %2) nil) {} (:m schema)))
+
+(defn stream-schema [data owner]
+  (reify
+    om/IDidMount
+    (did-mount [_]
+      (let [tj (tree->js (schema->tree (:schema data)))
+            cd (clj->js {:core {:data tj}})]
+        (.log js/console "Producing again" (pr-str cd))
+        (.jstree ($ :#tree) cd)
+        nil))
+    om/IDidUpdate
+    (did-update [_ _ _]
+      (let [tj (tree->js (schema->tree (:schema data)))
+            cd (clj->js {:core {:data tj}})
+            t (.jstree ($ :#tree) true)]
+        (.log js/console "Producing again" (pr-str cd))
+        (set! (.-data (.-core (.-settings t))) cd)
+        (.destroy t)
+        nil)
+      (let [tj (tree->js (schema->tree (:schema data)))
+            cd (clj->js {:core {:data tj}})]
+        (.log js/console "Producing again" (pr-str cd))
+        (.jstree ($ :#tree) cd)
+        nil))
+    om/IRender
+    (render [_]
+      (.log js/console "render")
+      (dom/div nil
+               (dom/div #js {:id "tree"})
+               (dom/p nil (pr-str data))))))
+
+(defn widget-analyse [data owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (let [streams (map :stream (:streams data))
+            default (:stream (first (sort-by #(- (:total-events %))
+                                             (:streams data))))
+            analyse-stream
+            (if (or (not (contains? (into #{} streams)
+                                    (:analyse-stream @app-state)))
+                    (nil? (:analyse-stream @app-state)))
+              (do
+                (swap! app-state
+                       (fn [old] (assoc old :analyse-stream default)))
+                default)
+              (:analyse-stream @app-state))]
+        (dom/div
+         nil
+         (dom/h2 nil "Data Analyser")
+         (om/build list-streams
+                   {:analyse-stream analyse-stream
+                    :streams streams})
+         (om/build stream-schema
+                   (first (filter #(= analyse-stream (:stream %))
+                                  (:streams data)))))))))
+
 (defn full-page [data owner]
   (reify
     om/IInitState
@@ -850,7 +935,8 @@
             "Streams" (om/build widget-streams (assoc state :full-page-owner owner))
             "Projections" (om/build widget-projections (assoc state :full-page-owner owner))
             "New Projection" (om/build widget-new-projection state)
-            "New Stream" (om/build widget-new-stream state)))))))
+            "New Stream" (om/build widget-new-stream state)
+            "Analyse Data" (om/build widget-analyse state)))))))
 
 (go
   (let [res (<! (get-api "/api/ping"))
