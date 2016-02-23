@@ -127,7 +127,8 @@
                  :tokens (ref {})
                  :username (:admin.user options)
                  :password (:admin.pass options)
-                 :secret (java.util.UUID/randomUUID)})))
+                 :secret (.getBytes (.toString
+                                     (java.util.UUID/randomUUID)))})))
       component))
   (stop [component]
     (if (nil? m-sec)
