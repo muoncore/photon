@@ -47,9 +47,11 @@
   (start [component]
     (if (nil? server)
       (let [m-conf (if (nil? (:rest.keystore options))
-                     {:port (:rest.port options)}
+                     {:host (:rest.host options)
+                      :port (:rest.port options)}
                      (immutant.web.undertow/options
-                      {:ssl-port (:rest.port options)
+                      {:host (:rest.host options)
+                       :ssl-port (:rest.port options)
                        :keystore (:rest.keystore options)
                        :key-password (:rest.keypass options)}))
             server (web/run (:handler ui) m-conf)]
