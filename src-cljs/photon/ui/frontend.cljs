@@ -36,22 +36,16 @@
   ([f url]
    (call-api f url ""))
   ([f url qs]
-   (let [token (ck/get "token")
-         tk (str "access_token=" token)
-         query (str url "?" (if (or (nil? qs) (= "" qs))
-                              tk
-                              (clojure.string/join "&" [qs tk])))]
+   (let [query (str url (if (or (nil? qs) (= "" qs))
+                          ""
+                          (str "?" qs)))]
      #_(.log js/console query)
      (f query))))
 
 (defn call-oauth [f & args]
-  (let [token (ck/get "token")
-        new-m (if (nil? token)
-                {}
-                {:default-headers {"authorization" (str "Token " token)}})
-        m (if (> (count args) 1)
-            (merge (second args) new-m)
-            new-m)]
+  (let [m (if (> (count args) 1)
+            (merge (second args) {})
+            {})]
     #_(.log js/console (pr-str m))
     (f (first args) m)))
 
@@ -651,8 +645,6 @@
                                    (iframeio-upload-file "upload-form"
                                                          owner))
                        :action "/api/new-stream"}
-          (dom/input #js {:type "hidden" :name "token"
-                          :value (ck/get "token")} nil)
           (dom/h1 #js {:className "view-title"} "New Stream")
           (:upload-status state)
           (dom/div
@@ -796,13 +788,12 @@
                   (om/update-state! owner (fn [old] (assoc old k v))))
             g (fn [k] (get state k))
             fn-post (fn []
-                      (client/get "/auth/token"
+                      (client/get "/auth/login"
                                   {:basic-auth {:username (g :username)
                                                 :password (g :password)}}))
             fn-clk (fn [_]
                      (go (let [res (<! (fn-post))]
-                           (upd :auth res)
-                           (ck/set "token" (:token #_:simple-token (:body res))))))]
+                           (upd :auth res))))]
         (if (= 200 (:status (:auth state)))
           (set! (.-location js/window) "/ui")
           (dom/div nil
