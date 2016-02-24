@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:use [jayq.core :only [$ css html]])
   (:require [cljs-http.client :as client]
-            [cljs.core.async :refer [<! >! put! close!]]
+            [cljs.core.async :refer [chan <! >! put! close!]]
             [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
             [chord.client :refer [ws-ch]]
             [goog.net.cookies :as ck]
@@ -877,6 +877,7 @@
         n (render-text (name k) (:mode sch)) ]
     {:text (str n " <i>[" tt "]</i>")
      :a_attr {:style "color: #111111;"}
+     :schema sch
      :icon "ui/images/ic_short_text_black_18dp.png"}))
 
 (defmethod node->js :vector-object [[k v]]
@@ -892,6 +893,7 @@
         under-type (m->text (:type leaf))]
     {:text (str (render-text (name k) (:mode leaf))
                 " <i>[Array (" under-type ")]</i>")
+     :schema leaf
      :icon "ui/images/ic_more_horiz_black_18dp.png"}))
 
 (defmethod node->js :tree [[k v]]
@@ -904,41 +906,77 @@
   (map node->js tree))
 
 (defn schema->tree [schema]
-  (reduce #(assoc-in %1 (key %2) {:leaf (val %2)}) {} (:m schema)))
+  (reduce #(assoc-in %1 (key %2) {:leaf (assoc (val %2) :path (key %2))})
+          {} (:m schema)))
 
-(defn produce-tree! [data]
+(defn produce-tree! [data ch]
   (let [tj (tree->js (schema->tree (:schema data)))
         cd (clj->js {:core {:data tj}})]
     (.jstree ($ :#tree) cd)
-    nil))
+    (.on ($ :#tree) "hover_node.jstree"
+         (fn [_ data] (go (>! ch data))))))
 
 (defn clean-tree! [data]
   (let [tj (tree->js (schema->tree (:schema data)))
         cd (clj->js {:core {:data tj}})
         t (.jstree ($ :#tree) true)]
     (set! (.-data (.-core (.-settings t))) cd)
-    (.destroy t)
-    nil))
+    (.destroy t)))
+
+(defn var-inspector [data owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:jstree.node nil})
+    om/IDidMount
+    (did-mount [_]
+      (go
+        (loop [elem (<! data)]
+          (when-not (nil? elem)
+            (om/update-state! owner
+                              (fn [old] (assoc old :jstree.node elem)))
+            (recur (<! data))))))
+    om/IRenderState
+    (render-state [_ state]
+      (when-not (nil? (:jstree.node state))
+        (let [node (js->clj (:jstree.node state) :keywordize-keys true)
+              sch (-> node :node :original :schema)
+              path (clojure.string/join "." (:path sch))]
+          (apply dom/div
+                 nil
+                 (when-not (nil? sch)
+                   [(dom/p nil path)
+                    (dom/p nil (str "This parameter is probably " (:mode sch)))
+                    (dom/p nil (when-not (= (:values sch) "not-enum")
+                                 (str "Values found: "
+                                      (clojure.string/join
+                                       ", "
+                                       (map name (keys (:values sch)))))))])))))))
 
 (defn stream-schema [data owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:ch (chan)})
     om/IDidMount
     (did-mount [_]
-      (produce-tree! data))
+      (produce-tree! data (:ch (om/get-state owner))))
     om/IDidUpdate
     (did-update [_ _ _]
+      (go (>! (:ch (om/get-state owner)) ""))
       (clean-tree! data)
-      (produce-tree! data))
+      (produce-tree! data (:ch (om/get-state owner))))
     om/IRender
     (render [_]
       (dom/div
        nil
        (dom/div
-        #js {:className "container-fluid"}
+        #js {:className "container"}
         (dom/div
          #js {:className "row"}
-         (dom/div #js {:className "col-md-1" :id "tree"})
-         (dom/div #js {:className "col-md-1" :id "tree"} (dom/p nil "hello"))))
+         (dom/div #js {:className "col-lg-4" :id "tree"})
+         (dom/div #js {:className "col-lg-4" :id "tree"}
+                  (om/build var-inspector (:ch (om/get-state owner))))))
        (dom/p nil (pr-str data))))))
 
 (defn widget-analyse [data owner]
