@@ -651,6 +651,8 @@
                                    (iframeio-upload-file "upload-form"
                                                          owner))
                        :action "/api/new-stream"}
+          (dom/input #js {:type "hidden" :name "token"
+                          :value (ck/get "token")} nil)
           (dom/h1 #js {:className "view-title"} "New Stream")
           (:upload-status state)
           (dom/div
@@ -800,7 +802,7 @@
             fn-clk (fn [_]
                      (go (let [res (<! (fn-post))]
                            (upd :auth res)
-                           (ck/set "token" (:simple-token (:body res))))))]
+                           (ck/set "token" (:token #_:simple-token (:body res))))))]
         (if (= 200 (:status (:auth state)))
           (set! (.-location js/window) "/ui")
           (dom/div nil
@@ -845,46 +847,108 @@
                                 % {:text (:analyse-stream data)}) %)
                              (:streams data))))))))
 
+(def type-mappings {"s/Str" "string"
+                    "s/Bool" "bool"})
+
+(defn type->text [t]
+  (get type-mappings t t))
+
+(defn m->text [m]
+  (let [t (map type->text m)
+        tt (if (string? m) (type->text m) (clojure.string/join ", " t))]
+    tt))
+
+(declare tree->js)
+
+(defmulti node->js
+  (fn [[_ v]]
+    (if (contains? v :leaf)
+      :leaf
+      (if-let [vv (get v "[]")]
+        (if (contains? vv :leaf)
+          :vector
+          :vector-object)
+        :tree))))
+
+;; TODO: Encapsulate into CSS classes
+
+(defn render-text [text mode]
+  (condp = mode
+    :required (str "<b>" text "</b>")
+    :optional text
+    :rare (str "<font color=\"#888888\">" text "</font>")
+    (pr-str mode)))
+
+(defmethod node->js :leaf [[k v]]
+  (let [sch (:leaf v)
+        ts (:type sch)
+        tt (m->text ts)
+        n (render-text (name k) (:mode sch)) ]
+    {:text (str n " <i>[" tt "]</i>")
+     :a_attr {:style "color: #111111;"}
+     :icon "ui/images/ic_short_text_black_18dp.png"}))
+
+(defmethod node->js :vector-object [[k v]]
+  (let [vv (get v "[]")]
+    {:text (str (name k) " <i>[Array (Object)]</i>")
+     :state {:opened false}
+     :icon "ui/images/ic_grid_on_black_18dp.png"
+     :children (tree->js vv)}))
+
+(defmethod node->js :vector [[k v]]
+  (let [vv (get v "[]")
+        leaf (:leaf vv)
+        under-type (m->text (:type leaf))]
+    {:text (str (render-text (name k) (:mode leaf))
+                " <i>[Array (" under-type ")]</i>")
+     :icon "ui/images/ic_more_horiz_black_18dp.png"}))
+
+(defmethod node->js :tree [[k v]]
+  {:text (str "<i>" (name k) " [Object]</i>")
+   :state {:opened false}
+   :icon "ui/images/ic_folder_open_black_18dp.png"
+   :children (tree->js v)})
+
 (defn tree->js [tree]
-  (map #(if (or (nil? (val %)) (= (val %) "[]"))
-          (name (key %))
-          {:text (name (key %))
-           :state {:opened false}
-           :children (tree->js (val %))})
-       tree))
+  (map node->js tree))
 
 (defn schema->tree [schema]
-  (reduce #(assoc-in %1 (key %2) nil) {} (:m schema)))
+  (reduce #(assoc-in %1 (key %2) {:leaf (val %2)}) {} (:m schema)))
+
+(defn produce-tree! [data]
+  (let [tj (tree->js (schema->tree (:schema data)))
+        cd (clj->js {:core {:data tj}})]
+    (.jstree ($ :#tree) cd)
+    nil))
+
+(defn clean-tree! [data]
+  (let [tj (tree->js (schema->tree (:schema data)))
+        cd (clj->js {:core {:data tj}})
+        t (.jstree ($ :#tree) true)]
+    (set! (.-data (.-core (.-settings t))) cd)
+    (.destroy t)
+    nil))
 
 (defn stream-schema [data owner]
   (reify
     om/IDidMount
     (did-mount [_]
-      (let [tj (tree->js (schema->tree (:schema data)))
-            cd (clj->js {:core {:data tj}})]
-        (.log js/console "Producing again" (pr-str cd))
-        (.jstree ($ :#tree) cd)
-        nil))
+      (produce-tree! data))
     om/IDidUpdate
     (did-update [_ _ _]
-      (let [tj (tree->js (schema->tree (:schema data)))
-            cd (clj->js {:core {:data tj}})
-            t (.jstree ($ :#tree) true)]
-        (.log js/console "Producing again" (pr-str cd))
-        (set! (.-data (.-core (.-settings t))) cd)
-        (.destroy t)
-        nil)
-      (let [tj (tree->js (schema->tree (:schema data)))
-            cd (clj->js {:core {:data tj}})]
-        (.log js/console "Producing again" (pr-str cd))
-        (.jstree ($ :#tree) cd)
-        nil))
+      (clean-tree! data)
+      (produce-tree! data))
     om/IRender
     (render [_]
-      (.log js/console "render")
-      (dom/div nil
-               (dom/div #js {:id "tree"})
-               (dom/p nil (pr-str data))))))
+      (dom/div
+       nil
+       (dom/div
+        #js {:className "container-fluid"}
+        (dom/div
+         #js {:className "row"}
+         (dom/div #js {:className "col-md-1" :id "tree"})
+         (dom/div #js {:className "col-md-1" :id "tree"} (dom/p nil "hello"))))
+       (dom/p nil (pr-str data))))))
 
 (defn widget-analyse [data owner]
   (reify
