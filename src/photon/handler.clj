@@ -18,6 +18,7 @@
             [chord.http-kit :refer [wrap-websocket-handler]]
             [ring.middleware.params :as pms]
             [ring.middleware.multipart-params :as mp]
+            [ring.middleware.session :refer [wrap-session]]
             [immutant.web.async :as async]
             [immutant.web.middleware :as iwm]
             [photon.api :as api]
@@ -124,28 +125,35 @@
                       :tags [{:name "api", :description "Core API"}]}}}
     (context "/auth" []
              :tags ["auth"]
-             :middleware [(sec/basic-auth-mw m-sec)
+             :middleware [(sec/basic-or-session-mw m-sec)
                           (sec/cors-mw m-sec)
                           (sec/authenticated-mw m-sec)]
              ;; TODO: Add refresh-token functionality
+             (GET "/login" {session :session}
+                  (assoc (http/ok {:logged-in true})
+                         :session (assoc session :identity "user")))
+             (GET "/logout" {session :session}
+                  (-> (http/ok {:logged-out true})
+                      (assoc :session (dissoc session :identity))))
              (GET "/token" req
                   (http/ok (sec/auth-credentials-response m-sec req))))
     (context "/export" []
              :no-doc true
-             :middleware [(sec/basic-auth-mw m-sec)
-                          (sec/cors-mw m-sec)
-                          (sec/authenticated-mw m-sec)]
+             :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
+                          (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
              (GET "/stream/:stream-name" [stream-name]
                   :path-params [stream-name :- s/Str]
                   (let [f (api/stream->file ms stream-name)]
                     (-> (response/file-response (.getAbsolutePath f))
-                      (http/header "Content-Type" "application/octet-stream")
-                      (http/header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
-                      (http/header "Content-Length" (.length f))))))
+                        (http/header "Content-Type" "application/octet-stream")
+                        (http/header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
+                        (http/header "Content-Length" (.length f))))))
     (context "/api" []
              :tags ["api"]
-             :middleware [(sec/qs->token-mw m-sec) (sec/token-auth-mw m-sec)
-                          (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
+             :middleware [(sec/qs->token-mw m-sec)
+                          (sec/session-or-token-mw m-sec)
+                          (sec/cors-mw m-sec)
+                          (sec/authenticated-mw m-sec)]
              (GET "/ping" []
                   (http/ok {:auth "ok"}))
              (GET "/streams" []
@@ -208,7 +216,7 @@
          (response/resource-response "index.html"
                                      {:root "public/ui"}))
     (context "/ws" []
-             :middleware [(sec/qs->token-mw m-sec) (sec/token-auth-mw m-sec)
+             :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
                           (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
              (routes (rjson/wrap-json-body
                       (pms/wrap-params
@@ -219,4 +227,4 @@
                       {:keywords? true})))
     (route/resources "/")
     (route/not-found (http/not-found "Not found")))
-  (reload/wrap-reload #'app-no-reload))
+  (wrap-session (reload/wrap-reload #'app-no-reload)))

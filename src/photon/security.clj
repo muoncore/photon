@@ -8,6 +8,7 @@
             [clj-time.core :as time]
             [ring.util.http-response :refer :all]
             [buddy.auth.backends.token :refer [jws-backend token-backend]]
+            [buddy.auth.backends.session :refer [session-backend]]
             [com.stuartsierra.component :as component]))
 
 (defn basic-auth [user-info]
@@ -65,6 +66,9 @@
   (authenticated-mw [this])
   (cors-mw [this])
   (token-auth-mw [this])
+  (session-mw [this])
+  (basic-or-session-mw [this])
+  (session-or-token-mw [this])
   (auth-credentials-response [this req])
   (qs->token-mw [this]))
 
@@ -74,6 +78,14 @@
     (fn [handler]
       (wrap-authentication
        handler (basic-backend {:username username :password password}))))
+  (session-mw [this]
+    (fn [handler]
+      (wrap-authentication handler (session-backend))))
+  (basic-or-session-mw [this]
+    (fn [handler]
+      (wrap-authentication
+       handler (basic-backend {:username username :password password})
+       (session-backend))))
   (authenticated-mw [this]
     (fn [handler]
       (fn [request]
@@ -90,6 +102,11 @@
                         "GET, PUT, PATCH, POST, DELETE, OPTIONS")
               (assoc-in [:headers "Access-Control-Allow-Headers"]
                         "Authorization, Content-Type"))))))
+  (session-or-token-mw [this]
+    (fn [handler]
+      (wrap-authentication
+       handler (session-backend) (jws-token-backend secret)
+       (token-backend {:authfn (simple-token-fn tokens)}))))
   (token-auth-mw [this]
     (fn [handler]
       (wrap-authentication
