@@ -105,57 +105,57 @@
                  #js {:className "radio"}
                  "Language:"
                  (map #(dom/div
-                           nil
-                         (dom/input
-                             #js {:type "checkbox"
-                                  :checked (= % (:language data))
-                                  :onChange
-                                  (fn [ev] (om/set-state! owner :language %))})
-                         %)
+                        nil
+                        (dom/input
+                         #js {:type "checkbox"
+                              :checked (= % (:language data))
+                              :onChange
+                              (fn [ev] (om/set-state! owner :language %))})
+                        %)
                       ["clojure" "javascript"]))
           (dom/div nil "Initial value")
           (dom/pre
-              nil
-            (dom/code #js {:className "clojure"}
-              (dom/div
-                  #js {:contentEditable "true"
-                       :ref "initial-value-box"
-                       :className "clojure"
-                       :onBlur
-                       (fn [ev]
-                         (om/set-state! owner :initial-value
-                                           (.-textContent (.-target ev)))
-                         (update-box owner "initial-value-box"))}
-                (:initial-value data))))
+           nil
+           (dom/code #js {:className "clojure"}
+                     (dom/div
+                      #js {:contentEditable "true"
+                           :ref "initial-value-box"
+                           :className "clojure"
+                           :onBlur
+                           (fn [ev]
+                             (om/set-state! owner :initial-value
+                                            (.-textContent (.-target ev)))
+                             (update-box owner "initial-value-box"))}
+                      (:initial-value data))))
           (dom/div nil "Code: content of (fn [prev item] ... )")
           (dom/pre
-              nil
-            (dom/code #js {:className "clojure"}
-              (dom/div
-                  #js {:contentEditable "true"
-                       :ref "code-box"
-                       :className "clojure"
-                       :onBlur
-                       (fn [ev]
-                         (om/set-state! owner :reduction
-                                     (.-textContent (.-target ev)))
-                         (update-box owner "code-box"))}
-                (:reduction data))))
+           nil
+           (dom/code #js {:className "clojure"}
+                     (dom/div
+                      #js {:contentEditable "true"
+                           :ref "code-box"
+                           :className "clojure"
+                           :onBlur
+                           (fn [ev]
+                             (om/set-state! owner :reduction
+                                            (.-textContent (.-target ev)))
+                             (update-box owner "code-box"))}
+                      (:reduction data))))
           (dom/div
-              nil
-            (dom/button
-                #js {:onClick
-                     (fn [_]
-                       (go
-                         (<! (post-api "/api/projection"
-                                       {:json-params
-                                        (select-keys data
-                                                     [:projection-name
-                                                      :stream-name
-                                                      :initial-value
-                                                      :reduction
-                                                      :language])}))))}
-                "Register projection")))))))
+           nil
+           (dom/button
+            #js {:onClick
+                 (fn [_]
+                   (go
+                     (<! (post-api "/api/projection"
+                                   {:json-params
+                                    (select-keys data
+                                                 [:projection-name
+                                                  :stream-name
+                                                  :initial-value
+                                                  :reduction
+                                                  :language])}))))}
+            "Register projection")))))))
 
 (defn subscribe-projections! [owner]
   (go
@@ -294,12 +294,15 @@
     (did-mount [_]
       #_(.log js/console "Update: code-block")
       (dorun (map #(.highlightBlock js/hljs %) ($ "code"))))
+    om/IDidUpdate
+    (did-update [_ _ _]
+      (dorun (map #(.highlightBlock js/hljs %) ($ "code"))))
     om/IRender
     (render [_]
       (dom/pre nil
                (dom/code #js
                          {:className "clojure"}
-                         (clj->str c))))))
+                         (if (string? c) c (clj->str c)))))))
 
 (defn widget-projections [data owner]
   (reify
@@ -839,6 +842,8 @@
                              (:streams data))))))))
 
 (def type-mappings {"s/Str" "string"
+                    "s/Num" "num"
+                    {:_ nil} "null"
                     "s/Bool" "bool"})
 
 (defn type->text [t]
@@ -909,10 +914,12 @@
   (reduce #(assoc-in %1 (key %2) {:leaf (assoc (val %2) :path (key %2))})
           {} (:m schema)))
 
-(defn produce-tree! [data ch]
+(defn produce-tree! [data ch ch-click]
   (let [tj (tree->js (schema->tree (:schema data)))
         cd (clj->js {:core {:data tj}})]
     (.jstree ($ :#tree) cd)
+    (.on ($ :#tree) "select_node.jstree"
+         (fn [_ data] (go (>! ch-click data))))
     (.on ($ :#tree) "hover_node.jstree"
          (fn [_ data] (go (>! ch data))))))
 
@@ -953,19 +960,85 @@
                                        ", "
                                        (map name (keys (:values sch)))))))])))))))
 
+(defn construct-code [m]
+  (let [node (js->clj (:var m) :keywordize-keys true)
+        sch (-> node :node :original :schema)
+        action (condp = (:action m)
+                 :group-by (str "  (update prev\n"
+                                "          (-> next :payload "
+                                (clojure.string/join " " (map keyword (:path sch)))
+                                ")\n"
+                                "          (fn [old]\n"
+                                "            (if (nil? old)\n"
+                                "              [next]\n"
+                                "              (conj old next))))") 
+                 "  (conj prev next)")
+        iv (condp = (:action m) :group-by "{}" "[]")]
+    [iv (str "(fn [prev next]\n" action ")")]))
+
+(defn var-actions [data owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      (go
+        (loop [elem (<! (:ch data))]
+          (om/update-state! owner (fn [old] (assoc old :var elem)))
+          (recur (<! (:ch data)))))
+      {:var nil})
+    om/IRenderState
+    (render-state [_ state]
+      (if (nil? (:var state))
+        (dom/p nil "Select a variable to get stated")
+        (let [node (js->clj (:var state) :keywordize-keys true)
+              sch (-> node :node :original :schema)
+              path (clojure.string/join "." (:path sch))
+              [iv code] (construct-code state)]
+          (dom/div
+           nil
+           (dom/p nil (str "Selected variable: " path))
+           (dom/button
+            #js {:onClick (fn [ev]
+                            (om/update-state! owner
+                                              (fn [old]
+                                                (assoc old :action :group-by))))}
+            "Group by")
+           (dom/br nil)
+           (dom/label nil "Initial value")
+           (om/build code-block iv)
+           (dom/label nil "Code")
+           (om/build code-block code)
+           (dom/label nil "Projection name")
+           (dom/input #js {:ref "projection-name"})
+           (dom/button
+            #js {:onClick
+                 (fn [ev]
+                   (let [pn (.-value (om/get-node owner "projection-name"))]
+                     (go
+                       (<! (post-api "/api/projection"
+                                     {:json-params
+                                      {:projection-name pn
+                                       :stream-name (:stream-name data)
+                                       :initial-value iv
+                                       :reduction code
+                                       :language "clojure"}})))))}
+            "Create projection")))))))
+
 (defn stream-schema [data owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:ch (chan)})
+      {:ch (chan)
+       :ch-click (chan)})
     om/IDidMount
     (did-mount [_]
-      (produce-tree! data (:ch (om/get-state owner))))
+      (produce-tree! data (:ch (om/get-state owner))
+                     (:ch-click (om/get-state owner))))
     om/IDidUpdate
     (did-update [_ _ _]
       (go (>! (:ch (om/get-state owner)) ""))
       (clean-tree! data)
-      (produce-tree! data (:ch (om/get-state owner))))
+      (produce-tree! data (:ch (om/get-state owner))
+                     (:ch-click (om/get-state owner))))
     om/IRender
     (render [_]
       (dom/div
@@ -975,9 +1048,14 @@
         (dom/div
          #js {:className "row"}
          (dom/div #js {:className "col-lg-4" :id "tree"})
-         (dom/div #js {:className "col-lg-4" :id "tree"}
-                  (om/build var-inspector (:ch (om/get-state owner))))))
-       (dom/p nil (pr-str data))))))
+         (dom/div
+          #js {:className "col-lg-4"}
+          (dom/div #js {:className "row small-widget-box"}
+                   (om/build var-inspector (:ch (om/get-state owner))))
+          (dom/div #js {:className "row small-widget-box"}
+                   (om/build var-actions {:ch (:ch-click (om/get-state owner))
+                                          :stream-name (:stream data)})))))
+       #_(dom/p nil (pr-str data))))))
 
 (defn widget-analyse [data owner]
   (reify

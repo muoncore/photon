@@ -106,6 +106,17 @@ td, th{
     width: 500px;
 }
 
+.small-widget-box{
+    display: inline-block;
+    width: 100%;
+    min-height: 100px;
+    margin: 25px;
+    background-color: #fafafa;
+    -moz-box-shadow: 3px 3px 5px 6px #ccc;
+    -webkit-box-shadow: 3px 3px 5px 6px #ccc;
+    box-shadow: 3px 3px 5px 6px #ccc;
+}
+
 .widget-box{
     display: inline-block;
     width: 100%;
