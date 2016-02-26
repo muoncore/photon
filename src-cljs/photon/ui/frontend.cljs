@@ -976,6 +976,21 @@
         iv (condp = (:action m) :group-by "{}" "[]")]
     [iv (str "(fn [prev next]\n" action ")")]))
 
+(def action-mappings {:group-by "Group by"
+                      :select "Select"})
+
+(defn action-item [data owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/p nil (str (get action-mappings (key (first data)))
+                      " " (val (first data))) " "
+             (dom/a #js {:href "#"} "[X]")))))
+
+(defn action-list->actions [action-list]
+  (mapcat (fn [k] (map #(hash-map k %) (get action-list k)))
+          (keys action-list)))
+
 (defn var-actions [data owner]
   (reify
     om/IInitState
@@ -984,7 +999,8 @@
         (loop [elem (<! (:ch data))]
           (om/update-state! owner (fn [old] (assoc old :var elem)))
           (recur (<! (:ch data)))))
-      {:var nil})
+      {:var nil
+       :action-list {}})
     om/IRenderState
     (render-state [_ state]
       (if (nil? (:var state))
@@ -992,17 +1008,32 @@
         (let [node (js->clj (:var state) :keywordize-keys true)
               sch (-> node :node :original :schema)
               path (clojure.string/join "." (:path sch))
-              [iv code] (construct-code state)]
+              [iv code] (construct-code state)
+              upd (fn [k v]
+                    (om/update-state! owner (fn [o] (assoc o k v))))]
           (dom/div
            nil
            (dom/p nil (str "Selected variable: " path))
            (dom/button
-            #js {:onClick (fn [ev]
-                            (om/update-state! owner
-                                              (fn [old]
-                                                (assoc old :action :group-by))))}
+            #js {:onClick
+                 (fn [ev]
+                   (om/update-state!
+                    owner
+                    (fn [old] (update-in old [:action-list :group-by]
+                                         #(conj (into #{} %) path)))))}
             "Group by")
-           (dom/br nil)
+           (dom/button
+            #js {:onClick
+                 (fn [ev]
+                   (om/update-state!
+                    owner
+                    (fn [old] (update-in old [:action-list :select]
+                                         #(conj (into #{} %) path)))))}
+            "Select")
+           (apply dom/div
+                  nil
+                  (map #(om/build action-item %)
+                       (action-list->actions (:action-list state))))
            (dom/label nil "Initial value")
            (om/build code-block iv)
            (dom/label nil "Code")
