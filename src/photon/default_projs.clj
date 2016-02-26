@@ -9,13 +9,14 @@
   (sfn/fn [p n]
     (let [ps (get p (:stream-name n) {})
           old-total (get ps :total-events 0)
+          new-total (inc old-total)
           old-schema (get ps :schema {})
-          schema (if (< (rand) 0.02)
+          schema (if (or (< old-total 10) (< (rand) 0.02))
                    (clj-schema-inspector.core/serialise
                     (clj-schema-inspector.core/add-map
                      old-schema (:payload n)))
                    old-schema)]
-      (assoc p (:stream-name n) {:total-events (inc old-total)
+      (assoc p (:stream-name n) {:total-events new-total
                                  :schema schema}))))
 
 (def default-projections
