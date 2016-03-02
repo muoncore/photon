@@ -32,6 +32,10 @@
                         (clojure.string/join
                          ":" (conj (rest tokens) prefix))))
 
+(defn js->cljk [n]
+  (.log js/console "js->cljk")
+  (js->clj n :keywordize-keys true))
+
 (defn call-api
   ([f url]
    (call-api f url ""))
@@ -602,7 +606,7 @@
   #_(.log js/console "set-status" class title items))
 
 (defn handle-iframe-response [json-msg]
-  (let [msg (js->clj json-msg :keywordize-keys true)]
+  (let [msg (js->cljk json-msg)]
     #_(.log js/console (str "iframe-response: " msg))
     (cond
       (= "OK" (:status msg)) (str "Uploaded to stream: " (:stream-name msg))
@@ -946,7 +950,7 @@
     om/IRenderState
     (render-state [_ state]
       (when-not (nil? (:jstree.node state))
-        (let [node (js->clj (:jstree.node state) :keywordize-keys true)
+        (let [node (js->cljk (:jstree.node state))
               sch (-> node :node :original :schema)
               path (clojure.string/join "." (:path sch))]
           (apply dom/div
@@ -960,32 +964,77 @@
                                        ", "
                                        (map name (keys (:values sch)))))))])))))))
 
-(defn construct-code [m]
-  (let [node (js->clj (:var m) :keywordize-keys true)
+(defn node->path [node]
+  (let [node (js->cljk node)
         sch (-> node :node :original :schema)
-        action (condp = (:action m)
-                 :group-by (str "  (update prev\n"
-                                "          (-> next :payload "
-                                (clojure.string/join " " (map keyword (:path sch)))
-                                ")\n"
-                                "          (fn [old]\n"
-                                "            (if (nil? old)\n"
-                                "              [next]\n"
-                                "              (conj old next))))") 
-                 "  (conj prev next)")
-        iv (condp = (:action m) :group-by "{}" "[]")]
-    [iv (str "(fn [prev next]\n" action ")")]))
+        path (clojure.string/join "." (:path sch))]
+    path))
+
+(defn group-by-structure [gs]
+  (let [nodes (map #(js->cljk %) gs)
+        schs (map #(-> % :node :original :schema) nodes)
+        paths (map #(into [] (map keyword (:path %))) schs)]
+    (str "{:group-by {"
+         (clojure.string/join
+          " "
+          (map (fn [x y]
+                 (str (pr-str y)
+                      " (-> next "
+                      (clojure.string/join
+                       " " (map #(str ":" %) (:path x)))
+                      ")"))
+               schs paths))
+         "}}")))
+
+(defn select-structure [gs]
+  (let [nodes (map #(js->cljk %) gs)
+        schs (map #(-> % :node :original :schema) nodes)
+        paths (map #(clojure.string/join "." (:path %)) schs)
+        bdgs (str "{"
+                  (clojure.string/join
+                   " "
+                   (map (fn [x]
+                          (let [v (into [] (map keyword (:path x)))
+                                vt (clojure.string/join " " v)]
+                            (str "[" vt "] (get-in next [" vt "])")))
+                        schs))
+                  "}")]
+    (str "let [next (reduce (fn [m m2] "
+         "(assoc-in m (key m2) (val m2))"
+         ") {} " bdgs ")] ")))
+
+(defn construct-code [m]
+  (let [action-list (:action-list m)
+        group-bys (:group-by action-list)
+        gbs (group-by-structure group-bys)
+        selects (:select action-list)
+        let-body (when-not (empty? selects) (select-structure selects))
+        action (if (empty? group-bys)
+                 "(conj prev next)"
+                 (str "(update prev "
+                      gbs
+                      " (fn [old] (if (nil? old)"
+                      " [next] (conj old next)"
+                      ")))"))
+        iv (if (empty? group-bys) "[]" "{}")]
+    [iv (str "(fn [prev next] " (if (empty? selects) action
+                                    (str "(" let-body action ")"))
+             ")")]))
 
 (def action-mappings {:group-by "Group by"
                       :select "Select"})
 
-(defn action-item [data owner]
+(defn action-item [{:keys [action fn-delete] :as data} owner]
   (reify
     om/IRender
     (render [_]
-      (dom/p nil (str (get action-mappings (key (first data)))
-                      " " (val (first data))) " "
-             (dom/a #js {:href "#"} "[X]")))))
+      (let [k (key (first action))
+            v (val (first action))
+            path (node->path v)]
+        (dom/p nil (str (get action-mappings k) " " path) " "
+               (dom/a #js {:href "#"
+                           :onClick (fn [ev] (fn-delete k v))}
+                      "[X]"))))))
 
 (defn action-list->actions [action-list]
   (mapcat (fn [k] (map #(hash-map k %) (get action-list k)))
@@ -1005,7 +1054,7 @@
     (render-state [_ state]
       (if (nil? (:var state))
         (dom/p nil "Select a variable to get stated")
-        (let [node (js->clj (:var state) :keywordize-keys true)
+        (let [node (js->cljk (:var state))
               sch (-> node :node :original :schema)
               path (clojure.string/join "." (:path sch))
               [iv code] (construct-code state)
@@ -1020,7 +1069,7 @@
                    (om/update-state!
                     owner
                     (fn [old] (update-in old [:action-list :group-by]
-                                         #(conj (into #{} %) path)))))}
+                                         #(conj (into #{} %) node)))))}
             "Group by")
            (dom/button
             #js {:onClick
@@ -1028,11 +1077,20 @@
                    (om/update-state!
                     owner
                     (fn [old] (update-in old [:action-list :select]
-                                         #(conj (into #{} %) path)))))}
+                                         #(conj (into #{} %) node)))))}
             "Select")
+           (.log js/console (:action-list->actions (:action-list state)))
            (apply dom/div
                   nil
-                  (map #(om/build action-item %)
+                  (map #(om/build action-item
+                                  {:action %
+                                   :fn-delete
+                                   (fn [k v]
+                                     (om/update-state!
+                                      owner
+                                      (fn [old]
+                                        (update-in old [:action-list k]
+                                                   (fn [x] (disj x v))))))})
                        (action-list->actions (:action-list state))))
            (dom/label nil "Initial value")
            (om/build code-block iv)
@@ -1044,6 +1102,7 @@
             #js {:onClick
                  (fn [ev]
                    (let [pn (.-value (om/get-node owner "projection-name"))]
+                     (.log js/console (pr-str code))
                      (go
                        (<! (post-api "/api/projection"
                                      {:json-params
@@ -1090,8 +1149,8 @@
 
 (defn widget-analyse [data owner]
   (reify
-    om/IRenderState
-    (render-state [_ state]
+    om/IInitState
+    (init-state [_]
       (let [streams (map :stream (:streams data))
             default (:stream (first (sort-by #(- (:total-events %))
                                              (:streams data))))
@@ -1104,15 +1163,20 @@
                        (fn [old] (assoc old :analyse-stream default)))
                 default)
               (:analyse-stream @app-state))]
-        (dom/div
-         nil
-         (dom/h2 nil "Data Analyser")
-         (om/build list-streams
-                   {:analyse-stream analyse-stream
-                    :streams streams})
-         (om/build stream-schema
-                   (first (filter #(= analyse-stream (:stream %))
-                                  (:streams data)))))))))
+        {:analyse-stream analyse-stream
+         :streams streams}))
+    om/IRenderState
+    (render-state [_ state]
+      (.log js/console "lala")
+      (dom/div
+       nil
+       (dom/h2 nil "Data Analyser")
+       (om/build list-streams
+                 {:analyse-stream (:analyse-stream state)
+                  :streams (:streams state)})
+       (om/build stream-schema
+                 (first (filter #(= (:analyse-stream state) (:stream %))
+                                (:streams data))))))))
 
 (defn full-page [data owner]
   (reify
