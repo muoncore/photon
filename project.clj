@@ -33,7 +33,7 @@
                  [metosin/compojure-api "1.0.0"]
                  [dire "0.5.4"]
                  [org.slf4j/slf4j-log4j12 "1.7.14"]
-                 [tranchis/clj-schema-inspector "0.5.1"]
+                 [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.7.228"]
