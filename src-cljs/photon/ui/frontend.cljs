@@ -830,8 +830,9 @@
                                "Login")))))))
 
 (defn list-streams [data owner]
-  (let [upd (fn [v] (swap! app-state
-                           (fn [old] (assoc old :analyse-stream v))))]
+  (let [upd (fn [v] (om/update-state!
+                     (:owner data)
+                     (fn [old] (assoc old :analyse-stream v))))]
     (reify
       om/IRender
       (render [_]
@@ -1153,26 +1154,17 @@
     (init-state [_]
       (let [streams (map :stream (:streams data))
             default (:stream (first (sort-by #(- (:total-events %))
-                                             (:streams data))))
-            analyse-stream
-            (if (or (not (contains? (into #{} streams)
-                                    (:analyse-stream @app-state)))
-                    (nil? (:analyse-stream @app-state)))
-              (do
-                (swap! app-state
-                       (fn [old] (assoc old :analyse-stream default)))
-                default)
-              (:analyse-stream @app-state))]
-        {:analyse-stream analyse-stream
+                                             (:streams data))))]
+        {:analyse-stream default
          :streams streams}))
     om/IRenderState
     (render-state [_ state]
-      (.log js/console "lala")
       (dom/div
        nil
        (dom/h2 nil "Data Analyser")
        (om/build list-streams
-                 {:analyse-stream (:analyse-stream state)
+                 {:owner owner
+                  :analyse-stream (:analyse-stream state)
                   :streams (:streams state)})
        (om/build stream-schema
                  (first (filter #(= (:analyse-stream state) (:stream %))
@@ -1202,7 +1194,8 @@
             "Projections" (om/build widget-projections (assoc state :full-page-owner owner))
             "New Projection" (om/build widget-new-projection state)
             "New Stream" (om/build widget-new-stream state)
-            "Analyse Data" (om/build widget-analyse state)))))))
+            "Analyse Data" (when (contains? state :streams)
+                             (om/build widget-analyse state))))))))
 
 (go
   (let [res (<! (get-api "/api/ping"))
