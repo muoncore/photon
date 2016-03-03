@@ -710,7 +710,7 @@
 
 (defn clean-stream [stream]
   (-> stream
-      (dissoc :schema)
+      (dissoc :schemas)
       (assoc :export :action/export-stream)))
 
 (defn widget-streams [data owner]
@@ -846,6 +846,34 @@
                                 % {:text (:analyse-stream data)}) %)
                              (:streams data))))))))
 
+(defn list-versions [data owner]
+  (reify
+    om/IWillReceiveProps
+    (will-receive-props [_ next-props]
+      (let [svs (om/get-node owner "schema-version-select")
+            cv (cljs.reader/read-string (.-value svs))]
+        (when-not (contains? (:schemas (:schema next-props)) cv)
+          (om/update-state!
+           (:owner next-props)
+           (fn [old]
+             (assoc old :analyse-version (first (keys (:schemas (:schema next-props))))))))))
+    om/IRender
+    (render [_]
+      (dom/div nil
+               (dom/p nil "Schema version:")
+               (apply dom/select
+                      #js {:ref "schema-version-select"
+                           :onChange
+                           (fn [x]
+                             (om/update-state!
+                              (:owner data)
+                              (fn [old]
+                                (assoc old :analyse-version
+                                       (cljs.reader/read-string (.-value (.-target x)))))))}
+                      (map #(dom/option
+                             (add-select-state (pr-str %) nil) (pr-str %))
+                           (keys (:schemas (:schema data)))))))))
+
 (def type-mappings {"s/Str" "string"
                     "s/Num" "num"
                     {:_ nil} "null"
@@ -920,7 +948,7 @@
           {} (:m schema)))
 
 (defn produce-tree! [data ch ch-click]
-  (let [tj (tree->js (schema->tree (:schema (:__unversioned__ (:schemas data)))))
+  (let [tj (tree->js (schema->tree (:schema data)))
         cd (clj->js {:core {:data tj}})]
     (.jstree ($ :#tree) cd)
     (.on ($ :#tree) "select_node.jstree"
@@ -929,7 +957,7 @@
          (fn [_ data] (go (>! ch data))))))
 
 (defn clean-tree! [data]
-  (let [tj (tree->js (schema->tree (:schema (:__unversioned__ (:schemas data)))))
+  (let [tj (tree->js (schema->tree (:schema data)))
         cd (clj->js {:core {:data tj}})
         t (.jstree ($ :#tree) true)]
     (set! (.-data (.-core (.-settings t))) cd)
@@ -1018,9 +1046,9 @@
                       " [next] (conj old next)"
                       ")))"))
         iv (if (empty? group-bys) "[]" "{}")]
-    [iv (str "(fn [prev next] " (if (empty? selects) action
-                                    (str "(" let-body action ")"))
-             ")")]))
+    [iv (str "(fn [prev next] "
+             (if (empty? selects) action
+                 (str "(" let-body action ")")) ")")]))
 
 (def action-mappings {:group-by "Group by"
                       :select "Select"})
@@ -1153,22 +1181,27 @@
     om/IInitState
     (init-state [_]
       (let [streams (map :stream (:streams data))
-            default (:stream (first (sort-by #(- (:total-events %))
-                                             (:streams data))))]
+            def-schema (first (sort-by #(- (:total-events %))
+                                       (:streams data)))
+            default (:stream def-schema)]
         {:analyse-stream default
+         :analyse-version (first (keys (:schemas def-schema)))
          :streams streams}))
     om/IRenderState
     (render-state [_ state]
-      (dom/div
-       nil
-       (dom/h2 nil "Data Analyser")
-       (om/build list-streams
-                 {:owner owner
-                  :analyse-stream (:analyse-stream state)
-                  :streams (:streams state)})
-       (om/build stream-schema
-                 (first (filter #(= (:analyse-stream state) (:stream %))
-                                (:streams data))))))))
+      (let [schema (first (filter #(= (:analyse-stream state) (:stream %))
+                                  (:streams data)))
+            my-schema (get (:schemas schema) (:analyse-version state))
+            with-name (merge my-schema (dissoc schema :schemas))]
+        (dom/div
+         nil
+         (dom/h2 nil "Data Analyser")
+         (om/build list-streams
+                   {:owner owner
+                    :analyse-stream (:analyse-stream state)
+                    :streams (:streams state)})
+         (om/build list-versions {:owner owner :schema schema})
+         (om/build stream-schema with-name))))))
 
 (defn full-page [data owner]
   (reify
