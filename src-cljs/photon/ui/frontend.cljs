@@ -920,7 +920,7 @@
           {} (:m schema)))
 
 (defn produce-tree! [data ch ch-click]
-  (let [tj (tree->js (schema->tree (:schema data)))
+  (let [tj (tree->js (schema->tree (:schema (:__unversioned__ (:schemas data)))))
         cd (clj->js {:core {:data tj}})]
     (.jstree ($ :#tree) cd)
     (.on ($ :#tree) "select_node.jstree"
@@ -929,7 +929,7 @@
          (fn [_ data] (go (>! ch data))))))
 
 (defn clean-tree! [data]
-  (let [tj (tree->js (schema->tree (:schema data)))
+  (let [tj (tree->js (schema->tree (:schema (:__unversioned__ (:schemas data)))))
         cd (clj->js {:core {:data tj}})
         t (.jstree ($ :#tree) true)]
     (set! (.-data (.-core (.-settings t))) cd)

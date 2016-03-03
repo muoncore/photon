@@ -8,7 +8,7 @@
 (def stream-fn
   (sfn/fn [p n]
     (let [ps (get p (:stream-name n) {})
-          schema-version (get n :schema :__unversioned__)
+          schema-version (if-let [v (get n :schema)] v :__unversioned__)
           old-total (get ps :total-events 0)
           old-local-total (get-in ps [:schemas schema-version
                                       :total-events]
