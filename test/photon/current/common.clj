@@ -59,7 +59,7 @@
   (db/lazy-events-page [this stream-name date page] []))
 
 (defn post-one-event
-  ([m url]
+  ([m url schema-version]
    (cl/with-muon m
      (cl/request! (str "request://" url "/events")
                   {"service-id","request://chatter",
@@ -71,10 +71,13 @@
                                "keyphrases",[{"phrase",
                                               "substitutable",
                                               "count",1}]}},
+                   "schema", schema-version,
                    "stream-name","chatter",
                    "server-timestamp",1420660080000})
      #_(cl/query-event "request://photon/projection"
                        {:projection-name "count"}))) 
+  ([m url]
+   (post-one-event m url nil))
   ([m]
    (post-one-event m "photon-integration-test")))
 
