@@ -389,10 +389,15 @@
               (log/trace "LOOP: create-telnet-socket!")
               (recur (<! ch))))))
       (go
-        (loop [s (.accept ss)]
-          (swap! sockets conj s)
-          (log/trace "LOOP: create-telnet-socket! - accept")
-          (recur (.accept ss))))
+        (loop [s (try
+                   (.accept ss)
+                   (catch java.net.SocketException e
+                     (log/trace "Socket closed")
+                     nil))]
+          (when-not (nil? s)
+            (swap! sockets conj s)
+            (log/trace "LOOP: create-telnet-socket! - accept")
+            (recur (.accept ss)))))
       ss)
     (catch java.net.BindException e
       (log/error (str "Port " port " unavailable, "
@@ -413,9 +418,9 @@
 (defn empty! [ch]
   (close! ch)
   (log/trace "Emptying channel" ch)
-  (go-loop [elem (<! ch)]
-    (when-not (nil? elem)
-      (recur (<! elem))))
+  (<!! (go-loop [elem (<! ch)]
+         (when-not (nil? elem)
+           (recur (<! ch)))))
   (log/trace "Channel" ch "empty, closing")
   (close! ch))
 
