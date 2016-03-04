@@ -123,14 +123,19 @@
         stream-name (:stream-name body)
         language (:language body)
         code (:reduction body)
-        initial-value (:initial-value body)]
-    (streams/register-query!
-     stm
-     {:projection-name projection-name
-      :stream-name stream-name
-      :language (keyword language)
-      :reduction code
-      :initial-value (read-string initial-value)})
+        initial-value (:initial-value body)
+        projection-descriptor {:projection-name projection-name
+                               :stream-name stream-name
+                               :language (keyword language)
+                               :reduction code
+                               :initial-value (read-string initial-value)}]
+    (try
+      (spit (str (:projections.path (:conf stm)) "/" projection-name ".edn")
+            (with-out-str (clojure.pprint/pprint projection-descriptor)))
+      (catch java.io.FileNotFoundException e
+        (log/fatal "projections.path is not writable. Not stopping, but"
+                   "this means that configuration is not correct!")))
+    (streams/register-query! stm projection-descriptor)
     {:correct true}))
 
 (defn post-event! [stm ev]

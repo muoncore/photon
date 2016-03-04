@@ -4,6 +4,7 @@
             [photon.default-projs :as dp]
             [photon.exec :refer :all]
             [photon.db :as db]
+            [clojure.pprint :as pp]
             [com.stuartsierra.component :as component]
             [clojure.string :as str]
             [clojure.core.async :as async
@@ -205,7 +206,7 @@
    [s]))
 
 (defn as-register-query!
-  [{:keys [state projection-mix telnet-mix] :as stream}
+  [{:keys [conf state projection-mix telnet-mix] :as stream}
    {:keys [stream-name language reduction
            initial-value projection-name]
     :as projection-descriptor}]
