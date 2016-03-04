@@ -29,7 +29,48 @@
       (fact (:status res) => 200)
       (fact (:body res) => {:auth "ok"})))
   #_(let [token (:simple_token
-               (:body (client/get "http://localhost:9997/api/ping")))]
-    
-   => (throws))
+                 (:body (client/get "http://localhost:9997/api/ping")))]
+      => (throws))
   (component/stop s))
+
+(let [s (new-web-server (java.util.UUID/randomUUID))
+      res (client/get "http://localhost:9997/auth/token"
+                      {:basic-auth ["test" "test"]
+                       :accept :edn :as :clojure})
+      token (:token (:body res))]
+  (fact "Token is correct"
+        (:status (client/get
+                  (str "http://localhost:9997/api/ping?access_token="
+                       token)
+                  {:accept :edn :as :clojure}))
+        => 200)
+  (component/stop s)
+  (let [s (new-web-server (java.util.UUID/randomUUID))]
+    (fact "Token is incorrect"
+          (:status (client/get
+                    (str "http://localhost:9997/api/ping?access_token="
+                         token)
+                    {:accept :edn :as :clojure}))
+          => (throws)) 
+    (component/stop s)))
+
+(let [s (new-web-server (java.util.UUID/randomUUID) "secret")
+      res (client/get "http://localhost:9997/auth/token"
+                      {:basic-auth ["test" "test"]
+                       :accept :edn :as :clojure})
+      token (:token (:body res))]
+  (fact "Token is correct"
+        (:status (client/get
+                  (str "http://localhost:9997/api/ping?access_token="
+                       token)
+                  {:accept :edn :as :clojure}))
+        => 200)
+  (component/stop s)
+  (let [s (new-web-server (java.util.UUID/randomUUID) "secret")]
+    (fact "Token is still correct"
+          (:status (client/get
+                    (str "http://localhost:9997/api/ping?access_token="
+                         token)
+                    {:accept :edn :as :clojure}))
+          => 200) 
+    (component/stop s)))

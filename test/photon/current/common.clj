@@ -81,7 +81,7 @@
   ([m]
    (post-one-event m "photon-integration-test")))
 
-(defn new-component [c uuid]
+(defn new-component [c uuid secret]
   (let [temp-file (.getAbsolutePath
                    (java.io.File/createTempFile "muon" ".json"))
         conf {:amqp.url :local
@@ -91,6 +91,9 @@
               :parallel.projections 2
               :admin.user "test"
               :admin.pass (hashers/encrypt "test")
+              :admin.secret (if (nil? secret)
+                              (java.util.UUID/randomUUID)
+                              secret)
               :projections.port 9998
               :events.port 9999}
         comp (component/start
@@ -101,12 +104,15 @@
     (db/delete-all! d)
     comp))
 
-(defn new-server [uuid]
-  (let [comp (new-component core/photon-system uuid)]
-    (:muon (:muon-service comp))))
+(defn new-server
+  ([uuid] (new-server uuid nil))
+  ([uuid secret]
+   (let [comp (new-component core/photon-system uuid secret)]
+     (:muon (:muon-service comp)))))
 
-(defn new-web-server [uuid]
-  (new-component core/photon-component uuid))
+(defn new-web-server
+  ([uuid] (new-web-server uuid nil))
+  ([uuid secret] (new-component core/photon-component uuid secret)))
 
 (defmacro time-limited [ms & body]
   `(let [f# (future ~@body)]
