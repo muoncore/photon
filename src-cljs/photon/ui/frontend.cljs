@@ -1186,11 +1186,12 @@
             default (:stream def-schema)]
         {:analyse-stream default
          :analyse-version (first (keys (:schemas def-schema)))
-         :streams streams}))
+         :streams streams
+         :data data}))
     om/IRenderState
     (render-state [_ state]
       (let [schema (first (filter #(= (:analyse-stream state) (:stream %))
-                                  (:streams data)))
+                                  (:streams (:data state))))
             my-schema (get (:schemas schema) (:analyse-version state))
             with-name (merge my-schema (dissoc schema :schemas))]
         (dom/div
