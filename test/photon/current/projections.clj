@@ -147,10 +147,12 @@
                                                 :initial-value "0"}))
                   (Thread/sleep 5000)
                   (post-one-event m s-name)
+                  (Thread/sleep 5000)
                   (let [current-6 (:processed @(:stats stm))]
                     (fact "1011 events processed"
                           (- current-6 current-5) => 1011)
                     (api/delete-projection! stm "chatter-proj")
+                    (Thread/sleep 5000)
                     (post-one-event m s-name)
                     (let [current-7 (:processed @(:stats stm))]
                       (fact "1 events processed"
