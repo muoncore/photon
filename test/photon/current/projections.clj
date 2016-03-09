@@ -105,6 +105,7 @@
             (api/projection stm "chatter-proj2") => nil)
       (let [processed (:processed @(:stats stm))]
         (post-one-event m s-name)
+        (Thread/sleep 5000)
         (let [current (:processed @(:stats stm))]
           (fact "2 events processed"
                 (- current processed) => 2)
@@ -112,19 +113,23 @@
           (fact "chatter-proj does not exist"
                 (api/projection stm "chatter-proj") => nil)
           (post-one-event m s-name)
+          (Thread/sleep 5000)
           (let [current-2 (:processed @(:stats stm))]
             (fact "1 event processed"
                   (- current-2 current) => 1)
             (api/delete-projection! stm "dummy-proj")
             (post-one-event m s-name)
+            (Thread/sleep 5000)
             (let [current-3 (:processed @(:stats stm))]
               (fact "1 events processed"
                     (- current-3 current-2) => 1)
               (api/delete-projection! stm "__streams__")
+              (Thread/sleep 5000)
               (fact "__streams__ does not get deleted"
                     (:projection-name (api/projection stm "__streams__"))
                     => "__streams__")
               (post-one-event m s-name)
+              (Thread/sleep 5000)
               (let [current-4 (:processed @(:stats stm))]
                 (fact "1 events processed"
                       (- current-4 current-3) => 1)
@@ -136,6 +141,7 @@
                                               :initial-value "0"}))
                 (Thread/sleep 5000)
                 (post-one-event m s-name)
+                (Thread/sleep 5000)
                 (let [current-5 (:processed @(:stats stm))]
                   (fact "1010 events processed"
                         (- current-5 current-4) => 1010)
@@ -154,6 +160,7 @@
                     (api/delete-projection! stm "chatter-proj")
                     (Thread/sleep 5000)
                     (post-one-event m s-name)
+                    (Thread/sleep 5000)
                     (let [current-7 (:processed @(:stats stm))]
                       (fact "1 events processed"
                             (- current-7 current-6) => 1)))))))))))
