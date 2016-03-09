@@ -330,17 +330,21 @@
                                     #_(.log js/console (pr-str state))
                                     (assoc state :active-page "New Projection"))))}
            "+ New Projection")
-          (apply dom/table #js
-            {:className "table table-striped table-bordered table-hover table-heading"}
-            (apply dom/tr nil
-              (map #(dom/th #js {:style #js {:border "1px"}}
-                            (k->header (key %)))
-                   (filter-projection
-                    (first (:projections data)))))
-            (map #(om/build projection-item {:data data
-                                             :projection %
-                                             :fn-update fn-update})
-                 (:projections data)))
+          (dom/table
+           #js
+           {:className (str "table table-striped table-bordered "
+                            "table-hover table-heading")}
+           (apply dom/tbody
+                  nil
+                  (apply dom/tr nil
+                         (map #(dom/th #js {:style #js {:border "1px"}}
+                                       (k->header (key %)))
+                              (filter-projection
+                               (first (:projections data)))))
+                  (map #(om/build projection-item {:data data
+                                                   :projection %
+                                                   :fn-update fn-update})
+                       (:projections data))))
           (if (not (nil? (:active-projection state)))
             (let [block (om/build code-block (:active-projection state))]
               block)))))))
