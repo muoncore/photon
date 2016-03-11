@@ -2,6 +2,7 @@
   (:require [photon.streams :as streams]
             [schema.core :as s]
             [cheshire.core :as json]
+            [photon.default-projs :as dp]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async])
@@ -138,6 +139,14 @@
     (streams/register-query! stm projection-descriptor)
     {:correct true}))
 
+(defn delete-projection! [{:keys [conf] :as stm} projection-name]
+  (let [defaults (into #{} (map :projection-name dp/default-projections))]
+    (if-not (contains? defaults projection-name)
+      (let [f (str (:projections.path conf) "/" projection-name ".edn")]
+        (.delete (File. f))
+        {:correct (streams/unregister-query! stm projection-name)})
+      {:correct false})))
+
 (defn post-event! [stm ev]
   (streams/process-event! stm ev))
 
@@ -145,8 +154,8 @@
   {:projections
    (map
     (fn [v] (assoc v :fn (pr-str (:fn v))))
-    (map #(apply dissoc (deref %) filter-keys)
-         (vals (:queries @(:state stm)))))})
+    (map #(apply dissoc (deref (:projection-descriptor %)) filter-keys)
+         (vals (:projections @(:state stm)))))})
 
 (defn projections-without-val [stm]
   (filtered-projections stm [:_id :current-value]))
@@ -156,8 +165,10 @@
 
 (defn projection [stm projection-name]
   (log/trace "Querying" projection-name)
-  (let [res (first (filter #(= (name (:projection-name %)) projection-name)
-                           (map deref (vals (:queries @(:state stm))))))]
+  (let [res (first
+             (filter #(= (name (:projection-name %)) projection-name)
+                     (map (comp deref :projection-descriptor)
+                          (vals (:projections @(:state stm))))))]
     (log/trace "Result:" (pr-str res))
     (log/trace "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
     res))
@@ -183,8 +194,8 @@
    (map :projection-name
         (map
          (fn [v] (assoc v :fn (pr-str (:fn v))))
-         (map #(apply dissoc (deref %) [:_id])
-              (vals (:queries @(:state stm))))))})
+         (map #(apply dissoc (deref (:projection-descriptor %)) [:_id])
+              (vals (:projections @(:state stm))))))})
 
 (defn stream [stm stream-name & args]
   (let [m-args (apply hash-map args)

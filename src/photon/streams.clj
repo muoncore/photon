@@ -25,6 +25,8 @@
 ;; Stream protocols and multimethods
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defrecord Projection [ch-in ch-out projection-descriptor])
+
 (defprotocol ColdStream
   (clean! [this])
   (event [this stream-name order-id])
@@ -35,7 +37,7 @@
 
 (defprotocol EventProcessor
   (register-query! [this projection-descriptor])
-  (current-query-value [this projection-name])
+  (unregister-query! [this projection-name])
   (process-event! [this ev]))
 
 (defprotocol StreamProtocol
@@ -150,7 +152,7 @@
                            (conj real-streams stream-name))))))))
 
 (defn as-create-virtual-stream-endpoint!
-  [{:keys [muon state projections]} stream-name]
+  [{:keys [muon state proj-ch]} stream-name]
   (let [ch (chan (sliding-buffer 1))
         ch-muon-mult (mult ch)
         copy-ch (chan (sliding-buffer 1))
@@ -158,9 +160,9 @@
         t-ch (chan)]
     (tap ch-muon-mult copy-ch)
     (tap ch-mult t-ch)
-    (>!! projections {:stream-name stream-name
-                      :projection-name stream-name
-                      :mult ch-muon-mult})
+    (>!! proj-ch {:stream-name stream-name
+                  :projection-name stream-name
+                  :mult ch-muon-mult})
     (dosync (alter state
                    (fn [old-state]
                      (assoc (assoc-in old-state
@@ -234,15 +236,27 @@
       (tap mult-ch telnet-tap)
       (admix telnet-mix telnet-tap))
     (log/info "Starting projection loop for" projection-name)
-    (dosync (alter state
-                   (fn [old-state]
-                     (assoc
-                      (assoc-in old-state
-                                [:queries projection-name] running-query)
-                      :all-channels
-                      (conj (:all-channels old-state) ch)))))
+    (dosync
+     (alter state
+            (fn [old-state]
+              (-> old-state
+                  (assoc-in [:projections projection-name]
+                            (->Projection s ch running-query))
+                  (update :all-channels conj ch)))))
     (admix projection-mix to-mix)
     (log/info "All done for" projection-name)))
+
+(defn as-unregister-query! [{:keys [state]} projection-name]
+  (dosync
+   (if-let [projection (get-in @state [:projections projection-name])]
+     (do
+       (close! (:ch-in projection))
+       (close! (:ch-out projection))
+       (alter state
+              (fn [old-state]
+                (update-in old-state [:projections] dissoc projection-name)))
+       true)
+     false)))
 
 (defn as-process-event! [{:keys [stats db global-channel] :as stream}
                          ev]
@@ -273,7 +287,7 @@
   {:correct true})
 
 (defrecord AsyncStream [db global-channel telnet-mix projection-mix
-                        state stats projections conf]
+                        state stats proj-ch conf]
   StreamProtocol
   (init-stream-manager! [this path] (as-init-stream-manager! this path))
   (update-streams! [this stream-name]
@@ -292,8 +306,13 @@
   HotStream
   (next! [this] (<!! (:channel global-channel)))
   EventProcessor
-  (register-query! [this projection-descriptor]
+  (register-query!
+      [this {:keys [projection-name] :as projection-descriptor}]
+    (if (contains? (:projections @state) projection-name)
+      (as-unregister-query! this projection-name))
     (as-register-query! this projection-descriptor))
+  (unregister-query! [this projection-name]
+    (as-unregister-query! this projection-name))
   (process-event! [this orig-msg] (as-process-event! this orig-msg)))
 
 (defmethod stream->ch "cold" [a-stream params]
@@ -363,7 +382,7 @@
       (sub (:p (publisher a-stream)) stream-name ch))
     ch))
 
-(defrecord AsyncStreamState [queries publication active-streams
+(defrecord AsyncStreamState [projections publication active-streams
                              virtual-streams all-channels])
 
 (defn create-telnet-socket! [port ch text]
@@ -425,7 +444,7 @@
   (close! ch))
 
 (defrecord StreamManager [options database manager channels
-                          sockets projections]
+                          sockets proj-ch]
   component/Lifecycle
   (start [component]
     (if (nil? manager)
@@ -441,7 +460,7 @@
             projection-channel (chan)
             projection-mix (mix projection-channel)
             initial-state (map->AsyncStreamState
-                           {:queries {}
+                           {:projections {}
                             :publication nil
                             :active-streams {}
                             :virtual-streams {}
@@ -471,8 +490,8 @@
     (if (nil? manager)
       component
       (do
-        (empty! (:projections manager))
-        (close! (:projections manager))
+        (empty! (:proj-ch manager))
+        (close! (:proj-ch manager))
         (dorun (map empty! channels))
         (dorun (map #(if (not (nil? %)) (.close %)) sockets))
         (dorun (map empty! (:all-channels @(:state manager))))

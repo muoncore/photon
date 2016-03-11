@@ -2,6 +2,7 @@
   (:require [muon-clojure.client :as cl]
             [photon.muon :as muon]
             [photon.config :as conf]
+            [photon.api :as api]
             [clojure.tools.logging :as log]
             [clojure.core.async :refer [<!!]]
             [com.stuartsierra.component :as component]
@@ -93,5 +94,74 @@
                                {:projection-name "chatter-proj"}))]
         (fact (:current-value res) => 1004.0)))
     (fact "The dummy-proj stream has generated nothing as of yet"
-          (time-limited 3000 (<!! sd)) => (throws Exception)))
+          (time-limited 3000 (<!! sd)) => (throws Exception))
+
+    ;; TODO: Use muon instead of REST API
+    (let [stm (:manager (:stream-manager ms))]
+      (fact "chatter-proj is still available"
+            (:projection-name (api/projection stm "chatter-proj"))
+            => "chatter-proj")
+      (fact "chatter-proj2 does not exist"
+            (api/projection stm "chatter-proj2") => nil)
+      (let [processed (:processed @(:stats stm))]
+        (post-one-event m s-name)
+        (Thread/sleep 5000)
+        (let [current (:processed @(:stats stm))]
+          (fact "2 events processed"
+                (- current processed) => 2)
+          (api/delete-projection! stm "chatter-proj")
+          (fact "chatter-proj does not exist"
+                (api/projection stm "chatter-proj") => nil)
+          (post-one-event m s-name)
+          (Thread/sleep 5000)
+          (let [current-2 (:processed @(:stats stm))]
+            (fact "1 event processed"
+                  (- current-2 current) => 1)
+            (api/delete-projection! stm "dummy-proj")
+            (post-one-event m s-name)
+            (Thread/sleep 5000)
+            (let [current-3 (:processed @(:stats stm))]
+              (fact "1 events processed"
+                    (- current-3 current-2) => 1)
+              (api/delete-projection! stm "__streams__")
+              (Thread/sleep 5000)
+              (fact "__streams__ does not get deleted"
+                    (:projection-name (api/projection stm "__streams__"))
+                    => "__streams__")
+              (post-one-event m s-name)
+              (Thread/sleep 5000)
+              (let [current-4 (:processed @(:stats stm))]
+                (fact "1 events processed"
+                      (- current-4 current-3) => 1)
+                (cl/with-muon m (cl/request! (str url-req "/projections")
+                                             {:projection-name "chatter-proj"
+                                              :stream-name "chatter"
+                                              :language "clojure"
+                                              :reduction "(fn [a b] (inc a))"
+                                              :initial-value "0"}))
+                (Thread/sleep 5000)
+                (post-one-event m s-name)
+                (Thread/sleep 5000)
+                (let [current-5 (:processed @(:stats stm))]
+                  (fact "1010 events processed"
+                        (- current-5 current-4) => 1010)
+                  (cl/with-muon m (cl/request! (str url-req "/projections")
+                                               {:projection-name "chatter-proj"
+                                                :stream-name "chatter"
+                                                :language "clojure"
+                                                :reduction "(fn [a b] (inc a))"
+                                                :initial-value "0"}))
+                  (Thread/sleep 5000)
+                  (post-one-event m s-name)
+                  (Thread/sleep 5000)
+                  (let [current-6 (:processed @(:stats stm))]
+                    (fact "1011 events processed"
+                          (- current-6 current-5) => 1011)
+                    (api/delete-projection! stm "chatter-proj")
+                    (Thread/sleep 5000)
+                    (post-one-event m s-name)
+                    (Thread/sleep 5000)
+                    (let [current-7 (:processed @(:stats stm))]
+                      (fact "1 events processed"
+                            (- current-7 current-6) => 1)))))))))))
   (component/stop ms))

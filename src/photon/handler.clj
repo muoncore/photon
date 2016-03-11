@@ -180,6 +180,12 @@
                     (if (nil? pres)
                       (http/not-found)
                       (http/ok pres))))
+             (DELETE "/projection/:projection-name" [projection-name]
+                     :path-params [projection-name :- s/Str]
+                     :return api/PostResponse
+                     :summary "Stop and delete a running projection"
+                     (http/ok
+                      (api/delete-projection! ms projection-name)))
              (GET "/stream-contents/:stream-name" [stream-name]
                   :path-params [stream-name :- s/Str]
                   :return api/StreamContentsResponse

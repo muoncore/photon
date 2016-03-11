@@ -156,41 +156,44 @@
   Object
   (render
    [this]
-   (let [upd (fn [k v]
-               (swap! app-state (fn [old] (assoc old k v))))
-         g (fn [k] (get @app-state k))
+   (let [{:keys [username auth password]} (om/props this)
          fn-post (fn []
                    (client/get "/auth/login"
-                               {:basic-auth {:username (g :username)
-                                             :password (g :password)}}))
+                               {:basic-auth {:username username
+                                             :password password}}))
          fn-clk (fn [_]
                   (go (let [res (<! (fn-post))]
-                        (upd :auth res))))]
-     (if (= 200 (:status (:auth (om/props this))))
+                        (om/transact!
+                         this `[(root/update {:auth ~res})]))))]
+     (if (= 200 (:status auth))
        (set! (.-location js/window) "/ui")
        (dom/div nil
-                (dom/p nil (if (= 401 (:status (:auth (om/props this))))
+                (dom/p nil (if (= 401 (:status auth))
                              "Wrong credentials"))
                 (dom/label nil "Username")
                 (dom/input
                  #js {:name "username"
-                      :value (g :username)
-                      :onChange (fn [ev]
-                                  (upd :username
-                                       (.-value (.-target ev))))
+                      :value username
+                      :onChange
+                      (fn [ev]
+                        (om/transact!
+                         this `[(root/update {:username
+                                              ~(.-value (.-target ev))})]))
                       :onKeyDown (fn [ev]
                                    (if (= 13 (.-keyCode ev))
                                      (fn-clk nil)))})
                 (dom/label nil "Password")
                 (dom/input
                  #js {:type "password" :name "password"
-                      :value (g :password)
+                      :value password
                       :onKeyDown (fn [ev]
                                    (if (= 13 (.-keyCode ev))
                                      (fn-clk nil)))
-                      :onChange (fn [ev]
-                                  (upd :password
-                                       (.-value (.-target ev))))})
+                      :onChange
+                      (fn [ev]
+                        (om/transact!
+                         this `[(root/update
+                                 {:password ~(.-value (.-target ev))})]))})
                 (dom/button #js {:type "Submit" :onClick fn-clk}
                             "Login"))))))
 
@@ -256,6 +259,10 @@
   [{:keys [state] :as env} key params]
   {:value (:items @state)})
 
+(defmethod read :default
+  [{:keys [state] :as env} key params]
+  {:value (get @state key :not-found)})
+
 (defmulti mutate om/dispatch)
 
 (defmethod mutate 'active-page/update
@@ -267,6 +274,9 @@
               (assoc old :items
                      (map #(assoc % :active? (= name (:name %)))
                           (:items old))))))})
+
+(defmethod mutate :default [{:keys [state]} _ m]
+  (swap! state merge m))
 
 (def reconciler
   (om/reconciler {:state app-state

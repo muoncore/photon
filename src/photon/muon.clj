@@ -49,7 +49,7 @@
       (try
         (let [stream-manager (:manager stream-manager)
               impl (PhotonMicroservice. stream-manager)
-              projections (:projections stream-manager)
+              projections (:proj-ch stream-manager)
               conf {:rabbit-url (:amqp.url options)
                     :service-identifier (:microservice.name options)
                     :tags ["photon" "eventstore"]
