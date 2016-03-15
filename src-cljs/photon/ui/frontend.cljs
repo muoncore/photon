@@ -18,7 +18,7 @@
   (:import goog.net.IframeIo
            goog.net.EventType))
 
-(defui FullPage
+#_(defui FullPage
   Object
   (render
    [this]
@@ -26,31 +26,39 @@
     nil
     (dom/div
      nil
-     #_(condp = (:active-page @app-state)
-         "Dashboard" (omo/build widget-dashboard state)
-         "Streams" (omo/build widget-streams (assoc state :full-page-owner owner))
-         "Projections" (omo/build widget-projections (assoc state :full-page-owner owner))
-         "New Projection" (omo/build widget-new-projection state)
-         "New Stream" (omo/build widget-new-stream state)
-         "Analyse Data" (when (contains? state :streams)
-                          (omo/build widget-analyse state)))))))
+     (condp = (:active-page @app-state)
+       "Dashboard" (omo/build widget-dashboard state)
+       "Streams" (omo/build widget-streams (assoc state :full-page-owner owner))
+       "Projections" (omo/build widget-projections (assoc state :full-page-owner owner))
+       "New Projection" (omo/build widget-new-projection state)
+       "New Stream" (omo/build widget-new-stream state)
+       "Analyse Data" (when (contains? state :streams)
+                        (omo/build widget-analyse state)))))))
 
 (def reconciler
   (om/reconciler {:state st/app-state
+                  :logger false
                   :parser (om/parser {:read parser/read
                                       :mutate parser/mutate})}))
 
 (defui App
   static om/IQuery
-  (query [this] (into [] (keys @st/app-state)))
+  (query [this]
+         (.log js/console (pr-str (om/get-query comp/MainMenu)))
+         (into [] (om/get-query comp/MenuCategory))
+         `[{:categories ~(om/get-query comp/MenuCategory)}
+           {:sections ~(om/get-query comp/MenuSection)}
+           {:leaves ~(om/get-query comp/MenuLeaf)}])
   Object
-  (componentDidMount
+  #_(componentDidMount
+     [this]
+     (let [upd (fn [x] (om/transact! this `[(root/update ~x)]))]
+       (ws/subscribe-streams! upd)
+       (ws/subscribe-projections! upd)
+       (ws/subscribe-stats! upd)))
+  (render
    [this]
-   (let [upd (fn [x] (om/transact! this `[(root/update ~x)]))]
-     (ws/subscribe-streams! upd)
-     (ws/subscribe-projections! upd)
-     (ws/subscribe-stats! upd)))
-  (render [this] ((om/factory comp/MainPage) (om/props this))))
+   ((om/factory comp/MainPage) (om/props this))))
 
 (go
   (let [res (<! (ws/get-api "/api/ping"))

@@ -1,4 +1,5 @@
 (ns photon.ui.components
+  (:use [jayq.core :only [$ css html]])
   (:require [photon.ui.ws :as ws]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]))
@@ -47,6 +48,75 @@
                          {:password ~(.-value (.-target ev))})]))})
         (dom/button #js {:type "Submit" :onClick fn-clk} "Login"))))))
 
+(defui DashboardContent
+  Object
+  (render [this] (dom/p nil "Hello world")))
+
+(defui MenuLeaf
+  static om/Ident
+  (ident [this {:keys [name]}] [:leaf/by-name name])
+  static om/IQuery
+  (query [this] [:name :link :active :section])
+  Object
+  (render
+   [this]
+   (let [{:keys [name link]} (om/props this)]
+     (dom/li nil (dom/a #js {:href "index.html"} name)))))
+
+(defui MenuSection
+  static om/Ident
+  (ident
+   [this {:keys [name category]}]
+   [:section/by-name name])
+  static om/IQuery
+  (query [this] '[:name :category :leaves :active :hover])
+  Object
+  (render
+   [this]
+   (let [{:keys [name leaves active hover]} (om/props this)]
+     (dom/li
+      (clj->js
+       {:onMouseOver
+        (fn [e]
+          (om/transact! this
+                        `[(section/hover ~{:section name
+                                           :hover true})]))
+        :onMouseOut
+        (fn [e]
+          (om/transact! this
+                        `[(section/hover ~{:section name
+                                           :hover false})]))
+        :className (if (or active hover) "active" "")})
+      (dom/a
+       nil
+       (dom/i #js {:className "fa fa-home"})
+       name
+       (dom/span
+        #js {:className "fa fa-chevron-down"}))
+      (apply
+       dom/ul
+       #js {:className "nav child_menu"
+            :style (if active
+                     #js {:display "none"}
+                     #js {})}
+       (map (om/factory MenuLeaf) leaves))))))
+
+(defui MenuCategory
+  static om/Ident
+  (ident [this {:keys [name]}] [:category/by-name name])
+  static om/IQuery
+  (query [this] `[:name {:sections ~(om/get-query MenuSection)}])
+  Object
+  (render
+   [this]
+   (let [{:keys [name sections]} (om/props this)]
+     (dom/div
+      #js {:className "menu_section"}
+      (dom/h3 nil name)
+      (apply dom/ul
+             #js {:className "nav side-menu"}
+             (map (om/factory MenuSection) sections))))))
+
 (defui MainMenu
   Object
   (render
@@ -76,28 +146,11 @@
        (dom/span nil "Welcome,")
        (dom/h2 nil "Wam Shiting")))
      (dom/br nil)
-     (dom/div
+     (apply
+      dom/div
       #js {:id "sidebar-menu"
            :className "main_menu_side hidden-print main_menu"}
-      (dom/div
-       #js {:className "menu_section"}
-       (dom/h3 nil "General")
-       (dom/ul
-        #js {:className "nav side-menu"}
-        (dom/li
-         nil
-         (dom/a
-          nil
-          (dom/i #js {:className "fa fa-home"})
-          "Home"
-          (dom/span
-           #js {:className "fa fa-chevron-down"}))
-         (dom/ul
-          #js {:className "nav child_menu"
-               :style #js {:display "none"}}
-          (dom/li
-           nil
-           (dom/a #js {:href "index.html"} "Dashboard")))))))))))
+      (map (om/factory MenuCategory) (:categories (om/props this))))))))
 
 (defui Footer
   Object
@@ -170,12 +223,13 @@
   Object
   (render
    [this]
+   (.log js/console "redraw")
    (dom/div
     #js {:className "nav-md"}
     (dom/div
      #js {:className "container body"}
      (dom/div
       #js {:className "main_container"}
-      ((om/factory MainMenu) {})
+      ((om/factory MainMenu) (om/props this))
       ((om/factory TopBar) {})
       ((om/factory Content) (om/props this)))))))
