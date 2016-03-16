@@ -1,4 +1,4 @@
-(defproject tranchis/photon "0.9.4"
+(defproject tranchis/photon "0.9.5"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
@@ -8,11 +8,11 @@
                    :creds :gpg}]
                  ["releases" "https://simplicityitself.artifactoryonline.com/simplicityitself/repo/"]]
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.immutant/web "2.1.2"
+                 [org.immutant/web "2.1.3"
                   :exclusions [potemkin ring/ring-core
                                commons-fileupload
                                org.jboss.logging/jboss-logging]]
-                 [org.jboss.logging/jboss-logging "3.2.1.Final"]
+                 [org.jboss.logging/jboss-logging "3.3.0.Final"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [buddy "0.10.0"]
                  [ring/ring-json "0.4.0"]
@@ -23,16 +23,16 @@
                   :exclusions [org.mozilla/rhino]]
                  [cheshire "5.5.0"]
                  [clj-time "0.11.0"]
-                 [compojure "1.4.0" :exclusions [commons-codec]]
+                 [compojure "1.5.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.37"]
-                 [io.muoncore/muon-clojure "6.4-20160119133830"]
+                 [io.muoncore/muon-clojure "6.4-20160311135945"]
                  [prismatic/schema "1.0.5"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [potemkin]]
-                 [metosin/compojure-api "1.0.0"]
+                 [metosin/compojure-api "1.0.1"]
                  [dire "0.5.4"]
-                 [org.slf4j/slf4j-log4j12 "1.7.14"]
+                 [org.slf4j/slf4j-log4j12 "1.7.19"]
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
@@ -49,7 +49,7 @@
                  [reagent-utils "0.1.7"]
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "1.9.17"]
-                 [congomongo "0.4.7"]
+                 [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-cassandra "0.9.41"
                   :exclusions [com.taoensso/encore]]
