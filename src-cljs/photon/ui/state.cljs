@@ -9,27 +9,25 @@
    :username ""
    :auth nil
    :password ""
-   :categories [{:name "Admin dashboard"
-                 :sections [{:name "Stats"
-                             :category "Admin dashboard"
-                             :active false
-                             :leaves [{:name "Basic stats"
-                                       :section "Stats"
-                                       :link :dashboard/stats
-                                       :active false}]
-                             :hover false}]}
-                {:name "Streams"}]
+   :categories [{:name "Admin dashboard"}
+                {:name "Docs"}]
    :sections [{:name "Stats"
                :category "Admin dashboard"
-               :active false
+               :active true
+               :opened true
                :hover false}
-              {:name "Active streams"
-               :category "Streams"
+              {:name "Streams"
+               :category "Admin dashboard"
                :active false
+               :opened false
                :hover false}]
    :leaves [{:name "Basic stats"
              :section "Stats"
              :link :dashboard/stats
+             :active true}
+            {:name "Active streams"
+             :section "Streams"
+             :link :streams/active
              :active false}]
    #_#_:menu-structure
    {"Admin dashboard" {"Stats" {"Basic stats" :dashboard/stats}
@@ -40,4 +38,6 @@
                    "New projections" NewProjectionContent}
     "Data analysis" {"Schema inspector" SchemaInspectorContent}}
    :analyse-stream nil
-   :new-projection false})
+   :new-projection false
+   :ui-state {:menu-toggle false
+              :active-stream nil}})

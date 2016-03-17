@@ -49,7 +49,7 @@
 (defn get-api  [& args] (apply call-oauth client/get args))
 (defn post-api [& args] (apply call-oauth client/post args))
 
-(defn subscribe-projections! [upd]
+(defn subscribe-projections! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
           (<! (ws-api (str ws-localhost "/ws/ws-projections")))]
@@ -66,7 +66,7 @@
               (recur (<! ws-channel)))))
         (do (.log js/console "Error:" (pr-str error)))))))
 
-(defn subscribe-stats! [upd]
+(defn subscribe-stats! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
           (<! (ws-api (str ws-localhost "/ws/ws-stats")))]
@@ -74,10 +74,10 @@
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)
-                 last-25-processed []
-                 last-25-incoming []
-                 last-25-memory (repeat 25 0)
-                 timestamps []
+                 last-25-processed (get stats :processed [])
+                 last-25-incoming (get stats :incoming [])
+                 last-25-memory (get stats :memory (repeat 25 0))
+                 timestamps (get stats :timestamps [])
                  previous-processed 0
                  previous-incoming 0
                  is-first? true]
@@ -103,7 +103,7 @@
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
-(defn subscribe-streams! [upd]
+(defn subscribe-streams! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
           (<! (ws-api (str ws-localhost "/ws/ws-projections")
@@ -121,3 +121,10 @@
               (>! ws-channel {:projection-name "__streams__"})
               (recur (<! ws-channel)))))
         (do #_(.log js/console "Error:" (pr-str error)))))))
+
+(defn fn-update [owner stream-name]
+  (go (let [response
+            (:body (<! (get-api (str "/api/stream-contents/"
+                                     stream-name))))]
+        #_(.log js/console response)
+        (om/update-state! owner #(assoc % :events (:results response))))))
