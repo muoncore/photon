@@ -123,8 +123,12 @@
         (do #_(.log js/console "Error:" (pr-str error)))))))
 
 (defn fn-update [owner stream-name]
-  (go (let [response
-            (:body (<! (get-api (str "/api/stream-contents/"
-                                     stream-name))))]
-        #_(.log js/console response)
-        (om/update-state! owner #(assoc % :events (:results response))))))
+  (go
+    (let [response
+          (:body (<! (get-api (str "/api/stream-contents/"
+                                   stream-name))))]
+      #_(.log js/console response)
+      #_(om/update-state! owner #(assoc % :events (:results response)))
+      (om/transact!
+       owner `[(ui/update {:k :events :v ~(:results response)})
+               :stream-info]))))
