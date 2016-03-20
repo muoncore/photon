@@ -646,13 +646,9 @@
                        :encType "multipart/form-data"
                        :onSubmit (fn [e]
                                    (.preventDefault e)
-                                   (omo/update-state! owner
-                                                     (fn [state]
-                                                       (assoc state
-                                                              :upload-status
-                                                              "Uploading...")))
-                                   (iframeio-upload-file "upload-form"
-                                                         owner))
+                                   (om/transact! this
+                                                 `[(ui/update ~{:k :upload-status :v "Uploading..."})])
+                                   (iframeio-upload-file "upload-form" this))
                        :action "/api/new-stream"}
           (dom/h1 #js {:className "view-title"} "New Stream")
           (:upload-status state)

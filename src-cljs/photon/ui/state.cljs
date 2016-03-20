@@ -28,16 +28,13 @@
             {:name "Active streams"
              :section "Streams"
              :link :streams/active
+             :active false}
+            {:name "New stream"
+             :section "Streams"
+             :link :streams/new
              :active false}]
-   #_#_:menu-structure
-   {"Admin dashboard" {"Stats" {"Basic stats" :dashboard/stats}
-                       "Streams" {"Active streams" :dashboard/streams}}
-    #_#_#_#_#_#_"Streams" {"Active streams" StreamsContent
-                           "New stream" NewStreamContent}
-    "Projections" {"List of projections" ProjectionsContent
-                   "New projections" NewProjectionContent}
-    "Data analysis" {"Schema inspector" SchemaInspectorContent}}
    :analyse-stream nil
    :new-projection false
    :ui-state {:menu-toggle false
+              :select-value "pev"
               :active-stream nil}})

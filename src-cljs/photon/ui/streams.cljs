@@ -2,8 +2,11 @@
   (:use [jayq.core :only [$ css html]])
   (:require [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
+            [goog.events :as events]
             [photon.ui.components :as comp]
-            [photon.ui.ws :as ws]))
+            [photon.ui.ws :as ws])
+  (:import goog.net.IframeIo
+           goog.net.EventType))
 
 (def k->header {:stream "Stream name"
                 :fn "Function"
@@ -124,3 +127,103 @@
       #_(if (not (nil? active-stream))
           ((om/factory EventList)
            {:events (:events (:ui-state data)) :stream active-stream}))))))
+
+(defn js->cljk [n]
+  (.log js/console "js->cljk")
+  (js->clj n :keywordize-keys true))
+
+(defn handle-iframe-response [json-msg]
+  (let [msg (js->cljk json-msg)]
+    #_(.log js/console (str "iframe-response: " msg))
+    (cond
+      (= "OK" (:status msg)) (str "Uploaded to stream: " (:stream-name msg))
+      :else (str "Unexpected error: " (pr-str msg)))))
+
+(defn iframeio-upload-file [form-id owner]
+  (let [el (.getDOMNode (om/react-ref owner form-id))
+        iframe (IframeIo.)]
+    #_(.log js/console el)
+    (events/listen iframe EventType.COMPLETE
+        (fn [event]
+          (om/transact! owner
+                        `[(ui/update ~{:k :upload-status
+                                       :v (handle-iframe-response
+                                           (.getResponseJson iframe))})])
+          (.dispose iframe)))
+    (.sendFromForm iframe el)))
+
+(defn add-select-state [option entry]
+  (if (= option (:text entry))
+    #js {:value option :selected "selected"}
+    #js {:value option}))
+
+(defui NewStream
+  static om/IQuery
+  (query [this] `[:stream-info])
+  Object
+  (render
+   [this]
+   (let [state (:ui-state (:stream-info (om/props this)))]
+     (dom/div
+      #js {:className "new-stream"}
+      (dom/form #js {:ref "upload-form"
+                     :method "POST"
+                     :encType "multipart/form-data"
+                     :onSubmit (fn [e]
+                                 (.preventDefault e)
+                                 (om/transact! this
+                                               `[(ui/update ~{:k :upload-status :v "Uploading..."})])
+                                 (iframeio-upload-file "upload-form" this))
+                     :action "/api/new-stream"}
+                (dom/h1 #js {:className "view-title"} "New Stream")
+                (:upload-status state)
+                (dom/div
+                 #js {:className "box"}
+                 (dom/div
+                  nil
+                  (dom/label #js {:className "input-label"} "Stream name (optional)")
+                  (dom/input
+                   #js {:className "wide-input"
+                        :name "stream-name"
+                        :type "text"
+                        :ref "name"
+                        :value (:name state)
+                        :onChange
+                        (fn [ev]
+                          (om/transact!
+                           this
+                           `[(ui/update ~{:k :name :v (.-value (.-target ev))})]))}))
+                 (dom/div
+                  #js {:className "radio"}
+                  "Source type:"
+                  (dom/select
+                   #js {:onChange
+                        (fn [ev]
+                          (om/transact!
+                           this
+                           ~{:k :select-value :v (.-value (.-target ev))}))}
+                   (dom/option
+                    (add-select-state "pev"
+                                      (:select-value state))
+                    "PEV file")
+                   (dom/option
+                    (add-select-state "file"
+                                      (:select-value state))
+                    "JSON sequence file")))
+                 (condp = (:select-value state)
+                   "file" (dom/div nil
+                                   (dom/input #js
+                                              {:type "file"
+                                               :name "upload-file-name"})
+                                   (dom/button
+                                    #js {:type "submit"
+                                         :value "submit"}
+                                    "Declare stream"))
+                   "pev" (dom/div nil
+                                  (dom/input #js
+                                             {:type "file"
+                                              :name "upload-pev-name"})
+                                  (dom/button
+                                   #js {:type "submit"
+                                        :value "submit"}
+                                   "Declare stream")))))))))

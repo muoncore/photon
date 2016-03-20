@@ -7,7 +7,8 @@
 
 (def components
   {:streams/active stm/ActiveStreams
-   :dashboard/stats dsh/DashboardStats})
+   :dashboard/stats dsh/DashboardStats
+   :streams/new stm/NewStream})
 
 (defui Footer
   Object

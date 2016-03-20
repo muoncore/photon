@@ -94,7 +94,8 @@
            {:leaves ~(om/get-query main/MenuLeaf)}
            {:stats ~(om/get-query dsh/DashboardStats)}
            {:ui-state ~(om/get-query main/TopBar)}
-           {:stream-info ~(om/get-query stm/ActiveStreams)}])
+           {:stream-info ~(om/get-query stm/ActiveStreams)}
+           {:stream-info ~(om/get-query stm/NewStream)}])
   Object
   (componentDidMount
    [this]
