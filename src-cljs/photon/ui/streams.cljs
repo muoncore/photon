@@ -157,13 +157,12 @@
     #js {:value option :selected "selected"}
     #js {:value option}))
 
-(defui NewStream
-  static om/IQuery
-  (query [this] `[:stream-info])
+(defui NewStreamForm
   Object
   (render
    [this]
-   (let [state (:ui-state (:stream-info (om/props this)))]
+   (let [state (om/props this)
+         owner (:owner state)]
      (dom/div
       #js {:className "new-stream"}
       (dom/form #js {:ref "upload-form"
@@ -171,7 +170,7 @@
                      :encType "multipart/form-data"
                      :onSubmit (fn [e]
                                  (.preventDefault e)
-                                 (om/transact! this
+                                 (om/transact! owner
                                                `[(ui/update ~{:k :upload-status :v "Uploading..."})])
                                  (iframeio-upload-file "upload-form" this))
                      :action "/api/new-stream"}
@@ -191,7 +190,7 @@
                         :onChange
                         (fn [ev]
                           (om/transact!
-                           this
+                           owner
                            `[(ui/update ~{:k :name :v (.-value (.-target ev))})]))}))
                  (dom/div
                   #js {:className "radio"}
@@ -200,7 +199,7 @@
                    #js {:onChange
                         (fn [ev]
                           (om/transact!
-                           this
+                           owner
                            ~{:k :select-value :v (.-value (.-target ev))}))}
                    (dom/option
                     (add-select-state "pev"
@@ -227,3 +226,25 @@
                                    #js {:type "submit"
                                         :value "submit"}
                                    "Declare stream")))))))))
+
+(defui NewStream
+  static om/IQuery
+  (query [this] `[:stream-info])
+  Object
+  (render
+   [this]
+   (dom/div
+    nil
+    (dom/div
+     #js {:className "page-title"}
+     (dom/div
+      #js {:className "title_left"}
+      (dom/h3
+       nil "New stream wizard")))
+    #_(dom/p nil (pr-str (:ui-state data)))
+    (dom/div #js {:className "clearfix"})
+    (dom/div
+     #js {:className "row"}
+     ((om/factory comp/LongPanel) {:component NewStreamForm
+                                   :data (assoc (:ui-state (:stream-info (om/props this)))
+                                                :owner this)})))))
