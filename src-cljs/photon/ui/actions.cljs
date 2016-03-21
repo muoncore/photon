@@ -7,7 +7,8 @@
   Object
   (render
    [this]
-   (let [link (str "/export/stream/" (:stream (om/props this)))]
+   (let [item (:item (om/props this))
+         link (str "/export/stream/" (:stream item))]
      (dom/a #js {:href link} "Export"))))
 
 (defui ViewContentsAction

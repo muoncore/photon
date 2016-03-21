@@ -66,40 +66,28 @@
   (ident [this {:keys [name]}] [:section/by-name name])
   static om/IQuery
   (query [this] `[:name :category {:leaves ~(om/get-query MenuLeaf)}
-                  :active :hover])
+                  :active])
   Object
   (componentDidUpdate
    [this prev-props prev-state]
-   (let [{:keys [name active hover opened]} (om/props this)
+   (let [{:keys [name active opened]} (om/props this)
          ul ($ (om/react-ref this "ul"))]
-     (when (and (not opened) (or active hover))
+     (when (and (not opened) active)
        (.slideDown ul)
        (om/transact! this `[(section/update ~{:section name
                                               :k :opened :v true})
                             :sections]))
-     (when (and opened (not (or active hover)))
+     (when (and opened (not active))
        (.slideUp ul)
        (om/transact! this `[(section/update ~{:section name
                                               :k :opened :v false})
                             :sections]))))
   (render
    [this]
-   (let [{:keys [name leaves active hover opened]} (om/props this)]
+   (let [{:keys [name leaves active opened]} (om/props this)]
      (dom/li
       (clj->js
-       {:onMouseOver
-        (fn [e]
-          (om/transact! this
-                        `[(section/update ~{:section name
-                                            :k :hover :v true})
-                          :sections]))
-        :onMouseOut
-        (fn [e]
-          (om/transact! this
-                        `[(section/update ~{:section name
-                                            :k :hover :v false})
-                          :sections]))
-        :className (if active "active" "")})
+       {:className (if active "active" "")})
       (dom/a
        #js {:onClick
             (fn [e]

@@ -145,10 +145,9 @@
     #_(.log js/console el)
     (events/listen iframe EventType.COMPLETE
         (fn [event]
-          (om/transact! owner
-                        `[(ui/update ~{:k :upload-status
-                                       :v (handle-iframe-response
-                                           (.getResponseJson iframe))})])
+          (om/update-state!
+           owner assoc :upload-status (handle-iframe-response
+                                       (.getResponseJson iframe)))
           (.dispose iframe)))
     (.sendFromForm iframe el)))
 
@@ -165,67 +164,68 @@
          owner (:owner state)]
      (dom/div
       #js {:className "new-stream"}
-      (dom/form #js {:ref "upload-form"
-                     :method "POST"
-                     :encType "multipart/form-data"
-                     :onSubmit (fn [e]
-                                 (.preventDefault e)
-                                 (om/transact! owner
-                                               `[(ui/update ~{:k :upload-status :v "Uploading..."})])
-                                 (iframeio-upload-file "upload-form" this))
-                     :action "/api/new-stream"}
-                (dom/h1 #js {:className "view-title"} "New Stream")
-                (:upload-status state)
-                (dom/div
-                 #js {:className "box"}
-                 (dom/div
-                  nil
-                  (dom/label #js {:className "input-label"} "Stream name (optional)")
-                  (dom/input
-                   #js {:className "wide-input"
-                        :name "stream-name"
-                        :type "text"
-                        :ref "name"
-                        :value (:name state)
-                        :onChange
-                        (fn [ev]
-                          (om/transact!
-                           owner
-                           `[(ui/update ~{:k :name :v (.-value (.-target ev))})]))}))
-                 (dom/div
-                  #js {:className "radio"}
-                  "Source type:"
-                  (dom/select
-                   #js {:onChange
-                        (fn [ev]
-                          (om/transact!
-                           owner
-                           ~{:k :select-value :v (.-value (.-target ev))}))}
-                   (dom/option
-                    (add-select-state "pev"
-                                      (:select-value state))
-                    "PEV file")
-                   (dom/option
-                    (add-select-state "file"
-                                      (:select-value state))
-                    "JSON sequence file")))
-                 (condp = (:select-value state)
-                   "file" (dom/div nil
-                                   (dom/input #js
-                                              {:type "file"
-                                               :name "upload-file-name"})
-                                   (dom/button
-                                    #js {:type "submit"
-                                         :value "submit"}
-                                    "Declare stream"))
-                   "pev" (dom/div nil
-                                  (dom/input #js
-                                             {:type "file"
-                                              :name "upload-pev-name"})
-                                  (dom/button
-                                   #js {:type "submit"
-                                        :value "submit"}
-                                   "Declare stream")))))))))
+      (dom/form
+       #js {:ref "upload-form"
+            :method "POST"
+            :encType "multipart/form-data"
+            :onSubmit (fn [e]
+                        (.preventDefault e)
+                        (om/update-state!
+                         this assoc :upload-status "Uploading...")
+                        (iframeio-upload-file "upload-form" this))
+            :action "/api/new-stream"}
+       (dom/h1 #js {:className "view-title"} "New Stream")
+       (:upload-status (om/get-state this))
+       (dom/div
+        #js {:className "box"}
+        (dom/div
+         nil
+         (dom/label #js {:className "input-label"} "Stream name (optional)")
+         (dom/input
+          #js {:className "wide-input"
+               :name "stream-name"
+               :type "text"
+               :ref "name"
+               :value (:name state)
+               :onChange
+               (fn [ev]
+                 (om/transact!
+                  owner
+                  `[(ui/update ~{:k :name :v (.-value (.-target ev))})]))}))
+        (dom/div
+         #js {:className "radio"}
+         "Source type:"
+         (dom/select
+          #js {:onChange
+               (fn [ev]
+                 (om/transact!
+                  owner
+                  ~{:k :select-value :v (.-value (.-target ev))}))}
+          (dom/option
+           (add-select-state "pev"
+                             (:select-value state))
+           "PEV file")
+          (dom/option
+           (add-select-state "file"
+                             (:select-value state))
+           "JSON sequence file")))
+        (condp = (:select-value state)
+          "file" (dom/div nil
+                          (dom/input #js
+                                     {:type "file"
+                                      :name "upload-file-name"})
+                          (dom/button
+                           #js {:type "submit"
+                                :value "submit"}
+                           "Declare stream"))
+          "pev" (dom/div nil
+                         (dom/input #js
+                                    {:type "file"
+                                     :name "upload-pev-name"})
+                         (dom/button
+                          #js {:type "submit"
+                               :value "submit"}
+                          "Declare stream")))))))))
 
 (defui NewStream
   static om/IQuery

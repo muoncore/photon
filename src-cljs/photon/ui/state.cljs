@@ -14,13 +14,11 @@
    :sections [{:name "Stats"
                :category "Admin dashboard"
                :active true
-               :opened true
-               :hover false}
+               :opened true}
               {:name "Streams"
                :category "Admin dashboard"
-               :active false
-               :opened false
-               :hover false}]
+               :active true
+               :opened true}]
    :leaves [{:name "Basic stats"
              :section "Stats"
              :link :dashboard/stats
