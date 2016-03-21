@@ -373,3 +373,56 @@
       (dom/code
        #js {:className "clojure"}
        (if (string? c) c (clj->str c)))))))
+
+(defui LabelAndSomething
+  Object
+  (render
+   [this]
+   (dom/div
+    #js {:className "form-group"}
+    (dom/label
+     #js {:className "control-label col-md-3 col-sm-3 col-xs-12"}
+     (:label (om/props this)))
+    (dom/div
+     #js {:className "col-md-6 col-sm-6 col-xs-12"}
+     (:component (om/props this))))))
+
+(defui LabelAndTextInput
+  Object
+  (render
+   [this]
+   ((om/factory LabelAndSomething)
+    (assoc (om/props this)
+           :component
+           (dom/input
+            #js {:className "form-control col-md-7 col-xs-12"
+                 :name "stream-name"
+                 :type "text"
+                 :ref "name"
+                 :value (:val (om/props this))
+                 :onChange
+                 (fn [ev]
+                   (om/transact!
+                    (:owner (om/props this))
+                    `[(ui/update ~{:k (:key (om/props this))
+                                   :v (.-value (.-target ev))})]))})))))
+
+(defui LabelAndFileInput
+  Object
+  (render
+   [this]
+   ((om/factory LabelAndSomething)
+    {:label "Input file"
+     :component (dom/input
+                 #js {:type "file"
+                      :name (:name (om/props this))})})))
+
+(defui FormButton
+  Object
+  (render
+   [this]
+   (dom/div
+    #js {:className "col-md-6 col-sm-6 col-xs-12 col-md-offset-3"}
+    (dom/button
+     #js {:type "submit" :className "btn btn-default" :value "submit"}
+     (:text (om/props this))))))

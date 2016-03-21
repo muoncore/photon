@@ -11,6 +11,7 @@ body.nav-sm .container.body .right_col {
     margin-left: 70px;
     z-index: 2;
 }
+.right_col{min-height: 1000px;}
 body.nav-sm .navbar.nav_title {
     width: 70px;
 }
@@ -188,7 +189,7 @@ body.nav-sm .menu_section h3 {
     float: left;
     /*background: #F4F6F9;
     border-bottom: 1px solid #E6E9ED;*/
-
+    
     background: #EDEDED;
     border-bottom: 1px solid #D9DEE4;
     margin-bottom: 10px;
@@ -256,14 +257,17 @@ body.nav-md .container.body .right_col {
 }
 /**  ------------------------------------------  **/
 
+blue,
 .blue {
     color: #3498DB;
 }
 
+purple,
 .purple {
     color: #9B59B6;
 }
 
+green,
 .green {
     color: #1ABB9C;
 }
@@ -272,10 +276,12 @@ body.nav-md .container.body .right_col {
     color: #9CC2CB;
 }
 
+red,
 .red {
     color: #E74C3C;
 }
 
+dark,
 .dark {
     color: #34495E;
 }
@@ -366,7 +372,7 @@ body {
     color: #73879C;
     background: #2A3F54;
     /*#ECF0F1; #FCFCFC*/
-
+    
     font-family: "Helvetica Neue", Roboto, Arial, "Droid Sans", sans-serif;
     font-size: 13px;
     font-weight: 400;
@@ -2270,7 +2276,7 @@ a.star {
     width: 33px;
 }
 
-.list-btn-mail > .cn {
+.list-btn-mail > cn {
     background: none repeat scroll 0 0 #39B3D7;
     border-radius: 12px;
     color: #FFFFFF;
@@ -2428,7 +2434,7 @@ span.section {
   color: #333;
   border: 0;
   border-bottom: 1px solid #e5e5e5;
-}
+} 
 
 .form-control {
     border-radius: 0;
@@ -2892,7 +2898,7 @@ select.parsley-error {
 }
 
 .well .markup-heading{
-
+    
 }
 .well .markup{
     background: #fff;
@@ -3209,14 +3215,14 @@ select.parsley-error {
 
 .daterangepicker_end_input {
     float: left;
-    padding-left: 11px;
+    padding-left: 11px
 }
 
 .daterangepicker th.month {
     width: auto;
 }
 
-
+//----
 .daterangepicker .daterangepicker_start_input label,
 .daterangepicker .daterangepicker_end_input label {
     color: #333;
@@ -3293,7 +3299,7 @@ select.parsley-error {
     border: none;
 }
 
-
+//----
 .daterangepicker.single .ranges,
 .daterangepicker.single .calendar {
     float: none;
@@ -3350,7 +3356,7 @@ textarea:focus {
     filter: progid: DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff', endColorstr='#ffe6e6e6', GradientType=0);
     border-color: #e6e6e6 #e6e6e6 #bfbfbf;
     border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-    filter: progid: DXImageTransform.Microsoft.gradient(enabled=false);
+    filter: progid: DXImageTransform.Microsoft.gradient(enabled false);
     border: 1px solid #cccccc;
     border-bottom-color: #b3b3b3;
     -webkit-border-radius: 4px;
@@ -3481,7 +3487,7 @@ span.tag a {
 
 ul.bar_tabs {
     /* border: 1px solid #ff0000; */
-
+    
     overflow: visible;
     background: #F5F7FA;
     height: 25px;
@@ -3866,7 +3872,7 @@ ul.social li {
     position: absolute;
     height: auto;
     /* Ensures notices are above everything */
-
+    
     z-index: 9999;
 }
 /* Hides position: fixed from IE6 */
@@ -4105,7 +4111,7 @@ html > body > .ui-pnotify {
 /* *********  profile/social  **************************** */
 
 .social-sidebar,
-.social-body {
+social-body {
     float: right;
 }
 
@@ -5298,7 +5304,7 @@ ul.project_files li a i {
     right: 0;
     bottom: 0;
     left: 0;
-    background: #fff url("../images/loading.gif") no-repeat center center;
+    background: #fff url("../img/loading.gif") no-repeat center center;
     opacity: .75;
     filter: alpha(opacity=75);
     z-index: 20140628;
@@ -5665,12 +5671,12 @@ a.hiddenanchor{
     position: relative;
 }
 
-#register,
+#register, 
 #login{
     position: absolute;
     top: 0px; width:100%;
 }
-#register{
+#register{	
     z-index: 21;
     opacity: 0; width:100%;
 }
@@ -5842,7 +5848,7 @@ form:after {
     border: 1px solid #A878AF;
     outline: none;
 }
-
+}
 #username { background-position: 10px 10px !important }
 #password { background-position: 10px -53px !important }
 .login_content form div a {
@@ -5875,7 +5881,7 @@ form:after {
     border-top: 1px solid #CFD5D9;
     padding: 15px 0;
 }
-.login_content form input[type="submit"],#content form .submit{float: left; margin-left: 38px;}
+login_content form input[type="submit"],#content form .submit{float: left; margin-left: 38px;}
 .button a {
     background: url(http://cssdeck.com/uploads/media/items/8/8bcLQqF.png) 0 -112px no-repeat;
     color: #7E7E7E;
@@ -5984,7 +5990,7 @@ header{width:100%;}
   display: inline-block;
   width: 20px;
   height: 20px;
-  background-image: url("../images/icons.png");
+  background-image: url("../../assets/img/icons.png");
   vertical-align: middle;
 }
 
@@ -6337,32 +6343,3 @@ ul.notifications {
     float: right;
     opacity: 1;
 }
-
-/*pace loader*/
-/*http://github.hubspot.com/pace/docs/welcome/*/
-.pace {
-  -webkit-pointer-events: none;
-  pointer-events: none;
-
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  user-select: none;
-}
-
-.pace-inactive {
-  display: none;
-}
-
-.pace .pace-progress {
-  background: #1abb9c;
-  position: fixed;
-  z-index: 2000;
-  top: 0;
-  right: 100%;
-  width: 100%;
-  height: 2px;
-}
-.copyright-info {
-    padding: 8px 0;
-}
-

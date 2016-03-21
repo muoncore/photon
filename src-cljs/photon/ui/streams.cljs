@@ -162,70 +162,48 @@
    [this]
    (let [state (om/props this)
          owner (:owner state)]
-     (dom/div
-      #js {:className "new-stream"}
-      (dom/form
-       #js {:ref "upload-form"
-            :method "POST"
-            :encType "multipart/form-data"
-            :onSubmit (fn [e]
-                        (.preventDefault e)
-                        (om/update-state!
-                         this assoc :upload-status "Uploading...")
-                        (iframeio-upload-file "upload-form" this))
-            :action "/api/new-stream"}
-       (dom/h1 #js {:className "view-title"} "New Stream")
-       (:upload-status (om/get-state this))
-       (dom/div
-        #js {:className "box"}
-        (dom/div
-         nil
-         (dom/label #js {:className "input-label"} "Stream name (optional)")
-         (dom/input
-          #js {:className "wide-input"
-               :name "stream-name"
-               :type "text"
-               :ref "name"
-               :value (:name state)
-               :onChange
-               (fn [ev]
-                 (om/transact!
-                  owner
-                  `[(ui/update ~{:k :name :v (.-value (.-target ev))})]))}))
-        (dom/div
-         #js {:className "radio"}
-         "Source type:"
-         (dom/select
-          #js {:onChange
-               (fn [ev]
-                 (om/transact!
-                  owner
-                  ~{:k :select-value :v (.-value (.-target ev))}))}
-          (dom/option
-           (add-select-state "pev"
-                             (:select-value state))
-           "PEV file")
-          (dom/option
-           (add-select-state "file"
-                             (:select-value state))
-           "JSON sequence file")))
-        (condp = (:select-value state)
-          "file" (dom/div nil
-                          (dom/input #js
-                                     {:type "file"
-                                      :name "upload-file-name"})
-                          (dom/button
-                           #js {:type "submit"
-                                :value "submit"}
-                           "Declare stream"))
-          "pev" (dom/div nil
-                         (dom/input #js
-                                    {:type "file"
-                                     :name "upload-pev-name"})
-                         (dom/button
-                          #js {:type "submit"
-                               :value "submit"}
-                          "Declare stream")))))))))
+     (apply dom/form
+            #js {:ref "upload-form"
+                 :className "form-horizontal form-label-left"
+                 :method "POST"
+                 :encType "multipart/form-data"
+                 :onSubmit (fn [e]
+                             (.preventDefault e)
+                             (om/update-state!
+                              this assoc :upload-status "Uploading...")
+                             (iframeio-upload-file "upload-form" this))
+                 :action "/api/new-stream"}
+            (:upload-status (om/get-state this))
+            ((om/factory comp/LabelAndTextInput)
+             {:owner this :key :name :val (:name state)
+              :label "Stream name (optional)"})
+            ((om/factory comp/LabelAndSomething)
+             {:owner this
+              :component (dom/select
+                          #js {:className "form-control"
+                               :onChange
+                               (fn [ev]
+                                 (om/transact!
+                                  owner
+                                  ~{:k :select-value :v (.-value (.-target ev))}))}
+                          (dom/option
+                           (add-select-state "pev"
+                                             (:select-value state))
+                           "PEV file")
+                          (dom/option
+                           (add-select-state "file"
+                                             (:select-value state))
+                           "JSON sequence file"))
+              :label "Source type"})
+            (condp = (:select-value state)
+              "file" [((om/factory comp/LabelAndFileInput)
+                       {:name "upload-file-name"})
+                      ((om/factory comp/FormButton)
+                       {:text "Declare stream"})]
+              "pev" [((om/factory comp/LabelAndFileInput)
+                      {:name "upload-pev-name"})
+                     ((om/factory comp/FormButton)
+                      {:text "Declare stream"})])))))
 
 (defui NewStream
   static om/IQuery
@@ -235,16 +213,11 @@
    [this]
    (dom/div
     nil
-    (dom/div
-     #js {:className "page-title"}
-     (dom/div
-      #js {:className "title_left"}
-      (dom/h3
-       nil "New stream wizard")))
     #_(dom/p nil (pr-str (:ui-state data)))
     (dom/div #js {:className "clearfix"})
     (dom/div
      #js {:className "row"}
      ((om/factory comp/LongPanel) {:component NewStreamForm
+                                   :title "New stream wizard"
                                    :data (assoc (:ui-state (:stream-info (om/props this)))
                                                 :owner this)})))))
