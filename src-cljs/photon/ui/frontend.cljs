@@ -94,17 +94,21 @@
            {:leaves ~(om/get-query main/MenuLeaf)}
            {:stats ~(om/get-query dsh/DashboardStats)}
            {:ui-state ~(om/get-query main/TopBar)}
+           :subscriptions
            {:stream-info ~(om/get-query stm/ActiveStreams)}
            {:stream-info ~(om/get-query stm/NewStream)}])
   Object
   (componentDidMount
    [this]
-   (let [upd (fn [x] (om/transact! this `[(stats/update ~x) :stats]))
-         stats (let [stats (get-in (om/props this) [:stats :stats :last-25])]
-                 (if (or (nil? stats) (= :not-found stats)) {} stats))]
-     (ws/subscribe-streams! stats upd)
-     (ws/subscribe-projections! stats upd)
-     (ws/subscribe-stats! stats upd)))
+   (when-not (:subscriptions (om/props this))
+     (let [upd (fn [x] (om/transact! this `[(stats/update ~x) :stats]))
+           stats (let [stats (get-in (om/props this) [:stats :stats :last-25])]
+                   (if (or (nil? stats) (= :not-found stats)) {} stats))]
+       (println "Subscribing...")
+       (ws/subscribe-streams! stats upd)
+       (ws/subscribe-projections! stats upd)
+       (ws/subscribe-stats! stats upd)
+       (om/transact! this `[(subscriptions/update {:subscriptions true})]))))
   (componentDidUpdate
    [this next-props next-state]
    (let [body ($ :body)

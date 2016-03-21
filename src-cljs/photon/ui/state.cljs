@@ -35,6 +35,7 @@
              :active false}]
    :analyse-stream nil
    :new-projection false
+   :subscriptions false
    :ui-state {:menu-toggle false
               :select-value "pev"
               :active-stream nil}})
