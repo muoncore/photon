@@ -24,6 +24,20 @@
                 :stream-info]))]
      (dom/a #js {:href "#" :onClick f} "Browse"))))
 
+(defui ViewProjectionAction
+  Object
+  (render
+   [this]
+   (let [{:keys [item owner]} (om/props this)
+         f (fn [_]
+             (ws/fn-update owner (:stream item))
+             (om/transact!
+              owner
+              `[(ui/update {:k :active-projection
+                            :v ~(:projection-name item)})
+                :projection-info]))]
+     (dom/a #js {:href "#" :onClick f} "Browse"))))
+
 (defui ShowPayloadAction
   Object
   (render
@@ -41,4 +55,5 @@
 
 (def k->action {:action/export-stream ExportAction
                 :action/view-contents ViewContentsAction
-                :action/show-payload ShowPayloadAction})
+                :action/show-payload ShowPayloadAction
+                :action/view-projection ViewProjectionAction})

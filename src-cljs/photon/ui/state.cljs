@@ -18,6 +18,10 @@
               {:name "Streams"
                :category "Admin dashboard"
                :active true
+               :opened true}
+              {:name "Projections"
+               :category "Admin dashboard"
+               :active true
                :opened true}]
    :leaves [{:name "Basic stats"
              :section "Stats"
@@ -30,10 +34,15 @@
             {:name "New stream"
              :section "Streams"
              :link :streams/new
+             :active false}
+            {:name "Active projections"
+             :section "Projections"
+             :link :projections/active
              :active false}]
    :analyse-stream nil
    :new-projection false
    :subscriptions false
    :ui-state {:menu-toggle false
               :select-value "pev"
-              :active-stream nil}})
+              :active-stream nil
+              :active-projection nil}})

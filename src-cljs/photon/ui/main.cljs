@@ -3,12 +3,14 @@
   (:require [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
             [photon.ui.streams :as stm]
+            [photon.ui.projections :as proj]
             [photon.ui.dashboard :as dsh]))
 
 (def components
   {:streams/active stm/ActiveStreams
    :dashboard/stats dsh/DashboardStats
-   :streams/new stm/NewStream})
+   :streams/new stm/NewStream
+   :projections/active proj/ActiveProjections})
 
 (defui Footer
   Object
@@ -38,7 +40,8 @@
       (dom/div
        nil
        #_(dom/p nil (pr-str active-comp))
-       #_(println (om/props this))
+       #_(println (:projection-info (om/props this)))
+       #_(println (get components active-comp))
        ((om/factory (get components active-comp)) (om/props this))))
     ((om/factory Footer) {}))))
 

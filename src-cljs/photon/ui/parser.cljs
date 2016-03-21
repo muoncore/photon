@@ -58,6 +58,11 @@
   {:value {:streams (:streams (:stats @state))
            :ui-state (:ui-state @state)}})
 
+(defmethod read :projection-info
+  [{:keys [state] :as env} key params]
+  {:value {:projections (:projections (:stats @state))
+           :ui-state (:ui-state @state)}})
+
 (defmethod read :default
   [{:keys [state] :as env} key params]
   {:value (get @state key :not-found)})

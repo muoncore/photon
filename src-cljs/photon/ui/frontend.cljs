@@ -13,6 +13,7 @@
             [photon.ui.state :as st]
             [photon.ui.streams :as stm]
             [photon.ui.ws :as ws]
+            [photon.ui.projections :as proj]
             [photon.ui.dashboard :as dsh]
             [goog.dom :as gdom]
             [om.dom :as dom])
@@ -95,6 +96,7 @@
            {:stats ~(om/get-query dsh/DashboardStats)}
            {:ui-state ~(om/get-query main/TopBar)}
            :subscriptions
+           {:projection-info ~(om/get-query proj/ActiveProjections)}
            {:stream-info ~(om/get-query stm/ActiveStreams)}
            {:stream-info ~(om/get-query stm/NewStream)}])
   Object

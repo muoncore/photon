@@ -22,6 +22,7 @@
                 :stream-name "Target stream"
                 :total-events "Stream size"
                 :encoding "Encoding"
+                :init-time "Created at"
                 :schema "Schema URL"
                 :service-id "Sending Service"
                 :local-id "Local UUID"
@@ -269,11 +270,18 @@
             (map #(dom/td nil (display-cell % item owner))
                  (vals (dissoc item :meta/original)))))))
 
+(defn row-comparator [row-order]
+  (let [order (apply merge (map-indexed #(hash-map %2 %1) row-order))
+        order (assoc order :meta/original (count order))]
+    (fn [a b]
+      (< (get order a) (get order b)))))
+
 (defn sort-by-row [row-order item]
   (if (or (nil? row-order) (empty? row-order))
     item
-    (assoc (zipmap row-order (map #(get item %) row-order))
-           :meta/original (:meta/original item))))
+    (assoc
+     (into (sorted-map-by (row-comparator row-order)) item)
+     :meta/original (:meta/original item))))
 
 (defui Table
   Object

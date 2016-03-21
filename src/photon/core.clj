@@ -9,7 +9,8 @@
             [immutant.web :as web]
             [com.stuartsierra.component :as component]
             [clojure.tools.logging :as log])
-  (:import (java.net ServerSocket)))
+  (:import (java.net ServerSocket)
+           (io.undertow UndertowOptions)))
 
 (defrecord UIHandler [options stream-manager security handler]
   component/Lifecycle
@@ -46,14 +47,18 @@
   component/Lifecycle
   (start [component]
     (if (nil? server)
-      (let [m-conf (if (nil? (:rest.keystore options))
-                     {:host (:rest.host options)
-                      :port (:rest.port options)}
-                     (immutant.web.undertow/options
+      (let [m-conf (immutant.web.undertow/options
+                    (if (nil? (:rest.keystore options))
+                      {:host (:rest.host options)
+                       :port (:rest.port options)}
                       {:host (:rest.host options)
                        :ssl-port (:rest.port options)
                        :keystore (:rest.keystore options)
                        :key-password (:rest.keypass options)}))
+            ;; Example of ad hoc Undertow configuration setting
+            #_m-conf #_(update m-conf :configuration
+                               #(.setServerOption
+                                 % UndertowOptions/MAX_ENTITY_SIZE 8388608))
             server (web/run (:handler ui) m-conf)]
         (assoc component :server server))
       component))
