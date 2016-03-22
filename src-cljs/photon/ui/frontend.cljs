@@ -100,6 +100,7 @@
            {:projection-info ~(om/get-query proj/ActiveProjections)}
            {:stream-info ~(om/get-query stm/ActiveStreams)}
            {:stream-info ~(om/get-query stm/NewStream)}
+           {:stream-info ~(om/get-query stm/DataAnalyser)}
            {:projection-info ~(om/get-query proj/NewProjection)}])
   Object
   (componentDidMount

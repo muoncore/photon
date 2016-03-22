@@ -11,7 +11,8 @@
    :dashboard/stats dsh/DashboardStats
    :streams/new stm/NewStream
    :projections/active proj/ActiveProjections
-   :projections/new proj/NewProjection})
+   :projections/new proj/NewProjection
+   :streams/analyse stm/DataAnalyser})
 
 (defui Footer
   Object

@@ -35,6 +35,10 @@
              :section "Streams"
              :link :streams/new
              :active false}
+            {:name "Data analyser"
+             :section "Streams"
+             :link :streams/analyse
+             :active false}
             {:name "Active projections"
              :section "Projections"
              :link :projections/active
