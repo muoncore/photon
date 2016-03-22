@@ -154,11 +154,6 @@
           (.dispose iframe)))
     (.sendFromForm iframe el)))
 
-(defn add-select-state [option entry]
-  (if (= option (:text entry))
-    #js {:value option :selected "selected"}
-    #js {:value option}))
-
 (defui NewStreamForm
   Object
   (render
@@ -178,25 +173,21 @@
                  :action "/api/new-stream"}
             (:upload-status (om/get-state this))
             ((om/factory comp/LabelAndTextInput)
-             {:owner this :key :name :val (:name state)
+             {:owner owner :key :name :val (:name state)
               :label "Stream name (optional)"})
             ((om/factory comp/LabelAndSomething)
-             {:owner this
+             {:owner owner
               :component (dom/select
                           #js {:className "form-control"
+                               :value (:sform/select-value state)
                                :onChange
                                (fn [ev]
                                  (om/transact!
                                   owner
-                                  ~{:k :select-value :v (.-value (.-target ev))}))}
-                          (dom/option
-                           (add-select-state "pev"
-                                             (:select-value state))
-                           "PEV file")
-                          (dom/option
-                           (add-select-state "file"
-                                             (:select-value state))
-                           "JSON sequence file"))
+                                  `[(ui/update ~{:k :sform/select-value
+                                                 :v (.-value (.-target ev))})]))}
+                          (dom/option #js {:value "pev"} "PEV file")
+                          (dom/option #js {:value "file"} "JSON sequence file"))
               :label "Source type"})
             (condp = (:select-value state)
               "file" [((om/factory comp/LabelAndFileInput)
@@ -220,7 +211,8 @@
     (dom/div #js {:className "clearfix"})
     (dom/div
      #js {:className "row"}
-     ((om/factory comp/LongPanel) {:component NewStreamForm
-                                   :title "New stream wizard"
-                                   :data (assoc (:ui-state (:stream-info (om/props this)))
-                                                :owner this)})))))
+     ((om/factory comp/LongPanel)
+      {:component NewStreamForm
+       :title "New stream wizard"
+       :data (assoc (:ui-state (:stream-info (om/props this)))
+                    :owner this)})))))

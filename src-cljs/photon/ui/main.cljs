@@ -10,7 +10,8 @@
   {:streams/active stm/ActiveStreams
    :dashboard/stats dsh/DashboardStats
    :streams/new stm/NewStream
-   :projections/active proj/ActiveProjections})
+   :projections/active proj/ActiveProjections
+   :projections/new proj/NewProjection})
 
 (defui Footer
   Object

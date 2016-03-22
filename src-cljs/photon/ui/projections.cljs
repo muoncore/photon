@@ -116,23 +116,58 @@
                   (om/transact! this `[(ui/update {:k :modal-projections :v false})
                                        :projection-info]))
         :component ((om/factory ProjectionBox)
-                    (:active-projection ui-state))})
-      #_(if (not (nil? active-stream))
-          ((om/factory EventList)
-           {:events (:events (:ui-state data)) :stream active-stream}))))
-   #_(let [fn-update (fn [new-active-projection]
-                       (om/transact! this `[(ui/update ~{:k :active-projection :v new-active-projection})]))]
-       (apply dom/table #js
-              {:className "table table-striped table-bordered table-hover table-heading"}
-              (apply dom/tr nil
-                     (map #(dom/th #js {:style #js {:border "1px"}}
-                                   (k->header (key %)))
-                          (filter-projection
-                           (first (:projections data)))))
-              (map #(omo/build projection-item {:data data
-                                                :projection %
-                                                :fn-update fn-update})
-                   (:projections data)))
-       (if (not (nil? (:active-projection state)))
-         (let [block (omo/build code-block (:active-projection state))]
-           block)))))
+                    (:active-projection ui-state))})))))
+
+(defui NewProjectionForm
+  Object
+  (render
+   [this]
+   (let [{:keys [owner] :as data} (om/props this)]
+     (dom/form
+      #js {:className "form-horizontal form-label-left"}
+      ((om/factory comp/LabelAndTextInput)
+       {:owner owner :key :pform/projection-name
+        :val (:pform/projection-name data) :label "Projection name"})
+      ((om/factory comp/LabelAndTextInput)
+       {:owner owner :key :pform/stream-name
+        :val (:pform/stream-name data) :label "Stream name"})
+      ((om/factory comp/LabelAndButtonArray)
+       {:owner owner :label "Language"
+        :options {"clojure" "Clojure" "javascript" "JavaScript"}
+        :key :pform/language :val (:pform/language data)})
+      ((om/factory comp/LabelAndCodeBlock)
+       {:owner owner :label "Initial value"
+        :key :pform/initial-value :val (:pform/initial-value data)})
+      ((om/factory comp/LabelAndCodeBlock)
+       {:owner owner :label "Code: content of (fn [prev item] ... )"
+        :key :pform/reduction :val (:pform/reduction data)}) 
+      ((om/factory comp/FormButton)
+       {:text "Register projection"
+        :onClick
+        (fn [_]
+          (ws/post-api-async "/api/projection"
+                             {:json-params
+                              (select-keys data
+                                           [:pform/projection-name
+                                            :pform/stream-name
+                                            :pform/initial-value
+                                            :pform/reduction
+                                            :pform/language])}))})))))
+
+(defui NewProjection
+  static om/IQuery
+  (query [this] `[:projection-info])
+  Object
+  (render
+   [this]
+   (dom/div
+    nil
+    #_(dom/p nil (pr-str (:ui-state data)))
+    (dom/div #js {:className "clearfix"})
+    (dom/div
+     #js {:className "row"}
+     ((om/factory comp/LongPanel)
+      {:component NewProjectionForm
+       :title "New projection wizard"
+       :data (assoc (:ui-state (:projection-info (om/props this)))
+                    :owner this)})))))

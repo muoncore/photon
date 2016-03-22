@@ -48,6 +48,7 @@
 (defn ws-api   [& args] (apply call-api ws-ch args))
 (defn get-api  [& args] (apply call-oauth client/get args))
 (defn post-api [& args] (apply call-oauth client/post args))
+(defn post-api-async [& args] (go (<! (apply call-oauth client/post args))))
 
 (defn subscribe-projections! [stats upd]
   (go

@@ -38,11 +38,18 @@
             {:name "Active projections"
              :section "Projections"
              :link :projections/active
+             :active false}
+            {:name "New projection"
+             :section "Projections"
+             :link :projections/new
              :active false}]
    :analyse-stream nil
    :new-projection false
    :subscriptions false
    :ui-state {:menu-toggle false
+              :pform/language "clojure"
+              :pform/initial-value ""
+              :pform/reduction ""
               :select-value "pev"
               :active-stream nil
               :active-projection nil}})

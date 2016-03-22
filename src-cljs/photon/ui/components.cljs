@@ -364,6 +364,9 @@
   (clojure.string/replace
    (with-out-str (pprint/pprint c)) #"}nil" "}"))
 
+(defn update-code-blocks! []
+  (dorun (map #(.highlightBlock js/hljs %) ($ "pre code"))))
+
 (defui CodeBlock
   Object
   (componentDidMount
@@ -371,13 +374,13 @@
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
               (max 300 (- (.-innerHeight js/window) 325))))
-   (dorun (map #(.highlightBlock js/hljs %) ($ "pre code"))))
+   (update-code-blocks!))
   (componentDidUpdate
    [this _ _]
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
               (max 300 (- (.-innerHeight js/window) 325))))
-   (dorun (map #(.highlightBlock js/hljs %) ($ "pre code"))))
+   (update-code-blocks!))
   (render
    [this]
    (let [c (:code (om/props this))]
@@ -385,7 +388,18 @@
       #js {:overflow-y "scroll" :ref "code-block"}
       (dom/code
        #js {:className "clojure" :ref "code"}
-       (if (string? c) c (clj->str c)))))))
+       (dom/div
+        (clj->js (if-let [k (:edit-key (om/props this))]
+                   {:contentEditable "true"
+                    :onBlur
+                    (fn [ev]
+                      (update-code-blocks!)
+                      (om/transact!
+                       (:owner (om/props this))
+                       `[(ui/update
+                          ~{:k k :v (.-textContent (.-target ev))})]))}
+                   {}))
+        (if (string? c) c (clj->str c))))))))
 
 (defui LabelAndSomething
   Object
@@ -409,9 +423,7 @@
            :component
            (dom/input
             #js {:className "form-control col-md-7 col-xs-12"
-                 :name "stream-name"
                  :type "text"
-                 :ref "name"
                  :value (:val (om/props this))
                  :onChange
                  (fn [ev]
@@ -419,6 +431,46 @@
                     (:owner (om/props this))
                     `[(ui/update ~{:k (:key (om/props this))
                                    :v (.-value (.-target ev))})]))})))))
+
+(defui LabelAndButtonArray
+  Object
+  (render
+   [this]
+   ((om/factory LabelAndSomething)
+    {:label (:label (om/props this))
+     :component
+     (let [{:keys [owner label options] :as props} (om/props this)
+           current ()]
+       (apply dom/div
+              #js {:className "btn-group"
+                   :data-toggle "buttons"}
+              (map #(dom/label
+                     (clj->js
+                      {:className (str "btn btn-default parsley-success"
+                                       (if (= (key %) (:val props))
+                                         " active" ""))
+                       :data-toggle-class "btn-primary"
+                       :data-toggle-passive-class "btn-default"
+                       :onChange
+                       (fn [ev]
+                         (om/transact!
+                          owner
+                          `[(ui/update ~{:k (:key props)
+                                         :v (key %)})]))})
+                     (dom/input #js {:type "radio" :value (key %)})
+                     (val %))
+                   options)))})))
+
+(defui LabelAndCodeBlock
+  Object
+  (render
+   [this]
+   ((om/factory LabelAndSomething)
+    (assoc (om/props this)
+           :component
+           ((om/factory CodeBlock) {:code (:val (om/props this))
+                                    :owner (:owner (om/props this))
+                                    :edit-key (:key (om/props this))})))))
 
 (defui LabelAndFileInput
   Object
@@ -437,5 +489,9 @@
    (dom/div
     #js {:className "col-md-6 col-sm-6 col-xs-12 col-md-offset-3"}
     (dom/button
-     #js {:type "submit" :className "btn btn-default" :value "submit"}
+     (clj->js (let [base {:type "submit"
+                          :className "btn btn-default"
+                          :value "submit"}]
+                (if-let [onClick (:onClick (om/props this))]
+                  (assoc base :onClick onClick) base)))
      (:text (om/props this))))))
