@@ -54,8 +54,9 @@
                   (ws/call-back "/auth/login"
                                 {:basic-auth {:username username
                                               :password password}}
-                                (fn [m] (om/transact!
-                                         this `[(root/update ~m)]))))]
+                                (fn [m]
+                                  (om/transact!
+                                   this `[(root/update ~{:auth m})]))))]
      (if (= 200 (:status auth))
        (set! (.-location js/window) "/ui")
        (dom/div

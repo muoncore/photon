@@ -122,8 +122,11 @@
                   (om/transact! this `[(ui/update {:k :modal-events :v false})
                                        :stream-info]))
         :component ((om/factory comp/CodeBlock)
-                    (if-let [code (:meta/original (:selected-event (:ui-state data)))]
-                      code ""))})
+                    {:code
+                     (if-let [code (:meta/original
+                                    (:selected-event (:ui-state data)))]
+                       code "")
+                     :modal? true})})
       #_(if (not (nil? active-stream))
           ((om/factory EventList)
            {:events (:events (:ui-state data)) :stream active-stream}))))))

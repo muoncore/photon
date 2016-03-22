@@ -43,7 +43,7 @@
 
 (defn call-back [url params upd]
   (go (let [res (<! (client/get url params))]
-        (upd {:auth res}))))
+        (upd res))))
 
 (defn ws-api   [& args] (apply call-api ws-ch args))
 (defn get-api  [& args] (apply call-oauth client/get args))

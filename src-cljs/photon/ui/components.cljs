@@ -368,18 +368,23 @@
   Object
   (componentDidMount
    [this]
+   (if (:modal? (om/props this))
+     (.height ($ (om/react-ref this "code-block"))
+              (max 300 (- (.-innerHeight js/window) 325))))
    (dorun (map #(.highlightBlock js/hljs %) ($ "pre code"))))
   (componentDidUpdate
    [this _ _]
-   (println "hola")
-   (.highlightBlock js/hljs ($ (om/react-ref this "code"))))
+   (if (:modal? (om/props this))
+     (.height ($ (om/react-ref this "code-block"))
+              (max 300 (- (.-innerHeight js/window) 325))))
+   (dorun (map #(.highlightBlock js/hljs %) ($ "pre code"))))
   (render
    [this]
-   (let [c (om/props this)]
+   (let [c (:code (om/props this))]
      (dom/pre
-      nil
+      #js {:overflow-y "scroll" :ref "code-block"}
       (dom/code
-       #js {:className "clojure"}
+       #js {:className "clojure" :ref "code"}
        (if (string? c) c (clj->str c)))))))
 
 (defui LabelAndSomething

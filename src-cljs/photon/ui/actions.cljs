@@ -34,7 +34,8 @@
              (om/transact!
               owner
               `[(ui/update {:k :active-projection
-                            :v ~(:projection-name item)})
+                            :v ~item})
+                (ui/update {:k :modal-projections :v true})
                 :projection-info]))]
      (dom/a #js {:href "#" :onClick f} "Browse"))))
 
