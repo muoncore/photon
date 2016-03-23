@@ -439,8 +439,7 @@
    ((om/factory LabelAndSomething)
     {:label (:label (om/props this))
      :component
-     (let [{:keys [owner label options] :as props} (om/props this)
-           current ()]
+     (let [{:keys [owner label options] :as props} (om/props this)]
        (apply dom/div
               #js {:className "btn-group"
                    :data-toggle "buttons"}
@@ -471,6 +470,15 @@
            ((om/factory CodeBlock) {:code (:val (om/props this))
                                     :owner (:owner (om/props this))
                                     :edit-key (:key (om/props this))})))))
+
+(defui LabelAndLabel
+  Object
+  (render
+   [this]
+   ((om/factory LabelAndSomething)
+    (assoc (om/props this)
+           :component
+           (dom/p nil (:second-label (om/props this)))))))
 
 (defui LabelAndFileInput
   Object

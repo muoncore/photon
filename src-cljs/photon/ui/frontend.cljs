@@ -10,6 +10,7 @@
             [om.next :as om :refer-macros [defui]]
             [photon.ui.parser :as parser]
             [photon.ui.main :as main]
+            [photon.ui.streams.analyser :as anal]
             [photon.ui.state :as st]
             [photon.ui.streams :as stm]
             [photon.ui.ws :as ws]
@@ -100,7 +101,7 @@
            {:projection-info ~(om/get-query proj/ActiveProjections)}
            {:stream-info ~(om/get-query stm/ActiveStreams)}
            {:stream-info ~(om/get-query stm/NewStream)}
-           {:stream-info ~(om/get-query stm/DataAnalyser)}
+           {:stream-info ~(om/get-query anal/DataAnalyser)}
            {:projection-info ~(om/get-query proj/NewProjection)}])
   Object
   (componentDidMount
@@ -116,6 +117,15 @@
        (om/transact! this `[(subscriptions/update {:subscriptions true})]))))
   (componentDidUpdate
    [this next-props next-state]
+   (let [stream-info (:stream-info (om/props this))
+         first-stream (first (:streams stream-info))]
+     (when (nil? (:analyse-stream (:ui-state stream-info)))
+       (om/transact! this
+                     `[(ui/update ~{:k :analyse-stream
+                                    :v (:stream first-stream)})
+                       (ui/update ~{:k :analyse-version
+                                    :v (first (keys (:schemas first-stream)))})
+                       :stream-info :ui-state])))
    (let [body ($ :body)
          li ($ "#sidebar-menu li")]
      (if (:menu-toggle (:ui-state (om/props this)))

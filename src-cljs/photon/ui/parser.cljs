@@ -55,8 +55,10 @@
 
 (defmethod read :stream-info
   [{:keys [state] :as env} key params]
-  {:value {:streams (:streams (:stats @state))
-           :ui-state (:ui-state @state)}})
+  (let [streams (:streams (:stats @state))]
+    {:value {:streams streams
+             :streams/by-name (zipmap (map :stream streams) streams)
+             :ui-state (:ui-state @state)}}))
 
 (defmethod read :projection-info
   [{:keys [state] :as env} key params]
@@ -104,7 +106,7 @@
      (swap! state
             #(-> %
                  (unique-val [:leaf/by-name] :active :name name)
-                 (unique-val [:section/by-name] :active :name section))))})
+                 #_(unique-val [:section/by-name] :active :name section))))})
 
 (defmethod mutate 'ui/update
   [{:keys [state]} _ {:keys [k v]}]

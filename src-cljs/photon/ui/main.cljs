@@ -3,6 +3,7 @@
   (:require [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
             [photon.ui.streams :as stm]
+            [photon.ui.streams.analyser :as anal]
             [photon.ui.projections :as proj]
             [photon.ui.dashboard :as dsh]))
 
@@ -12,7 +13,7 @@
    :streams/new stm/NewStream
    :projections/active proj/ActiveProjections
    :projections/new proj/NewProjection
-   :streams/analyse stm/DataAnalyser})
+   :streams/analyse anal/DataAnalyser})
 
 (defui Footer
   Object
