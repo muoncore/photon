@@ -43,7 +43,7 @@
                                com.cognitect/transit-java]]
                  [tailrecursion/cljson "1.0.7"]
                  [cljs-http "0.1.39"]
-                 [org.omcljs/om "1.0.0-alpha23"]
+                 [org.omcljs/om "1.0.0-alpha31"]
                  [jayq "2.5.4"]
                  [fipp "0.6.4"]
                  [reagent-utils "0.1.7"]
