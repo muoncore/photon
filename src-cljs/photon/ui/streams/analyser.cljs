@@ -214,7 +214,7 @@
          "(assoc-in m (key m2) (val m2))"
          ") {} " bdgs ")] ")))
 
-(defn construct-code [m]
+(defn construct-code [m version]
   (let [action-list (:action-list m)
         group-bys (:group-by action-list)
         gbs (group-by-structure group-bys)
@@ -228,9 +228,13 @@
                       " [next] (conj old next)"
                       ")))"))
         iv (if (empty? group-bys) "[]" "{}")]
-    [iv (str "(fn [prev next] "
-             (if (empty? selects) action
-                 (str "(" let-body action ")")) ")")]))
+    [iv (if (= :__unversioned__ version)
+          (str "(fn [prev next] "
+               (if (empty? selects) action
+                   (str "(" let-body action ")")) ")")
+          (str "(fn [prev next] (if (= \"" version "\" (:schema next)) "
+               (if (empty? selects) action
+                   (str "(" let-body action ")")) " prev))"))]))
 
 (def action-mappings {:group-by "Group by"
                       :select "Select"})
@@ -243,117 +247,16 @@
          k (key (first action))
          v (val (first action))
          path (node->path v)]
-     (dom/p nil (str (get action-mappings k) " " path) " "
-            (dom/a #js {:href "#"
-                        :onClick (fn [ev] (fn-delete k v))}
-                   "[X]")))))
+     (dom/span
+      #js {:className "tag"}
+      (dom/span nil (str (get action-mappings k) " " path "   "))
+      (dom/a #js {:href "#"
+                  :data-original-title "Removing tag"
+                  :onClick (fn [ev] (fn-delete k v))} " [X]")))))
 
 (defn action-list->actions [action-list]
   (mapcat (fn [k] (map #(hash-map k %) (get action-list k)))
           (keys action-list)))
-
-(defui VarActions
-  Object
-  (init-state
-   [this]
-   (go
-     (loop [elem (<! (:ch (om/props this)))]
-       (om/update-state! this assoc :var elem)
-       (recur (<! (:ch (om/props this))))))
-   {:var nil
-    :action-list {}})
-  (render
-   [this]
-   (if (nil? (:var (om/get-state this)))
-     (dom/p nil "Select a variable to get stated")
-     (let [node (u/js->cljk (:var (om/get-state this)))
-           sch (-> node :node :original :schema)
-           path (clojure.string/join "." (:path sch))
-           [iv code] (construct-code (om/get-state this))
-           upd (fn [k v]
-                 (om/update-state! this assoc k v))]
-       (dom/form
-        #js {:className "form-horizontal form-label-left"}
-        (dom/p nil (str "Selected variable: " path))
-        (dom/button
-         #js {:onClick
-              (fn [ev]
-                (om/update-state!
-                 this
-                 update-in [:action-list :group-by] #(conj (into #{} %) node)))}
-         "Group by")
-        (dom/button
-         #js {:onClick
-              (fn [ev]
-                (om/update-state!
-                 this
-                 update-in [:action-list :select] #(conj (into #{} %) node)))}
-         "Select")
-        (.log js/console (:action-list->actions (:action-list (om/get-state this))))
-        (apply dom/div
-               nil
-               (map #((om/factory ActionItem)
-                      {:action %
-                       :fn-delete
-                       (fn [k v]
-                         (om/update-state!
-                          this
-                          update-in [:action-list k] (fn [x] (disj x v))))})
-                    (action-list->actions (:action-list (om/get-state this)))))
-        (dom/label nil "Initial value")
-        (((om/factory comp/CodeBlock)) {:code code})
-        (dom/label nil "Code")
-        ((om/factory comp/CodeBlock) {:code code})
-        (dom/label nil "Projection name")
-        (dom/input #js {:ref "projection-name"})
-        (dom/button
-         #js {:onClick
-              (fn [ev]
-                (let [pn (.-value (om/react-ref this "projection-name"))]
-                  (.log js/console (pr-str code))
-                  (go
-                    (<! (ws/post-api "/api/projection"
-                                     {:json-params
-                                      {:projection-name pn
-                                       :stream-name (:stream-name (om/props this))
-                                       :initial-value iv
-                                       :reduction code
-                                       :language "clojure"}})))))}
-         "Create projection"))))))
-
-(defui StreamSchema
-  Object
-  (getInitialState
-   [this]
-   {:ch (chan) :ch-click (chan)})
-  (componentDidMount
-   [this]
-   #_(produce-tree! (om/props this)
-                  (:ch (om/get-state this))
-                  (:ch-click (om/get-state this))))
-  (componentDidUpdate
-   [this _ _]
-   (go (>! (:ch (om/get-state this)) ""))
-   #_(clean-tree! (om/props this))
-   #_(produce-tree! (om/props this)
-                  (:ch (om/get-state this))
-                  (:ch-click (om/get-state this))))
-  (render
-   [this]
-   (dom/div
-    nil
-    (dom/div
-     #js {:className "container"}
-     (dom/div
-      #js {:className "row"}
-      (dom/div #js {:className "col-lg-4" :id "tree"})
-      (dom/div
-       #js {:className "col-lg-4"}
-       (dom/div #js {:className "row small-widget-box"}
-                ((om/factory VarActions)
-                 {:ch (:ch-click (om/get-state this))
-                  :stream-name (:stream (om/props this))})))))
-    #_(dom/p nil (pr-str data)))))
 
 (defui StreamSelector
   Object
@@ -373,16 +276,19 @@
      (let [node (u/js->cljk (:tree/select ui-state))
            sch (-> node :node :original :schema)
            path (clojure.string/join "." (:path sch))]
-       (apply dom/div
-              nil
+       (apply dom/form
+              #js {:className "form-horizontal form-label-left"}
               (when-not (nil? sch)
-                [(dom/p nil path)
-                 (dom/p nil (str "This parameter is probably " (:mode sch)))
-                 (dom/p nil (when-not (= (:values sch) "not-enum")
-                              (str "Values found: "
-                                   (clojure.string/join
-                                    ", "
-                                    (map name (keys (:values sch)))))))]))))))
+                [((om/factory comp/LabelAndLabel)
+                  {:label "Path" :second-label path})
+                 ((om/factory comp/LabelAndLabel)
+                  {:label "Optionality" :second-label (:mode sch)})
+                 ((om/factory comp/LabelAndLabel)
+                  {:label "Found values"
+                   :second-label (when-not (= (:values sch) "not-enum")
+                                   (str (clojure.string/join
+                                         ", "
+                                         (map name (keys (:values sch))))))})]))))))
 
 (defui SchemaTree
   Object
@@ -440,7 +346,8 @@
          node (u/js->cljk v)
          sch (-> node :node :original :schema)
          path (clojure.string/join "." (:path sch))
-         [iv code] (construct-code (om/get-state this))
+         [iv code] (construct-code (om/get-state this)
+                                   (:analyse-version ui-state))
          upd (fn [k v]
                (om/transact! owner
                              `[(ui/update ~{:k k :v v}) :ui-state]))]
@@ -471,36 +378,53 @@
                                update-in [:action-list :select] #(conj (into #{} %) node)))}
                        "Select"))})
         #_(.log js/console (pr-str (action-list->actions (:action-list om/get-state))))
-        (apply dom/div
-               nil
-               (map #((om/factory ActionItem)
-                      {:action %
-                       :fn-delete
-                       (fn [k v]
-                         (om/update-state!
-                          this
-                          update-in [:action-list k] (fn [x] (disj x v))))})
-                    (action-list->actions (:action-list (om/get-state this)))))
-        #_(dom/label nil "Initial value")
-        #_(((om/factory comp/CodeBlock)) {:code code})
-        #_(dom/label nil "Code")
-        #_((om/factory comp/CodeBlock) {:code code})
-        #_(dom/label nil "Projection name")
-        #_(dom/input #js {:ref "projection-name"})
-        #_(dom/button
-         #js {:onClick
-              (fn [ev]
-                (let [pn (.-value (om/react-ref this "projection-name"))]
-                  (.log js/console (pr-str code))
-                  (go
-                    (<! (ws/post-api "/api/projection"
-                                     {:json-params
-                                      {:projection-name pn
-                                       :stream-name (:stream-name (om/props this))
-                                       :initial-value iv
-                                       :reduction code
-                                       :language "clojure"}})))))}
-         "Create projection"))))))
+        (let [acs (action-list->actions (:action-list (om/get-state this)))]
+          (dom/div
+           #js {:className "control-group"}
+           (dom/label
+            #js {:className "control-label col-md-3 col-sm-3 col-xs-12"}
+            "Selected actions")
+           (dom/div
+            #js {:id "tags" :className "col-md-9 col-sm-9 col-xs-12"}
+            (apply dom/div
+                  #js {:className "tagsinput"
+                       :style #js {:width "auto" :height "auto"}}
+                  (if (= 0 (count acs))
+                    [(dom/input
+                      #js {:value "none"
+                           :data-default "none"
+                           :style #js {:color "rgb(102,102,102)"
+                                       :width "72px"}})]
+                    (map #((om/factory ActionItem)
+                           {:action %
+                            :fn-delete
+                            (fn [k v]
+                              (om/update-state!
+                               this
+                               update-in [:action-list k] (fn [x] (disj x v))))})
+                         acs))))))
+        ((om/factory comp/LabelAndSomething)
+         {:label "Initial value"
+          :component ((om/factory comp/CodeBlock) {:code iv})})
+        ((om/factory comp/LabelAndSomething)
+         {:label "Code"
+          :component ((om/factory comp/CodeBlock) {:code code})})
+        ((om/factory comp/LabelAndTextInput)
+         {:label "Projection name" :key :analyser-projection-name
+          :owner owner})
+        ((om/factory comp/FormButton)
+         {:text "Create projection"
+          :onClick
+          (fn [ev]
+            (let [pn (:analyser-projection-name ui-state)]
+              (go
+                (<! (ws/post-api "/api/projection"
+                                 {:json-params
+                                  {:projection-name pn
+                                   :stream-name (:analyse-stream ui-state)
+                                   :initial-value iv
+                                   :reduction code
+                                   :language "clojure"}})))))}))))))
 
 (defui DataAnalyser
   static om/IQuery
