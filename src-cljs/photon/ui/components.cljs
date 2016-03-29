@@ -260,10 +260,11 @@
   Object
   (render
    [this]
-   (let [{:keys [idx item owner]} (om/props this)
-         oddness (if (= (mod idx 2) 0) "odd" "even")]
+   (let [{:keys [idx item owner flash?]} (om/props this)
+         oddness (if (= (mod idx 2) 0) "odd" "even")
+         flashness (if flash? "selected" "")]
      (apply dom/tr
-            #js {:className (str "pointer " oddness)}
+            #js {:className (str "pointer " oddness " " flashness)}
             (dom/td
              #js {:className "a-center sorting_1"}
              ((om/factory TableChecker)))
@@ -287,7 +288,7 @@
   Object
   (render
    [this]
-   (let [{:keys [data rows owner]} (om/props this)
+   (let [{:keys [data rows owner flash]} (om/props this)
          data (map (partial sort-by-row rows) data)
          headings (map k->header
                        (keys (dissoc (first data) :meta/original)))]
@@ -321,7 +322,10 @@
        (apply dom/tbody
               #js {:role "alert" :aria-live "polite" :aria-relevant "all"}
               (map-indexed #((om/factory TableRow)
-                             {:idx %1 :item %2 :owner owner})
+                             {:idx %1 :item %2 :owner owner
+                              :flash? (and
+                                       (not (nil? flash))
+                                       (= (get %2 (key flash)) (val flash)))})
                            data)))))))
 
 (defui Modal

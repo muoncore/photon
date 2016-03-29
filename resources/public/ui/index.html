@@ -45,11 +45,22 @@
     <link href="css/icheck/flat/green.css" rel="stylesheet" />
     <link href="css/floatexamples.css" rel="stylesheet" />
     <link href="css/dataTables.tableTools.css" rel="stylesheet" />
+    <script src="lib/pnotify.custom.min.js"></script>
+    <link href="css/pnotify.custom.min.css" media="all" rel="stylesheet" type="text/css" />
     <script src="lib/echarts-all.js"></script>
     <script src="lib/green.js"></script>
+    <script>
+      PNotify.prototype.options.styling = "bootstrap3";
+    </script>
   </head>
   <body class="nav-md">
     <div id="main-area">
+    </div>
+    <div id="custom_notifications" class="custom-notifications dsp_none">
+      <ul class="list-unstyled notifications clearfix" data-tabbed_notifications="notif-group">
+      </ul>
+      <div class="clearfix"></div>
+      <div id="notif-group" class="tabbed_notifications"></div>
     </div>
     <script src="ui/js/main.js" type="text/javascript"></script>
     <script src="lib/custom.js"></script>

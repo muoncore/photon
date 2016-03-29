@@ -133,3 +133,65 @@
       (om/transact!
        owner `[(ui/update {:k :events :v ~(:results response)})
                :stream-info]))))
+
+(defn post-projection-and-notify [owner params]
+  (let [pn (:projection-name params)
+        noti (js/PNotify.
+              #js {:title "Creating projection..."
+                   :type "info"
+                   :text "Test"})]
+    (go
+      (let [res (<! (post-api "/api/projection" {:json-params params}))]
+        (.removeAll js/PNotify)
+        (js/PNotify.
+         (clj->js
+          (if (= 200 (:status res))
+            {:title "Success"
+             :type "success"
+             :text (str "Projection " pn " created "
+                        "successfully")
+             :confirm {:confirm true
+                       :buttons
+                       [{:text "Go to projection"
+                         :addClass "btn-primary"
+                         :click
+                         (fn [_]
+                           (om/transact!
+                            owner
+                            `[(leaf/select {:name "Active projections"})])
+                           (om/transact!
+                            owner
+                            `[(ui/update ~{:k :new-projection
+                                           :v pn})]))}]}}
+            {:title "Unexpected problem"
+             :type "error"
+             :text (str "Error code: " (:status res) "\n"
+                        "Message: " (pr-str (:body res)))})))
+        (.positionAll js/PNotify)))))
+
+(defn notify-stream [owner msg]
+  (let [stream-name (:stream-name msg)]
+    (js/PNotify.
+     (clj->js
+      (if (= "OK" (:status msg))
+        {:title "Success"
+         :type "success"
+         :text (str "Stream " stream-name " created "
+                    "successfully")
+         :confirm {:confirm true
+                   :buttons
+                   [{:text "Go to stream"
+                     :addClass "btn-primary"
+                     :click
+                     (fn [_]
+                       (om/transact!
+                        owner
+                        `[(leaf/select {:name "Active streams"})])
+                       (om/transact!
+                        owner
+                        `[(ui/update ~{:k :new-stream
+                                       :v stream-name})]))}]}}
+        {:title "Unexpected problem"
+         :type "error"
+         :text (str "Error code: " (:status msg) "\n"
+                    "Message: " (pr-str msg))})))))

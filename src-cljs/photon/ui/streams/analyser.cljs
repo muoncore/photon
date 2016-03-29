@@ -416,15 +416,13 @@
          {:text "Create projection"
           :onClick
           (fn [ev]
-            (let [pn (:analyser-projection-name ui-state)]
-              (go
-                (<! (ws/post-api "/api/projection"
-                                 {:json-params
-                                  {:projection-name pn
-                                   :stream-name (:analyse-stream ui-state)
-                                   :initial-value iv
-                                   :reduction code
-                                   :language "clojure"}})))))}))))))
+            (ws/post-projection-and-notify
+             owner
+             {:projection-name (:analyser-projection-name ui-state)
+              :stream-name (:analyse-stream ui-state)
+              :initial-value iv
+              :reduction code
+              :language "clojure"}))}))))))
 
 (defui DataAnalyser
   static om/IQuery

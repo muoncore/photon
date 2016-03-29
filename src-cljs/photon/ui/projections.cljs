@@ -106,6 +106,7 @@
          :component comp/Table
          :data {:data (map filter-projection projections)
                 :owner this
+                :flash [:projection-name (:new-projection ui-state)]
                 :rows [:projection-name
                        :init-time :avg-time :status :language
                        :processed :stream-name :url]}}))
@@ -145,14 +146,15 @@
        {:text "Register projection"
         :onClick
         (fn [_]
-          (ws/post-api-async "/api/projection"
-                             {:json-params
-                              (select-keys data
-                                           [:pform/projection-name
-                                            :pform/stream-name
-                                            :pform/initial-value
-                                            :pform/reduction
-                                            :pform/language])}))})))))
+          (ws/post-projection-and-notify
+           owner
+           (zipmap
+            [:projection-name :stream-name :initial-value
+             :reduction :language]
+            (vals (select-keys data
+                               [:pform/projection-name :pform/stream-name
+                                :pform/initial-value :pform/reduction
+                                :pform/language])))))})))))
 
 (defui NewProjection
   static om/IQuery

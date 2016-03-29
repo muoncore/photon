@@ -104,6 +104,7 @@
         {:title "Currently active streams"
          :component comp/Table
          :data {:data streams
+                :flash [:stream (:new-stream (:ui-state data))]
                 :owner this
                 :rows [:stream :total-events :contents :export]}}))
       (if (not (nil? active-stream))
@@ -133,22 +134,24 @@
           ((om/factory EventList)
            {:events (:events (:ui-state data)) :stream active-stream}))))))
 
-(defn handle-iframe-response [json-msg]
-  (let [msg (u/js->cljk json-msg)]
+(defn handle-iframe-response [parent json-msg]
+  (let [msg (try (u/js->cljk (.getResponseJson json-msg))
+                 (catch js/Error e e))]
     #_(.log js/console (str "iframe-response: " msg))
-    (cond
-      (= "OK" (:status msg)) (str "Uploaded to stream: " (:stream-name msg))
-      :else (str "Unexpected error: " (pr-str msg)))))
+    (ws/notify-stream parent msg)
+    (if (= "OK" (:status msg))
+      (str "Uploaded to stream: " (:stream-name msg))
+      (str "Unexpected error: " (pr-str msg)))))
 
-(defn iframeio-upload-file [form-id owner]
+(defn iframeio-upload-file [form-id owner parent]
   (let [el (.getDOMNode (om/react-ref owner form-id))
         iframe (IframeIo.)]
     #_(.log js/console el)
     (events/listen iframe EventType.COMPLETE
         (fn [event]
           (om/update-state!
-           owner assoc :upload-status (handle-iframe-response
-                                       (.getResponseJson iframe)))
+           owner assoc :upload-status
+           (handle-iframe-response parent iframe))
           (.dispose iframe)))
     (.sendFromForm iframe el)))
 
@@ -167,7 +170,8 @@
                              (.preventDefault e)
                              (om/update-state!
                               this assoc :upload-status "Uploading...")
-                             (iframeio-upload-file "upload-form" this))
+                             (iframeio-upload-file "upload-form" this
+                                                   owner))
                  :action "/api/new-stream"}
             (:upload-status (om/get-state this))
             ((om/factory comp/LabelAndTextInput)
