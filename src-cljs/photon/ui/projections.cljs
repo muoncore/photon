@@ -141,7 +141,7 @@
         :key :pform/initial-value :val (:pform/initial-value data)})
       ((om/factory comp/LabelAndCodeBlock)
        {:owner owner :label "Code: content of (fn [prev item] ... )"
-        :key :pform/reduction :val (:pform/reduction data)}) 
+        :key :pform/reduction :val (:pform/reduction data)})
       ((om/factory comp/FormButton)
        {:text "Register projection"
         :onClick

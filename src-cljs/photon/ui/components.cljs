@@ -449,22 +449,22 @@
      :component
      (let [{:keys [owner label options] :as props} (om/props this)]
        (apply dom/div
-              #js {:className "btn-group"
-                   :data-toggle "buttons"}
+              #js {:className "btn-group" }
               (map #(dom/label
                      (clj->js
                       {:className (str "btn btn-default parsley-success"
                                        (if (= (key %) (:val props))
-                                         " active" ""))
-                       :data-toggle-class "btn-primary"
-                       :data-toggle-passive-class "btn-default"
-                       :onChange
+                                         " btn-primary active" ""))
+                       :onClick
                        (fn [ev]
+                         (println "onChange!")
                          (om/transact!
                           owner
                           `[(ui/update ~{:k (:key props)
                                          :v (key %)})]))})
-                     (dom/input #js {:type "radio" :value (key %)})
+                     (dom/input #js {:type "radio" :value (key %)
+                                     :style #js {:visibility "hidden"
+                                                 :display "none"}})
                      (val %))
                    options)))})))
 
