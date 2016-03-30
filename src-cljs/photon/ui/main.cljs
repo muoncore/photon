@@ -5,7 +5,8 @@
             [photon.ui.streams :as stm]
             [photon.ui.streams.analyser :as anal]
             [photon.ui.projections :as proj]
-            [photon.ui.dashboard :as dsh]))
+            [photon.ui.dashboard :as dsh]
+            [photon.ui.external :as external]))
 
 (def components
   {:streams/active stm/ActiveStreams
@@ -13,7 +14,8 @@
    :streams/new stm/NewStream
    :projections/active proj/ActiveProjections
    :projections/new proj/NewProjection
-   :streams/analyse anal/DataAnalyser})
+   :streams/analyse anal/DataAnalyser
+   :api/swagger external/Swagger})
 
 (defui Footer
   Object

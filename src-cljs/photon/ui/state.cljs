@@ -10,7 +10,7 @@
    :auth nil
    :password ""
    :categories [{:name "Admin dashboard"}
-                {:name "Docs"}]
+                {:name "Documentation"}]
    :sections [{:name "Stats"
                :category "Admin dashboard"
                :active true
@@ -21,6 +21,10 @@
                :opened true}
               {:name "Projections"
                :category "Admin dashboard"
+               :active true
+               :opened true}
+              {:name "API"
+               :category "Documentation"
                :active true
                :opened true}]
    :leaves [{:name "Basic stats"
@@ -46,6 +50,10 @@
             {:name "New projection"
              :section "Projections"
              :link :projections/new
+             :active false}
+            {:name "Swagger Interface"
+             :section "API"
+             :link :api/swagger
              :active false}]
    :analyse-stream nil
    :new-projection false

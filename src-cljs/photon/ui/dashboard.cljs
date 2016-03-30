@@ -47,6 +47,7 @@
        ((om/factory comp/Chart)
         {:timestamps (:timestamps (:last-25 data))
          :id "events-processed-chart"
+         :padding 10
          :sets [{:name "Events/sec."
                  :data (:processed (:last-25 data))}]}))))))
 
@@ -62,6 +63,7 @@
        ((om/factory comp/Chart)
         {:timestamps (:timestamps (:last-25 data))
          :id "events-incoming-chart"
+         :padding 10
          :sets [{:name "Events/sec."
                  :data (:incoming (:last-25 data))}]}))))))
 

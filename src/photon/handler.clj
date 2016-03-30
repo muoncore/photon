@@ -52,8 +52,7 @@
         (if-let [{:keys [message]} (<! ws-channel)]
           (do
             (<! (timeout t))
-            (let [stats-stream (assoc (deref (:stats stream))
-                                      :atom (:stats stream))
+            (let [stats-stream @(:stats stream)
                   stats-rt (api/runtime-stats stream)
                   all-stats {:stats (merge stats-stream stats-rt)}]
               (>! ws-channel all-stats))

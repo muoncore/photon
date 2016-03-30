@@ -86,14 +86,13 @@
   Object
   (componentDidMount
    [this]
-   (let [{:keys [id max label-y]} (om/props this)
+   (let [{:keys [id max padding label-y]} (om/props this)
          options {:bindto (str "#" id)
                   :data {:x "x"
                          :columns []
                          :type "area"}
                   :point {:show false}
-                  :axis {:y {:tick {:count 5}
-                             :min 0
+                  :axis {:y {:min 0
                              :padding {:bottom 0
                                        :top 0}}
                          :x {:type "timeseries"
@@ -105,6 +104,9 @@
          options (if (nil? label-y)
                    options
                    (assoc-in options [:axis :y :label] label-y))
+         options (if (nil? padding)
+                   options
+                   (assoc-in options [:axis :y :padding :bottom] padding))
          chart (.generate js/c3 (clj->js options))]
      (om/set-state! this {:chart chart})))
   (componentDidUpdate
