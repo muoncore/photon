@@ -84,7 +84,7 @@
                  previous-processed 0
                  previous-incoming 0
                  is-first? true]
-            (when-not (nil? elem)
+            (when-not (or (nil? elem) (nil? (:stats (:message elem))))
               (if (contains? elem :error)
                 (.log js/console (pr-str elem))
                 (let [stats-from-msg (:stats (:message elem))
@@ -98,12 +98,12 @@
                                                             :incoming new-incoming
                                                             :memory new-memory
                                                             :timestamps new-timestamps})]
-                  (when (< new-processed 0)
-                    (println "SOMETHING WRONG!")
-                    (println (:message elem)))
+                  (when (< (last new-processed) 0) (println "SOMETHING WRONG!"))
                   (when-not is-first? (upd {:stats stats}))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-processed new-incoming new-memory new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
+                  (recur (<! ws-channel) new-processed new-incoming new-memory
+                         new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg)
+                         false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
@@ -116,7 +116,7 @@
         (do
           (>! ws-channel {:projection-name "__streams__"})
           (loop [elem (<! ws-channel)]
-            (when-not (nil? elem)
+            (when-not (or (nil? elem) (nil? (:current-value (:message elem))))
               (if (contains? elem :error)
                 (do #_(.log js/console (pr-str elem)))
                 (let [streams-proj (:message elem)]

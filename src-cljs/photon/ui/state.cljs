@@ -31,6 +31,10 @@
              :section "Stats"
              :link :dashboard/stats
              :active true}
+            {:name "Debug interface"
+             :section "Stats"
+             :link :dashboard/debug
+             :active true}
             {:name "Active streams"
              :section "Streams"
              :link :streams/active
