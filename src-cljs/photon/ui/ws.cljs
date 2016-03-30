@@ -6,9 +6,11 @@
             [cljs.core.async :refer [chan <! >! put! close!]]))
 
 (defonce localhost (let [href (.-href (.-location js/window))]
-                     (clojure.string/join
-                      "/"
-                      (drop-last (clojure.string/split href #"/")))))
+                     (if (= (last href) \/)
+                       (apply str (drop-last 1 href))
+                       (clojure.string/join
+                        "/"
+                        (drop-last (clojure.string/split href #"/"))))))
 
 (defonce ws-localhost (let [tokens (clojure.string/split localhost #":")
                             prefix (if (= (first tokens) "https")

@@ -59,7 +59,7 @@
                                   (om/transact!
                                    this `[(root/update ~{:auth m})]))))]
      (if (= 200 (:status auth))
-       (set! (.-location js/window) "/ui")
+       (set! (.-location js/window) "/")
        (dom/div
         nil
         (dom/p nil (if (= 401 (:status auth)) "Wrong credentials"))
