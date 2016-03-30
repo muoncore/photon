@@ -125,7 +125,8 @@
    [this]
    (let [{:keys [owner] :as data} (om/props this)]
      (dom/form
-      #js {:className "form-horizontal form-label-left"}
+      #js {:className "form-horizontal form-label-left"
+           :onSubmit (fn [e] (.preventDefault e) false)}
       ((om/factory comp/LabelAndTextInput)
        {:owner owner :key :pform/projection-name
         :val (:pform/projection-name data) :label "Projection name"})

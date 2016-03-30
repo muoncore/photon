@@ -86,8 +86,7 @@
                  is-first? true]
             (when-not (nil? elem)
               (if (contains? elem :error)
-                (do
-                  #_(.log js/console (pr-str elem)))
+                (.log js/console (pr-str elem))
                 (let [stats-from-msg (:stats (:message elem))
                       new-processed (get-chart-data (:processed stats-from-msg) previous-processed last-25-processed is-first?)
                       new-incoming (get-chart-data (:incoming stats-from-msg) previous-incoming last-25-incoming is-first?)
@@ -99,8 +98,10 @@
                                                             :incoming new-incoming
                                                             :memory new-memory
                                                             :timestamps new-timestamps})]
-                  (when-not is-first?
-                    (upd {:stats stats}))
+                  (when (< new-processed 0)
+                    (println "SOMETHING WRONG!")
+                    (println (:message elem)))
+                  (when-not is-first? (upd {:stats stats}))
                   (>! ws-channel {:ok true})
                   (recur (<! ws-channel) new-processed new-incoming new-memory new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
         (do
@@ -141,7 +142,7 @@
         noti (js/PNotify.
               #js {:title "Creating projection..."
                    :type "info"
-                   :text "Test"})]
+                   :text (str "Projection: " pn)})]
     (go
       (let [res (<! (post-api "/api/projection" {:json-params params}))]
         (.removeAll js/PNotify)
@@ -163,8 +164,7 @@
                             `[(leaf/select {:name "Active projections"})])
                            (om/transact!
                             owner
-                            `[(ui/update ~{:k :new-projection
-                                           :v pn})]))}]}}
+                            `[(ui/update ~{:k :new-projection :v pn})]))}]}}
             {:title "Unexpected problem"
              :type "error"
              :text (str "Error code: " (:status res) "\n"

@@ -457,7 +457,6 @@
                                          " btn-primary active" ""))
                        :onClick
                        (fn [ev]
-                         (println "onChange!")
                          (om/transact!
                           owner
                           `[(ui/update ~{:k (:key props)
@@ -511,3 +510,4 @@
                 (if-let [onClick (:onClick (om/props this))]
                   (assoc base :onClick onClick) base)))
      (:text (om/props this))))))
+
