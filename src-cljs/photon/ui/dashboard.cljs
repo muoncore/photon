@@ -30,6 +30,8 @@
        ((om/factory comp/Chart)
         {:timestamps (:timestamps (:last-25 data))
          :id "system-data"
+         :max 100
+         :label-y "%"
          :sets [{:name "Memory usage"
                  :data (:memory (:last-25 data))}]}))))))
 

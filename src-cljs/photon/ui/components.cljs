@@ -86,7 +86,7 @@
   Object
   (componentDidMount
    [this]
-   (let [{:keys [id]} (om/props this)
+   (let [{:keys [id max label-y]} (om/props this)
          options {:bindto (str "#" id)
                   :data {:x "x"
                          :columns []
@@ -94,15 +94,17 @@
                   :point {:show false}
                   :axis {:y {:tick {:count 5}
                              :min 0
-                             :max 100
                              :padding {:bottom 0
-                                       :top 0}
-                             :label "%"}
+                                       :top 0}}
                          :x {:type "timeseries"
                              :tick {:count 5
                                     :format "%H:%M:%S"}}}
                   #_#_:tooltip {:show false}
                   :transition {:duration 0}}
+         options (if (nil? max) options (assoc-in options [:axis :y :max] max))
+         options (if (nil? label-y)
+                   options
+                   (assoc-in options [:axis :y :label] label-y))
          chart (.generate js/c3 (clj->js options))]
      (om/set-state! this {:chart chart})))
   (componentDidUpdate

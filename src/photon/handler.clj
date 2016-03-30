@@ -52,7 +52,8 @@
         (if-let [{:keys [message]} (<! ws-channel)]
           (do
             (<! (timeout t))
-            (let [stats-stream @(:stats stream)
+            (let [stats-stream (assoc (deref (:stats stream))
+                                      :atom (:stats stream))
                   stats-rt (api/runtime-stats stream)
                   all-stats {:stats (merge stats-stream stats-rt)}]
               (>! ws-channel all-stats))
@@ -78,13 +79,13 @@
                       (apply str (rest (:path-info req))))))
 
 (defmethod on-open "ws-stats" [ch stream]
-  (let [req (async/originating-request ch)
-        stats-stream @(:stats stream)]
+  (let [req (async/originating-request ch)]
     (go
       (loop [t 0]
         (<! (timeout t))
         (when (async/open? ch)
-          (let [stats-rt (api/runtime-stats stream)
+          (let [stats-stream @(:stats stream)
+                stats-rt (api/runtime-stats stream)
                 all-stats {:stats (merge stats-stream stats-rt)}]
             (ws-send! ch all-stats)
             (recur 1000)))))))
