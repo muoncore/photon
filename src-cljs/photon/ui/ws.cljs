@@ -60,7 +60,7 @@
         (do
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)]
-            (when-not (nil? elem)
+            (when-not (or (nil? elem) (nil? (:projections (:message elem))))
               (if (contains? elem :error)
                 (do
                   #_(.log js/console (pr-str elem)))
