@@ -217,10 +217,6 @@
               (cc/POST "/new-stream" {params :params}
                        (http/ok {:status "OK"
                                  :stream-name (api/new-stream ms params)}))))
-    (GET "/ui" []
-         :no-doc true
-         (response/resource-response "index.html"
-                                     {:root "public/ui"}))
     (context "/ws" []
              :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
                           (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
@@ -231,6 +227,9 @@
                                        (ws-route-stats-hk ms))
                                (routes (ws-route ms)))))
                       {:keywords? true})))
-    (route/resources "/")
+    (GET "/" []
+         :no-doc true
+         (response/resource-response "index.html" {:root "public/ui"}))
+    #_(route/resources "/")
     (route/not-found (http/not-found "Not found")))
   (wrap-session (reload/wrap-reload #'app-no-reload)))
