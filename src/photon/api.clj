@@ -1,5 +1,6 @@
 (ns photon.api
   (:require [photon.streams :as streams]
+            [photon.exec :as exec]
             [schema.core :as s]
             [cheshire.core :as json]
             [photon.default-projs :as dp]
@@ -125,11 +126,13 @@
         language (:language body)
         code (:reduction body)
         initial-value (:initial-value body)
+        k-language (keyword language)
+        parsed-initial-value (exec/parse-value initial-value k-language)
         projection-descriptor {:projection-name projection-name
                                :stream-name stream-name
-                               :language (keyword language)
+                               :language k-language
                                :reduction code
-                               :initial-value (read-string initial-value)}]
+                               :initial-value parsed-initial-value}]
     (try
       (spit (str (:projections.path (:conf stm)) "/" projection-name ".edn")
             (with-out-str (clojure.pprint/pprint projection-descriptor)))

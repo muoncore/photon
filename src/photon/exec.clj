@@ -1,5 +1,6 @@
 (ns photon.exec
   (:require [clj-rhino :as js]
+            [cheshire.core :as json]
             [photon.db :as db])
   (:import (org.mozilla.javascript ConsString)
            (java.util HashMap)
@@ -173,4 +174,11 @@
 (extend org.bson.types.ObjectId js/RhinoConvertible
         {:-to-rhino (fn [obj scope ctx] (str obj))})
 
+(defn parse-value [str-val k-language]
+  (println k-language)
+  (condp = k-language
+    :clojure (read-string str-val)
+    :javascript (json/parse-string str-val)
+    (throw (UnsupportedOperationException.
+             (str (name k-language) " not supported")))))
 

@@ -147,15 +147,20 @@
        {:text "Register projection"
         :onClick
         (fn [_]
-          (ws/post-projection-and-notify
-           owner
-           (zipmap
-            [:projection-name :stream-name :initial-value
-             :reduction :language]
-            (vals (select-keys data
-                               [:pform/projection-name :pform/stream-name
-                                :pform/initial-value :pform/reduction
-                                :pform/language])))))})))))
+          (let [all (zipmap
+                      [:projection-name :stream-name :initial-value
+                       :reduction :language]
+                      (vals (select-keys data
+                                         [:pform/projection-name :pform/stream-name
+                                          :pform/initial-value :pform/reduction
+                                          :pform/language])))
+                proj (if (= "javascript" (:language all))
+                       (do
+                         (js/eval
+                           (str "var __proj_eval = " (:initial-value all) ";"))
+                         (assoc all :initial-value (.stringify js/JSON js/__proj_eval)))
+                       all)]
+            (ws/post-projection-and-notify owner proj)))})))))
 
 (defui NewProjection
   static om/IQuery
