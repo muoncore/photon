@@ -73,7 +73,7 @@
   static om/Ident
   (ident [this {:keys [name]}] [:section/by-name name])
   static om/IQuery
-  (query [this] `[:name :category
+  (query [this] `[:name :category :icon
                   {:leaves ~(om/get-query MenuLeaf)} :active])
   Object
   (componentDidUpdate
@@ -92,7 +92,7 @@
                             :sections]))))
   (render
    [this]
-   (let [{:keys [name leaves active opened]} (om/props this)]
+   (let [{:keys [name leaves active opened icon]} (om/props this)]
      (dom/li
       (clj->js
        {:className (if active "active" "")})
@@ -103,7 +103,7 @@
                             `[(section/update ~{:section name
                                                 :k :active :v (not active)})
                               :sections]))}
-       (dom/i #js {:className "fa fa-home"})
+       (dom/i (clj->js {:className (str "fa " icon)}))
        name
        (dom/span
         (if active

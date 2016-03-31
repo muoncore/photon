@@ -13,18 +13,22 @@
                 {:name "Documentation"}]
    :sections [{:name "Stats"
                :category "Admin dashboard"
+               :icon "fa-cogs"
                :active true
                :opened true}
               {:name "Streams"
                :category "Admin dashboard"
+               :icon "fa-sliders"
                :active true
                :opened true}
               {:name "Projections"
                :category "Admin dashboard"
+               :icon "fa-tasks"
                :active true
                :opened true}
               {:name "API"
                :category "Documentation"
+               :icon "fa-newspaper-o"
                :active true
                :opened true}]
    :leaves [{:name "Basic stats"
