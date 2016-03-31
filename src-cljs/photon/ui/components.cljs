@@ -393,7 +393,8 @@
    [this]
    (let [c (:code (om/props this))]
      (dom/pre
-      #js {:overflow-y "scroll" :ref "code-block"}
+      #js {:overflow-y "scroll" :ref "code-block"
+           :style #js {:width "100%"}}
       (dom/code
        #js {:className "clojure" :ref "code"}
        (dom/div
@@ -419,7 +420,7 @@
      #js {:className "control-label col-md-3 col-sm-3 col-xs-12"}
      (:label (om/props this)))
     (dom/div
-     #js {:className "col-md-6 col-sm-6 col-xs-12"}
+     #js {:className "col-md-9 col-sm-9 col-xs-12"}
      (:component (om/props this))))))
 
 (defui LabelAndTextInput
@@ -508,6 +509,20 @@
                           :className "btn btn-default"
                           :value "submit"}]
                 (if-let [onClick (:onClick (om/props this))]
-                  (assoc base :onClick onClick) base)))
+                  (assoc base
+                         :onClick (fn [e]
+                                    (.preventDefault e)
+                                    (onClick e)))
+                  base)))
      (:text (om/props this))))))
 
+(defui ActionButton
+  Object
+  (render
+   [this]
+   (dom/button
+    #js {:className "btn btn-primary"
+         :onClick (fn [ev]
+                    (.preventDefault ev)
+                    ((:onClick (om/props this)) ev))}
+    (:label (om/props this)))))

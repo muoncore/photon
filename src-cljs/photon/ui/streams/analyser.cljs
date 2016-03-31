@@ -181,63 +181,90 @@
         path (clojure.string/join "." (:path sch))]
     path))
 
+(def s-conj (symbol "conj"))
+(def s-prev (symbol "prev"))
+(def s-orig-next (symbol "orig-next"))
+(def s-next (symbol "next"))
+(def s-update (symbol "update"))
+(def s-update-in (symbol "update-in"))
+(def s-fn (symbol "fn"))
+(def s-old (symbol "old"))
+(def s-if (symbol "if"))
+(def s-nil? (symbol "nil?"))
+(def s-= (symbol "="))
+(def s-let (symbol "let"))
+(def s-reduce (symbol "reduce"))
+(def s-m (symbol "m"))
+(def s-m2 (symbol "m2"))
+(def s-assoc-in (symbol "assoc-in"))
+(def s-key (symbol "key"))
+(def s-val (symbol "val"))
+(def s-get-in (symbol "get-in"))
+(def s-concat (symbol "concat"))
+(def s-int (symbol "int"))
+(def s--> (symbol "->"))
+(def s-div (symbol "/"))
+(def s-mult (symbol "*"))
+
 (defn group-by-structure [gs]
   (let [nodes (map #(u/js->cljk %) gs)
         schs (map #(-> % :node :original :schema) nodes)
         paths (map #(into [] (map keyword (:path %))) schs)]
-    (str "{:group-by {"
-         (clojure.string/join
-          " "
-          (map (fn [x y]
-                 (str (pr-str y)
-                      " (-> next "
-                      (clojure.string/join
-                       " " (map #(str ":" %) (:path x)))
-                      ")"))
-               schs paths))
-         "}}")))
+    {:group-by
+     (apply merge
+            (map (fn [x y]
+                   {y `(~s--> ~s-next ~@(map keyword (:path x)))})
+                 schs paths))}))
 
 (defn select-structure [gs]
   (let [nodes (map #(u/js->cljk %) gs)
         schs (map #(-> % :node :original :schema) nodes)
         paths (map #(clojure.string/join "." (:path %)) schs)
-        bdgs (str "{"
-                  (clojure.string/join
-                   " "
-                   (map (fn [x]
-                          (let [v (into [] (map keyword (:path x)))
-                                vt (clojure.string/join " " v)]
-                            (str "[" vt "] (get-in next [" vt "])")))
-                        schs))
-                  "}")]
-    (str "let [next (reduce (fn [m m2] "
-         "(assoc-in m (key m2) (val m2))"
-         ") {} " bdgs ")] ")))
+        bdgs (apply merge
+                    (map (fn [x]
+                           (let [v (into [] (map keyword (:path x)))]
+                             {v `(~s-get-in ~s-next ~v)}))
+                         schs))]
+    `(~s-let [~s-orig-next ~s-next
+              ~s-next (~s-reduce
+                       (~s-fn [~s-m ~s-m2]
+                        (~s-assoc-in ~s-m (~s-key ~s-m2) (~s-val ~s-m2)))
+                       {} ~bdgs)])))
 
 (defn construct-code [m version]
   (let [action-list (:action-list m)
+        sk (if (contains? action-list :split-4-weeks)
+             `(~s-mult
+               2419200000
+               (~s-int (~s-div (:photon-timestamp ~s-orig-next)
+                        2419200000)))
+             nil)
         group-bys (:group-by action-list)
         gbs (group-by-structure group-bys)
+        sk-gbs (if (nil? sk) gbs (if (nil? gbs) sk [sk gbs]))
         selects (:select action-list)
-        let-body (when-not (empty? selects) (select-structure selects))
+        let-body (when-not (empty? selects)
+                   (select-structure selects))
         action (if (empty? group-bys)
-                 "(conj prev next)"
-                 (str "(update prev "
-                      gbs
-                      " (fn [old] (if (nil? old)"
-                      " [next] (conj old next)"
-                      ")))"))
-        iv (if (empty? group-bys) "[]" "{}")]
-    [iv (if (= :__unversioned__ version)
-          (str "(fn [prev next] "
-               (if (empty? selects) action
-                   (str "(" let-body action ")")) ")")
-          (str "(fn [prev next] (if (= \"" version "\" (:schema next)) "
-               (if (empty? selects) action
-                   (str "(" let-body action ")")) " prev))"))]))
+                 (if (nil? sk)
+                   `(~s-conj ~s-prev ~s-next)
+                   `(~s-update ~s-prev ~sk ~s-concat [~s-next]))
+                 `(~s-update-in ~s-prev ~sk-gbs
+                   (~s-fn [~s-old]
+                    (~s-if (~s-nil? ~s-old)
+                     [~s-next] (~s-conj ~s-old ~s-next)))))
+        condition (if (= :__unversioned__ version)
+                    true
+                    `(~s-= ~version (:schema ~s-next)))
+        iv (if (and (nil? sk) (empty? group-bys)) [] {})]
+    [iv `(~s-fn [~s-prev ~s-next]
+          (~s-if ~condition
+           ~(if (empty? selects) action (concat let-body [action]))
+           ~s-prev))]))
 
 (def action-mappings {:group-by "Group by"
-                      :select "Select"})
+                      :select "Select"
+                      :split-4-weeks "Split: 4 weeks"})
 
 (defui ActionItem
   Object
@@ -252,7 +279,10 @@
       (dom/span nil (str (get action-mappings k) " " path "   "))
       (dom/a #js {:href "#"
                   :data-original-title "Removing tag"
-                  :onClick (fn [ev] (fn-delete k v))} " [X]")))))
+                  :onClick (fn [ev]
+                             (.preventDefault ev)
+                             (fn-delete k v))}
+             " [X]")))))
 
 (defn action-list->actions [action-list]
   (mapcat (fn [k] (map #(hash-map k %) (get action-list k)))
@@ -277,7 +307,8 @@
            sch (-> node :node :original :schema)
            path (clojure.string/join "." (:path sch))]
        (apply dom/form
-              #js {:className "form-horizontal form-label-left"}
+              #js {:className "form-horizontal form-label-left"
+                   :onSubmit (fn [e] (.preventDefault e) false)}
               (when-not (nil? sch)
                 [((om/factory comp/LabelAndLabel)
                   {:label "Path" :second-label path})
@@ -351,78 +382,90 @@
          upd (fn [k v]
                (om/transact! owner
                              `[(ui/update ~{:k k :v v}) :ui-state]))]
-     (if (nil? v)
-       (dom/p nil "Select a variable to get started")
-       (dom/form
-        #js {:className "form-horizontal form-label-left"}
-        ((om/factory comp/LabelAndLabel)
-         {:label "Selected variable" :second-label path})
+     (dom/form
+      #js {:className "form-horizontal form-label-left"}
+      ((om/factory comp/LabelAndLabel)
+       {:label "Selected variable"
+        :second-label (if (nil? v) "none" path)})
+      (when-not (nil? v)
         ((om/factory comp/LabelAndSomething)
-         {:label "Actions"
-          :component (dom/div
-                      nil
-                      (dom/button
-                       #js {:className "btn btn-primary"
-                            :onClick
-                            (fn [ev]
-                              (om/update-state!
-                               this
-                               update-in [:action-list :group-by] #(conj (into #{} %) node)))}
-                       "Group by")
-                      (dom/button
-                       #js {:className "btn btn-primary"
-                            :onClick
-                            (fn [ev]
-                              (om/update-state!
-                               this
-                               update-in [:action-list :select] #(conj (into #{} %) node)))}
-                       "Select"))})
-        #_(.log js/console (pr-str (action-list->actions (:action-list om/get-state))))
-        (let [acs (action-list->actions (:action-list (om/get-state this)))]
+         {:label "Path actions"
+          :component
           (dom/div
-           #js {:className "control-group"}
-           (dom/label
-            #js {:className "control-label col-md-3 col-sm-3 col-xs-12"}
-            "Selected actions")
-           (dom/div
-            #js {:id "tags" :className "col-md-9 col-sm-9 col-xs-12"}
-            (apply dom/div
-                  #js {:className "tagsinput"
-                       :style #js {:width "auto" :height "auto"}}
-                  (if (= 0 (count acs))
-                    [(dom/input
-                      #js {:value "none"
-                           :data-default "none"
-                           :style #js {:color "rgb(102,102,102)"
-                                       :width "72px"}})]
-                    (map #((om/factory ActionItem)
-                           {:action %
-                            :fn-delete
-                            (fn [k v]
-                              (om/update-state!
-                               this
-                               update-in [:action-list k] (fn [x] (disj x v))))})
-                         acs))))))
-        ((om/factory comp/LabelAndSomething)
-         {:label "Initial value"
-          :component ((om/factory comp/CodeBlock) {:code iv})})
-        ((om/factory comp/LabelAndSomething)
-         {:label "Code"
-          :component ((om/factory comp/CodeBlock) {:code code})})
-        ((om/factory comp/LabelAndTextInput)
-         {:label "Projection name" :key :analyser-projection-name
-          :owner owner})
-        ((om/factory comp/FormButton)
-         {:text "Create projection"
-          :onClick
-          (fn [ev]
-            (ws/post-projection-and-notify
-             owner
-             {:projection-name (:analyser-projection-name ui-state)
-              :stream-name (:analyse-stream ui-state)
-              :initial-value iv
-              :reduction code
-              :language "clojure"}))}))))))
+           nil
+           ((om/factory comp/ActionButton)
+            {:label "Group by"
+             :onClick
+             (fn [ev]
+               (om/update-state!
+                this
+                update-in [:action-list :group-by] #(conj (into #{} %) node)))})
+           ((om/factory comp/ActionButton)
+            {:label "Select"
+             :onClick
+             (fn [ev]
+               (om/update-state!
+                this
+                update-in [:action-list :select] #(conj (into #{} %) node)))}))}))
+      ((om/factory comp/LabelAndSomething)
+       {:label "Global actions"
+        :component
+        (dom/div
+         nil
+         ((om/factory comp/ActionButton)
+          {:label "Split: 4 weeks"
+           :onClick
+           (fn [ev]
+             (om/update-state!
+              this
+              update-in [:action-list :split-4-weeks]
+              #(conj (into #{} %) nil)))}))})
+      #_(.log js/console (pr-str (action-list->actions (:action-list om/get-state))))
+      (let [acs (action-list->actions (:action-list (om/get-state this)))]
+        (dom/div
+         #js {:className "control-group"}
+         (dom/label
+          #js {:className "control-label col-md-3 col-sm-3 col-xs-12"}
+          "Selected actions")
+         (dom/div
+          #js {:id "tags" :className "col-md-9 col-sm-9 col-xs-12"}
+          (apply dom/div
+                 #js {:className "tagsinput"
+                      :style #js {:width "auto" :height "auto"}}
+                 (if (= 0 (count acs))
+                   [(dom/input
+                     #js {:value "none"
+                          :data-default "none"
+                          :style #js {:color "rgb(102,102,102)"
+                                      :width "72px"}})]
+                   (map #((om/factory ActionItem)
+                          {:action %
+                           :fn-delete
+                           (fn [k v]
+                             (om/update-state!
+                              this
+                              update-in [:action-list k] (fn [x] (disj x v))))})
+                        acs))))))
+      ((om/factory comp/LabelAndSomething)
+       {:label "Initial value"
+        :component ((om/factory comp/CodeBlock) {:code iv})})
+      ((om/factory comp/LabelAndSomething)
+       {:label "Code"
+        :component ((om/factory comp/CodeBlock) {:code code})})
+      ((om/factory comp/LabelAndTextInput)
+       {:label "Projection name" :key :analyser-projection-name
+        :owner owner})
+      ((om/factory comp/FormButton)
+       {:text "Create projection"
+        :onClick
+        (fn [ev]
+          (ws/post-projection-and-notify
+           owner
+           {:projection-name (:analyser-projection-name ui-state)
+            :stream-name (:analyse-stream ui-state)
+            :initial-value (if (string? iv) iv (pr-str iv))
+            :reduction (if (string? code) code (pr-str code))
+            :language "clojure"}))})))))
 
 (defui DataAnalyser
   static om/IQuery
