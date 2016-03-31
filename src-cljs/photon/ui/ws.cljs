@@ -61,13 +61,15 @@
           (>! ws-channel {:ok true})
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
-              (if (contains? elem :error)
+              (if (or (nil? (:projections (:message elem)))
+                      (contains? elem :error))
                 (do
+                  (subscribe-projections! stats upd)
                   #_(.log js/console (pr-str elem)))
-                (when-not (nil? (:projections (:message elem)))
-                  (upd {:projections (:projections (:message elem))})))
-              (>! ws-channel {:ok true})
-              (recur (<! ws-channel)))))
+                (do
+                  (upd {:projections (:projections (:message elem))})
+                  (>! ws-channel {:ok true})
+                  (recur (<! ws-channel)))))))
         (do (.log js/console "Error:" (pr-str error)))))))
 
 (defn subscribe-stats! [stats upd]
@@ -86,32 +88,33 @@
                  previous-incoming 0
                  is-first? true]
             (when-not (nil? elem)
-              (if (contains? elem :error)
-                (.log js/console (pr-str elem))
-                (if (nil? (:stats (:message elem)))
-                  (do
-                    (println "problem with" (:message elem))
-                    (>! ws-channel {:ok true})
-                    (recur (<! ws-channel) last-25-processed last-25-incoming
-                           last-25-memory timestamps previous-processed
-                           previous-incoming is-first?))
-                  (let [stats-from-msg (:stats (:message elem))
-                        new-processed (get-chart-data (:processed stats-from-msg) previous-processed last-25-processed is-first?)
-                        new-incoming (get-chart-data (:incoming stats-from-msg) previous-incoming last-25-incoming is-first?)
-                        used-memory (- (:total-memory stats-from-msg) (:available-memory stats-from-msg))
-                        used-memory-percentage (int (* (/ used-memory (:total-memory stats-from-msg)) 100))
-                        new-memory (into [] (take-last 25 (conj last-25-memory used-memory-percentage)))
-                        new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
-                        stats (assoc stats-from-msg :last-25 {:processed new-processed
-                                                              :incoming new-incoming
-                                                              :memory new-memory
-                                                              :timestamps new-timestamps})]
-                    (when (< (last new-processed) 0) (println "SOMETHING WRONG!"))
-                    (when-not is-first? (upd {:stats stats}))
-                    (>! ws-channel {:ok true})
-                    (recur (<! ws-channel) new-processed new-incoming new-memory
-                           new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg)
-                           false)))))))
+              (if (or (contains? elem :error)
+                      (nil? (:stats (:message elem))))
+                (do
+                  (.log js/console (pr-str elem))
+                  (println "problem with" (:message elem))
+                  (subscribe-stats! {:processed last-25-processed
+                                     :incoming last-25-incoming
+                                     :memory last-25-memory
+                                     :timestamps timestamps}
+                                    upd))
+                (let [stats-from-msg (:stats (:message elem))
+                      new-processed (get-chart-data (:processed stats-from-msg) previous-processed last-25-processed is-first?)
+                      new-incoming (get-chart-data (:incoming stats-from-msg) previous-incoming last-25-incoming is-first?)
+                      used-memory (- (:total-memory stats-from-msg) (:available-memory stats-from-msg))
+                      used-memory-percentage (int (* (/ used-memory (:total-memory stats-from-msg)) 100))
+                      new-memory (into [] (take-last 25 (conj last-25-memory used-memory-percentage)))
+                      new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
+                      stats (assoc stats-from-msg :last-25 {:processed new-processed
+                                                            :incoming new-incoming
+                                                            :memory new-memory
+                                                            :timestamps new-timestamps})]
+                  (when-not is-first? (upd {:stats stats}))
+                  (>! ws-channel {:ok true})
+                  (recur (<! ws-channel) new-processed new-incoming
+                         new-memory new-timestamps
+                         (:processed stats-from-msg)
+                         (:incoming stats-from-msg) false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
@@ -125,14 +128,16 @@
           (>! ws-channel {:projection-name "__streams__"})
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem) 
-              (if (contains? elem :error)
-                (do #_(.log js/console (pr-str elem)))
-                (when-not (nil? (:current-value (:message elem)))
-                  (let [streams-proj (:message elem)]
-                    (upd {:streams
-                          (proj->streams (:current-value streams-proj))}))))
-              (>! ws-channel {:projection-name "__streams__"})
-              (recur (<! ws-channel)))))
+              (if (or (contains? elem :error)
+                      (nil? (:current-value (:message elem))))
+                (do
+                  (subscribe-streams! stats upd)
+                  #_(.log js/console (pr-str elem)))
+                (let [streams-proj (:message elem)]
+                  (upd {:streams
+                        (proj->streams (:current-value streams-proj))})
+                  (>! ws-channel {:projection-name "__streams__"})
+                  (recur (<! ws-channel)))))))
         (do #_(.log js/console "Error:" (pr-str error)))))))
 
 (defn fn-update [owner stream-name]
