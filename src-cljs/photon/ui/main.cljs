@@ -76,9 +76,23 @@
   (query [this] `[:name :category
                   {:leaves ~(om/get-query MenuLeaf)} :active])
   Object
+  (componentDidUpdate
+   [this prev-props prev-state]
+   (let [{:keys [name active opened]} (om/props this)
+         ul ($ (om/react-ref this "ul"))]
+     (when (and (not opened) active)
+       (.slideDown ul)
+       (om/transact! this `[(section/update ~{:section name
+                                              :k :opened :v true})
+                            :sections]))
+     (when (and opened (not active))
+       (.slideUp ul)
+       (om/transact! this `[(section/update ~{:section name
+                                              :k :opened :v false})
+                            :sections]))))
   (render
    [this]
-   (let [{:keys [name leaves active]} (om/props this)]
+   (let [{:keys [name leaves active opened]} (om/props this)]
      (dom/li
       (clj->js
        {:className (if active "active" "")})
@@ -97,9 +111,9 @@
           #js {:className "fa fa-chevron-down"})))
       (apply
        dom/ul
-       #js {:ref "ul"
-            :className "nav child_menu"
-            :style (if active #js {:display ""} #js {:display "none"})}
+       (clj->js {:ref "ul"
+                 :className "nav child_menu"
+                 :style {:display (if active "" "none")}})
        (map (om/factory MenuLeaf) leaves))))))
 
 (defui MenuCategory
