@@ -33,7 +33,9 @@
          :max 100
          :label-y "%"
          :sets [{:name "Memory usage"
-                 :data (:memory (:last-25 data))}]}))))))
+                 :data (:memory (:last-25 data))}
+                {:name "CPU load"
+                 :data (:cpu (:last-25 data))}]}))))))
 
 (defui EventsProcessedPanel
   Object

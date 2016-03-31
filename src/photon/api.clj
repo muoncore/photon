@@ -286,7 +286,11 @@
         total-memory (.maxMemory rt)
         avail-memory (+ (.freeMemory rt) (- total-memory (.totalMemory rt)))
         avail-processors (.availableProcessors rt)
-        cpu-load (format "%.2f" (* (/ (.getSystemLoadAverage mf) avail-processors) 100))
+        raw-cpu-load (try
+                       (.getProcessCpuLoad mf)
+                       (catch Exception e
+                         (/ (.getSystemLoadAverage mf) avail-processors)))
+        cpu-load (format "%.2f" (* raw-cpu-load 100))
         stats {:total-memory total-memory :available-memory avail-memory
-               :cpu-load cpu-load}]
+               :cpu-load (read-string cpu-load)}]
     stats))

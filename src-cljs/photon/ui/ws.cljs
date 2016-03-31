@@ -80,6 +80,7 @@
                  last-25-processed (get stats :processed [])
                  last-25-incoming (get stats :incoming [])
                  last-25-memory (get stats :memory (repeat 25 0))
+                 last-25-cpu (get stats :cpu (repeat 25 0))
                  timestamps (get stats :timestamps [])
                  previous-processed 0
                  previous-incoming 0
@@ -93,17 +94,19 @@
                       used-memory (- (:total-memory stats-from-msg) (:available-memory stats-from-msg))
                       used-memory-percentage (int (* (/ used-memory (:total-memory stats-from-msg)) 100))
                       new-memory (into [] (take-last 25 (conj last-25-memory used-memory-percentage)))
+                      new-cpu (into [] (take-last 25 (conj last-25-cpu (:cpu-load stats-from-msg))))
                       new-timestamps (into [] (take-last 25 (conj timestamps (.getTime (js/Date.)))))
                       stats (assoc stats-from-msg :last-25 {:processed new-processed
                                                             :incoming new-incoming
                                                             :memory new-memory
-                                                            :timestamps new-timestamps})]
-                  (when (< new-processed 0)
-                    (println "SOMETHING WRONG!")
-                    (println (:message elem)))
+                                                            :timestamps new-timestamps
+                                                            :cpu new-cpu})]
                   (when-not is-first? (upd {:stats stats}))
                   (>! ws-channel {:ok true})
-                  (recur (<! ws-channel) new-processed new-incoming new-memory new-timestamps (:processed stats-from-msg) (:incoming stats-from-msg) false))))))
+                  (recur (<! ws-channel) new-processed new-incoming
+                         new-memory new-cpu new-timestamps
+                         (:processed stats-from-msg)
+                         (:incoming stats-from-msg) false))))))
         (do
           (.log js/console "Error:" (pr-str error)))))))
 
