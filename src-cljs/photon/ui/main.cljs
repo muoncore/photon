@@ -73,26 +73,12 @@
   static om/Ident
   (ident [this {:keys [name]}] [:section/by-name name])
   static om/IQuery
-  (query [this] `[:name :category {:leaves ~(om/get-query MenuLeaf)}
-                  :active])
+  (query [this] `[:name :category
+                  {:leaves ~(om/get-query MenuLeaf)} :active])
   Object
-  (componentDidUpdate
-   [this prev-props prev-state]
-   (let [{:keys [name active opened]} (om/props this)
-         ul ($ (om/react-ref this "ul"))]
-     (when (and (not opened) active)
-       (.slideDown ul)
-       (om/transact! this `[(section/update ~{:section name
-                                              :k :opened :v true})
-                            :sections]))
-     (when (and opened (not active))
-       (.slideUp ul)
-       (om/transact! this `[(section/update ~{:section name
-                                              :k :opened :v false})
-                            :sections]))))
   (render
    [this]
-   (let [{:keys [name leaves active opened]} (om/props this)]
+   (let [{:keys [name leaves active]} (om/props this)]
      (dom/li
       (clj->js
        {:className (if active "active" "")})
@@ -113,9 +99,7 @@
        dom/ul
        #js {:ref "ul"
             :className "nav child_menu"
-            :style (if active
-                     #js {:display ""}
-                     #js {:display "none"})}
+            :style (if active #js {:display ""} #js {:display "none"})}
        (map (om/factory MenuLeaf) leaves))))))
 
 (defui MenuCategory
@@ -226,7 +210,9 @@
                 `[(ui/update
                    {:k :menu-toggle
                     :v ~(-> this om/props :ui-state :menu-toggle not)})
-                  :ui-state]))}
+                  (section/activate
+                   {:v ~(not (:menu-toggle (:ui-state (om/props this))))})
+                  :ui-state :section/by-name]))}
         (dom/i #js {:className "fa fa-bars"})))
       (dom/ul
        #js {:className "nav navbar-nav navbar-right"}

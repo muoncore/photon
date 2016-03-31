@@ -99,14 +99,32 @@
                 (map #(assoc % k-set (= val (get % k-comp)))
                      (vals x))))))
 
+(defmethod mutate 'section/activate
+  [{:keys [state]} _ {:keys [v]}]
+  {:action
+   (fn []
+     (swap! state update :section/by-name
+            (fn [x]
+              (zipmap
+               (keys x)
+               (map #(assoc % :active (not v)) (vals x))))))})
+
 (defmethod mutate 'leaf/select
   [{:keys [state]} _ {:keys [name section]}]
   {:action
    (fn []
-     (swap! state
-            #(-> %
-                 (unique-val [:leaf/by-name] :active :name name)
-                 #_(unique-val [:section/by-name] :active :name section))))})
+     (swap!
+      state
+      (fn [old]
+        #_(unique-val [:section/by-name] :active :name section)
+        (let [base (unique-val old [:leaf/by-name] :active :name name)]
+          (if (:menu-toggle (:ui-state old))
+            (update base :section/by-name
+                    (fn [x]
+                      (zipmap
+                       (keys x)
+                       (map #(assoc % :active false) (vals x)))))
+            base)))))})
 
 (defmethod mutate 'ui/update
   [{:keys [state]} _ {:keys [k v]}]

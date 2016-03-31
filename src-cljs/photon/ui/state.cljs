@@ -13,20 +13,16 @@
                 {:name "Documentation"}]
    :sections [{:name "Stats"
                :category "Admin dashboard"
-               :active true
-               :opened true}
+               :active true}
               {:name "Streams"
                :category "Admin dashboard"
-               :active true
-               :opened true}
+               :active true}
               {:name "Projections"
                :category "Admin dashboard"
-               :active true
-               :opened true}
+               :active true}
               {:name "API"
                :category "Documentation"
-               :active true
-               :opened true}]
+               :active true}]
    :leaves [{:name "Basic stats"
              :section "Stats"
              :link :dashboard/stats
