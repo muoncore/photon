@@ -14,7 +14,7 @@
                                org.jboss.logging/jboss-logging]]
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
-                 [buddy "0.10.0"]
+                 [buddy "0.11.0"]
                  [ring/ring-json "0.4.0"]
                  [tranchis/photon-db "0.9.31"]
                  [org.clojure/tools.logging "0.3.1"]
@@ -36,14 +36,14 @@
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.7.228"]
+                 [org.clojure/clojurescript "1.8.40"]
                  [jarohen/chord "0.7.0"
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs
                                com.cognitect/transit-java]]
                  [tailrecursion/cljson "1.0.7"]
-                 [cljs-http "0.1.39"]
-                 [org.omcljs/om "1.0.0-alpha31"]
+                 [cljs-http "0.1.40"]
+                 [org.omcljs/om "1.0.0-alpha32"]
                  [jayq "2.5.4"]
                  [fipp "0.6.4"]
                  [reagent-utils "0.1.7"]
@@ -51,12 +51,13 @@
                  [io.github.lukehutch/fast-classpath-scanner "1.9.17"]
                  [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-cassandra "0.9.41"
+                 [tranchis/photon-cassandra "0.9.42"
                   :exclusions [com.taoensso/encore]]
                  [tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-annotations
                                com.fasterxml.jackson.core/jackson-databind]]
-                 [tranchis/photon-redis "0.9.40"]
+                 [tranchis/photon-redis "0.9.42"
+                  :exclusions [com.taoensso/encore]]
                  #_[tranchis/photon-mongo "0.9.31"]
                  [tranchis/photon-file "0.9.31"
                   :exclusions [com.fasterxml.jackson.core/jackson-annotations
