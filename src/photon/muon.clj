@@ -72,6 +72,8 @@
           (assoc component :muon ms))
         (catch Exception e
           (log/info "Muon could not be started:" (.getMessage e))
+          (log/info "Error class: " (.getName (.getClass e)))
+          (.printStackTrace e)
           (log/info "Falling back to muon-less mode!")
           component))
       component))
