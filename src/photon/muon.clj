@@ -50,7 +50,7 @@
         (let [stream-manager (:manager stream-manager)
               impl (PhotonMicroservice. stream-manager)
               projections (:proj-ch stream-manager)
-              conf {:rabbit-url (:amqp.url options)
+              conf {:url (:amqp.url options)
                     :service-name (:microservice.name options)
                     :tags ["photon" "eventstore"]
                     :implementation impl}
@@ -72,6 +72,8 @@
           (assoc component :muon ms))
         (catch Exception e
           (log/info "Muon could not be started:" (.getMessage e))
+          (log/info "Error class: " (.getName (.getClass e)))
+          (.printStackTrace e)
           (log/info "Falling back to muon-less mode!")
           component))
       component))

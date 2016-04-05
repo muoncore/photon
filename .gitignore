@@ -22,7 +22,7 @@ pom.xml.asc
 .nrepl-port
 *.swp
 .idea
-eventstore.iml
+*.iml
 /bin/
 \#project.clj\#
 .leinbin/

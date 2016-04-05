@@ -15,7 +15,8 @@
    :projections/active proj/ActiveProjections
    :projections/new proj/NewProjection
    :streams/analyse anal/DataAnalyser
-   :api/swagger external/Swagger})
+   :api/swagger external/Swagger
+   :dashboard/debug external/DebugMode})
 
 (defui Footer
   Object
