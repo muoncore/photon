@@ -113,19 +113,18 @@
 (defn subscribe-streams! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-api (str ws-localhost "/ws/ws-projections")
-                      "projection-name=__streams__"))]
+          (<! (ws-api (str ws-localhost "/ws/ws-streams")))]
       (if-not error
         (do
-          (>! ws-channel {:projection-name "__streams__"})
+          (>! ws-channel {})
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (do #_(.log js/console (pr-str elem)))
                 (let [streams-proj (:message elem)]
-                  (upd {:streams
-                        (proj->streams (:current-value streams-proj))})))
-              (>! ws-channel {:projection-name "__streams__"})
+                  (println streams-proj)
+                  (upd {:streams (proj->streams streams-proj)})))
+              (>! ws-channel {})
               (recur (<! ws-channel)))))
         (do #_(.log js/console "Error:" (pr-str error)))))))
 

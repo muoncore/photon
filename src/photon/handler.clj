@@ -45,6 +45,23 @@
             (close! ws-channel)
             (prn "closed.")))))))
 
+(defn f-ws-streams-handler-hk [stream]
+  (fn [{:keys [ws-channel] :as req}]
+    (go
+      (loop [t 0]
+        (if-let [{:keys [message]} (<! ws-channel)]
+          (do
+            (<! (timeout t))
+            (let [all (:current-value
+                       (api/projection stream "__streams__"))
+                  filtered (zipmap (keys all)
+                                   (map #(dissoc % :schemas) (vals all)))]
+              (>! ws-channel filtered))
+            (recur 1000))
+          (do
+            (close! ws-channel)
+            (prn "closed.")))))))
+
 (defn f-ws-stats-handler-hk [stream]
   (fn [{:keys [ws-channel] :as req}]
     (go
@@ -66,6 +83,12 @@
     (let [ws-projections-handler (f-ws-projections-handler-hk stm)]
       (GET "/ws-projections" []
            (wrap-websocket-handler ws-projections-handler)))))
+
+(defn ws-route-streams-hk [stm]
+  (cc/defroutes m-ws-route-streams
+    (let [ws-streams-handler (f-ws-streams-handler-hk stm)]
+      (GET "/ws-streams" []
+           (wrap-websocket-handler ws-streams-handler)))))
 
 (defn ws-route-stats-hk [stm]
   (cc/defroutes m-ws-route-stats
@@ -102,6 +125,16 @@
                       (api/projection stream projection-name)))
           (recur 1000))))))
 
+(defmethod on-open "ws-streams" [ch stream]
+  (let [req (async/originating-request ch)]
+    (go
+      (loop [t 0]
+        (<! (timeout t))
+        (when (async/open? ch)
+          (ws-send! ch
+                    (:current-value (api/projection stream "__streams__")))
+          (recur 1000))))))
+
 (defn f-ws-handler [stream]
   {:on-open (fn [ch] (on-open ch stream))
    :on-close (fn [ch {:keys [code reason]}])
@@ -113,6 +146,7 @@
    (cc/defroutes m-ws-route
      (let [ws-handler (f-ws-handler stm)]
        (GET "/ws-stats" [] {:connected "ok"})
+       (GET "/ws-streams" [] {:connected "ok"})
        (GET "/ws-projections" [] {:connected "ok"})))
    (f-ws-handler stm)))
 
@@ -224,6 +258,7 @@
                       (pms/wrap-params
                        (site (if http-kit?
                                (routes (ws-route-projections-hk ms)
+                                       (ws-route-streams-hk ms)
                                        (ws-route-stats-hk ms))
                                (routes (ws-route ms)))))
                       {:keywords? true})))
