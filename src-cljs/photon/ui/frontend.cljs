@@ -101,14 +101,21 @@
   (componentDidUpdate
    [this next-props next-state]
    (let [stream-info (:stream-info (om/props this))
-         first-stream (first (:streams stream-info))]
+         first-stream (first (:streams stream-info))
+         analyse-stream (:stream first-stream)]
      (when (nil? (:analyse-stream (:ui-state stream-info)))
-       (om/transact! this
-                     `[(ui/update ~{:k :analyse-stream
-                                    :v (:stream first-stream)})
-                       (ui/update ~{:k :analyse-version
-                                    :v (first (keys (:schemas first-stream)))})
-                       :stream-info :ui-state])))
+       (go
+         (let [res (<! (ws/get-api (str "/api/schema/" analyse-stream)))
+               schemas (:body res)
+               analyse-version (first (keys schemas))]
+           (om/transact! this
+                         `[(ui/update ~{:k :analyse-stream
+                                        :v analyse-stream})
+                           (ui/update ~{:k :analyse-version
+                                        :v analyse-version})
+                           (ui/update ~{:k :schemas
+                                        :v schemas})
+                           :stream-info :ui-state])))))
    (let [body ($ :body)
          li ($ "#sidebar-menu li")]
      (if (:menu-toggle (:ui-state (om/props this)))

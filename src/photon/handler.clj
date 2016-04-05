@@ -220,6 +220,14 @@
                      :summary "Stop and delete a running projection"
                      (http/ok
                       (api/delete-projection! ms projection-name)))
+             (GET "/schema/:stream-name" [stream-name]
+                  :path-params [stream-name :- s/Str]
+                  :return s/Any ;; Refine this
+                  :summary "Obtain the inferred schema for a given stream"
+                  (http/ok
+                   (:schemas
+                    (get (:current-value (api/projection ms "__streams__"))
+                         stream-name))))
              (GET "/stream-contents/:stream-name" [stream-name]
                   :path-params [stream-name :- s/Str]
                   :return api/StreamContentsResponse

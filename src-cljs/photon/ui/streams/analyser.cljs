@@ -16,12 +16,18 @@
    (let [{:keys [stream-info owner ui-state]} (om/props this)
          by-name (:streams/by-name stream-info)
          upd #(let [stm (get by-name %)]
-                (om/transact!
-                 owner
-                 `[(ui/update ~{:k :analyse-stream :v %})
-                   (ui/update ~{:k :analyse-version
-                                :v (first (keys (:schemas stm)))})
-                   :stream-info]))]
+                (go
+                  (let [res (<! (ws/get-api (str "/api/schema/" %)))
+                        schemas (:body res)
+                        analyse-version (first (keys schemas))]
+                    (om/transact! owner
+                                  `[(ui/update ~{:k :analyse-stream
+                                                 :v %})
+                                    (ui/update ~{:k :analyse-version
+                                                 :v analyse-version})
+                                    (ui/update ~{:k :schemas
+                                                 :v schemas})
+                                    :stream-info :ui-state]))))]
      ((om/factory comp/LabelAndSomething)
       {:label "Stream"
        :component
@@ -39,10 +45,7 @@
    ((om/factory comp/LabelAndSomething)
     {:label "Schema version"
      :component
-     (let [{:keys [stream-info owner]} (om/props this)
-           ui-state (:ui-state stream-info)
-           streams-by-name (:streams/by-name stream-info)
-           schema (get streams-by-name (:analyse-stream ui-state))]
+     (let [{:keys [schemas owner]} (om/props this)]
        (dom/div
         nil
         (apply dom/select
@@ -58,7 +61,7 @@
                                 (.-value (.-target x)))})
                          :stream-info]))}
                (map #(dom/option #js {:value (pr-str %)} (name %))
-                    (keys (:schemas schema))))))})))
+                    (keys schemas)))))})))
 
 (def type-mappings {"s/Str" "string"
                     "s/Num" "num"
@@ -292,7 +295,7 @@
   Object
   (render
    [this]
-   (let [{:keys [owner stream-info] :as props} (om/props this)]
+   (let [{:keys [owner stream-info schemas] :as props} (om/props this)]
      (dom/form
       #js {:className "form-horizontal form-label-left"}
       ((om/factory ListStreams) props)
@@ -475,9 +478,8 @@
    [this]
    (let [stream-info (:stream-info (om/props this))
          ui-state (:ui-state stream-info)
-         {:keys [analyse-stream analyse-version]} ui-state
-         stream (get (:streams/by-name stream-info) analyse-stream)
-         schema (:schema (get (:schemas stream) analyse-version))]
+         {:keys [analyse-stream analyse-version schemas]} ui-state
+         schema (:schema (get schemas analyse-version))]
      (dom/div
       nil
       (dom/div #js {:className "clearfix"})
@@ -486,7 +488,7 @@
        ((om/factory comp/LongPanel)
         {:title "Stream selector"
          :component StreamSelector
-         :data {:owner this :stream-info stream-info}}))
+         :data {:owner this :stream-info stream-info :schemas schemas}}))
       (dom/div
        #js {:className "row"}
        ((om/factory comp/HalfPanel)

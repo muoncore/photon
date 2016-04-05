@@ -41,7 +41,7 @@
             (merge (second args) {})
             {})]
     #_(.log js/console (pr-str m))
-    (f (first args) m)))
+    (f (first args) (assoc m :accept "application/edn"))))
 
 (defn call-back [url params upd]
   (go (let [res (<! (client/get url params))]
@@ -122,7 +122,6 @@
               (if (contains? elem :error)
                 (do #_(.log js/console (pr-str elem)))
                 (let [streams-proj (:message elem)]
-                  (println streams-proj)
                   (upd {:streams (proj->streams streams-proj)})))
               (>! ws-channel {})
               (recur (<! ws-channel)))))
