@@ -21,23 +21,6 @@
   (:import goog.net.IframeIo
            goog.net.EventType))
 
-#_(defui FullPage
-  Object
-  (render
-   [this]
-   (dom/div
-    nil
-    (dom/div
-     nil
-     (condp = (:active-page @app-state)
-       "Dashboard" (omo/build widget-dashboard state)
-       "Streams" (omo/build widget-streams (assoc state :full-page-owner owner))
-       "Projections" (omo/build widget-projections (assoc state :full-page-owner owner))
-       "New Projection" (omo/build widget-new-projection state)
-       "New Stream" (omo/build widget-new-stream state)
-       "Analyse Data" (when (contains? state :streams)
-                        (omo/build widget-analyse state)))))))
-
 (defonce reconciler
   (om/reconciler {:state st/app-state
                   :logger false
