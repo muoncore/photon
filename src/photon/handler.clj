@@ -131,8 +131,11 @@
       (loop [t 0]
         (<! (timeout t))
         (when (async/open? ch)
-          (ws-send! ch
-                    (:current-value (api/projection stream "__streams__")))
+          (let [all (:current-value
+                      (api/projection stream "__streams__"))
+                filtered (zipmap (keys all)
+                                 (map #(dissoc % :schemas) (vals all)))]
+            (ws-send! ch filtered))
           (recur 1000))))))
 
 (defn f-ws-handler [stream]

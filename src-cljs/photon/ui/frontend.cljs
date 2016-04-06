@@ -23,6 +23,7 @@
 
 (defonce reconciler
   (om/reconciler {:state st/app-state
+                  :history 1
                   :logger false
                   :parser (om/parser {:read parser/read
                                       :mutate parser/mutate})}))
