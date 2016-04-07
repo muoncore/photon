@@ -21,6 +21,9 @@
       :fn-process (fn [params]
                     (log/info "PhotonMS:" params)
                     (streams/stream->ch stream-manager params))}])
+  mcs/MicroserviceEvent
+  (handle-event [this event]
+    (api/post-event! stream-manager event))
   mcs/MicroserviceRequest
   (request-mappings [this]
     [{:endpoint "projection"

@@ -1,4 +1,4 @@
-(defproject tranchis/photon "0.9.5"
+(defproject tranchis/photon "0.9.6"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
@@ -25,14 +25,14 @@
                  [clj-time "0.11.0"]
                  [compojure "1.5.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.37"]
-                 [io.muoncore/muon-clojure "6.4-20160401135945"]
+                 [tranchis/photon-config "0.9.38"]
+                 [io.muoncore/muon-clojure "6.4-20160407155247"]
                  [prismatic/schema "1.0.5"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [potemkin]]
                  [metosin/compojure-api "1.0.1"]
                  [dire "0.5.4"]
-                 [org.slf4j/slf4j-log4j12 "1.7.19"]
+                 [org.slf4j/slf4j-log4j12 "1.7.21"]
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
@@ -42,6 +42,7 @@
                                com.cognitect/transit-cljs
                                com.cognitect/transit-java]]
                  [tailrecursion/cljson "1.0.7"]
+                 [clj-http "2.1.0"]
                  [cljs-http "0.1.40"]
                  [org.omcljs/om "1.0.0-alpha32"]
                  [jayq "2.5.4"]
@@ -59,9 +60,10 @@
                  [tranchis/photon-redis "0.9.42"
                   :exclusions [com.taoensso/encore]]
                  #_[tranchis/photon-mongo "0.9.31"]
-                 [tranchis/photon-file "0.9.31"
+                 [tranchis/photon-file "0.9.42"
                   :exclusions [com.fasterxml.jackson.core/jackson-annotations
-                               com.fasterxml.jackson.core/jackson-databind]]]
+                               com.fasterxml.jackson.core/jackson-databind
+                               clj-http]]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
   :plugins [[lein-cljsbuild "1.1.1"]
