@@ -271,7 +271,7 @@
                         (long server-timestamp))
         new-msg (assoc! msg :server-timestamp
                         new-timestamp)
-        new-msg (assoc! new-msg :photon-timestamp
+        new-msg (assoc! new-msg :event-time
                         now)
         new-msg (assoc! new-msg :order-id
                         (+ (* 1000 new-timestamp)
