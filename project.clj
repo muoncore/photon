@@ -52,7 +52,7 @@
                  [io.github.lukehutch/fast-classpath-scanner "1.9.17"]
                  [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-h2 "0.9.42"]
+                 [tranchis/photon-h2 "0.9.43"]
                  [tranchis/photon-cassandra "0.9.42"
                   :exclusions [com.taoensso/encore]]
                  [tranchis/photon-hazelcast "0.9.40"
