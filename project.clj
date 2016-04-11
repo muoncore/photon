@@ -26,8 +26,9 @@
                  [compojure "1.5.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.40"]
+                 [tranchis/muon-schemas "0.1.0"]
                  [io.muoncore/muon-clojure "6.4-20160407155247"]
-                 [prismatic/schema "1.0.5"]
+                 [prismatic/schema "1.1.0"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [potemkin]]
                  [metosin/compojure-api "1.0.1"]

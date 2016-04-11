@@ -1,7 +1,6 @@
 (ns photon.api
   (:require [photon.streams :as streams]
             [photon.exec :as exec]
-            [schema.core :as s]
             [cheshire.core :as json]
             [photon.default-projs :as dp]
             [clojure.java.io :as io]
@@ -11,109 +10,6 @@
            (java.io File FileInputStream FileOutputStream)
            (java.util.zip GZIPInputStream GZIPOutputStream)
            (java.lang.management ManagementFactory)))
-
-;; Schemas
-(s/defschema StreamInfo
-  {:stream-name s/Str
-   :total-events Long})
-
-(s/defschema StreamInfoMap
-  {:streams [StreamInfo]})
-
-(s/defschema ProjectionKeyMap
-  {:projection-keys [s/Str]})
-
-(s/defschema ReductionValue
-  ;; TODO: Improve
-  s/Any)
-
-(s/def Encoding
-  ;; TODO: Extend
-  s/Str #_(s/enum "application/json"))
-
-(s/def Provenance
-  ;; TODO: Improve
-  {s/Keyword s/Any})
-
-(s/defschema Event
-  {(s/optional-key :encoding) (s/maybe Encoding)
-   (s/optional-key :schema) (s/maybe s/Str)
-   :payload s/Any
-   :service-id (s/maybe s/Str) ;; TODO: Re-check this
-   (s/optional-key :photon-timestamp) Long
-   :local-id s/Any
-   (s/optional-key :order-id) Long
-   (s/optional-key :provenance) (s/maybe Provenance)
-   :stream-name s/Str
-   :server-timestamp Long})
-
-(s/defschema FreeSchema
-  {s/Keyword s/Any})
-
-(s/defschema EventTemplate
-  {(s/optional-key :encoding) (s/maybe Encoding)
-   (s/optional-key :schema) (s/maybe s/Str)
-   :payload (s/maybe FreeSchema)
-   :service-id (s/maybe s/Str) ;; TODO: Re-check this
-   :local-id s/Str
-   (s/optional-key :provenance) (s/maybe Provenance)
-   :stream-name s/Str
-   (s/optional-key :server-timestamp) Long})
-
-(s/defschema ReductionFunction
-  ;; TODO: Improve
-  s/Any)
-
-(s/defschema StreamContentsResponse
-  {:results [Event]})
-
-(s/defschema ProjectionTemplate
-  {:language (s/maybe (s/enum :clojure :javascript :js-experimental))
-   :reduction s/Str
-   :initial-value s/Str
-   :stream-name s/Str
-   :projection-name s/Str})
-
-(s/defschema ProjectionValue
-  {:fn s/Str
-   :last-error (s/maybe s/Str)
-   :current-value (s/maybe ReductionValue)
-   :init-time Long
-   :status (s/enum :running :failed)
-   :language (s/maybe (s/enum :clojure :javascript :js-experimental))
-   :initial-value ReductionValue
-   :processed Long
-   :last-event Event
-   :reduction ReductionFunction
-   :stream-name s/Str
-   :avg-time Double
-   :avg-global-time Double
-   :projection-name s/Str})
-
-(s/defschema Projection
-  {:fn s/Str
-   :last-error (s/maybe s/Str)
-   :init-time Long
-   :status (s/enum :running :failed)
-   :language (s/maybe (s/enum :clojure :javascript :js-experimental))
-   :initial-value ReductionValue
-   :processed Long
-   :last-event Event
-   :reduction ReductionFunction
-   :stream-name s/Str
-   :avg-time Double
-   :avg-global-time Double
-   :projection-name s/Str})
-
-(s/defschema ProjectionList
-  {:projections [Projection]})
-
-(s/defschema EventResponse (s/maybe Event))
-
-(s/defschema PostResponse (s/maybe {:correct (s/enum true)}))
-
-(s/defschema ProjectionResponse
-  (s/maybe ProjectionValue))
 
 ;; Methods
 (defn event [stm stream-name order-id]
