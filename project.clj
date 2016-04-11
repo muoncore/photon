@@ -16,7 +16,7 @@
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
                  [buddy "0.11.0"]
                  [ring/ring-json "0.4.0"]
-                 [tranchis/photon-db "0.9.31"]
+                 [tranchis/photon-db "0.9.45"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.2.374"]
                  [org.marianoguerra/clj-rhino "0.2.2"
@@ -54,15 +54,15 @@
                  [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-h2 "0.9.44"]
-                 [tranchis/photon-cassandra "0.9.42"
+                 [tranchis/photon-cassandra "0.9.45"
                   :exclusions [com.taoensso/encore]]
                  [tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-annotations
                                com.fasterxml.jackson.core/jackson-databind]]
                  [tranchis/photon-redis "0.9.42"
                   :exclusions [com.taoensso/encore]]
-                 #_[tranchis/photon-mongo "0.9.31"]
-                 [tranchis/photon-file "0.9.42"
+                 #_[tranchis/photon-mongo "0.9.45"]
+                 [tranchis/photon-file "0.9.45"
                   :exclusions [com.fasterxml.jackson.core/jackson-annotations
                                com.fasterxml.jackson.core/jackson-databind
                                clj-http]]]

@@ -89,7 +89,7 @@
                               (str "request://photon-test-" uuid "/events")
                               {:payload {:test :ok}
                                :service-id "muon://client"
-                               :local-id (java.util.UUID/randomUUID)
+                               :order-id (* 1000 (System/currentTimeMillis))
                                :stream-name "dummy"})))))
   #_(Thread/sleep 120000)
   (fact "Correct count" (test-cold) => 4))

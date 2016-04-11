@@ -222,7 +222,7 @@
                                  s-name language initial-value)
         new-descriptor (merge-t desc projection-descriptor)
         last-ts (str (inc (get (:last-event new-descriptor)
-                               :server-timestamp -1)))
+                               :event-time -1)))
         s (stream->ch stream {:from last-ts
                               :stream-type "hot-cold"
                               :stream-name s-name})
@@ -264,12 +264,12 @@
   (log/trace (pr-str ev))
   (let [msg (transient ev)
         stream-name (:stream-name msg)
-        server-timestamp (:server-timestamp msg)
+        event-time (:event-time msg)
         now (bigint (System/currentTimeMillis))
-        new-timestamp (if (nil? server-timestamp)
+        new-timestamp (if (nil? event-time)
                         now
-                        (long server-timestamp))
-        new-msg (assoc! msg :server-timestamp
+                        (long event-time))
+        new-msg (assoc! msg :event-time
                         new-timestamp)
         new-msg (assoc! new-msg :event-time
                         now)
