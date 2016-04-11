@@ -25,7 +25,7 @@
                  [clj-time "0.11.0"]
                  [compojure "1.5.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.38"]
+                 [tranchis/photon-config "0.9.40"]
                  [io.muoncore/muon-clojure "6.4-20160407155247"]
                  [prismatic/schema "1.0.5"]
                  [metosin/ring-http-response "0.6.5"
@@ -52,6 +52,7 @@
                  [io.github.lukehutch/fast-classpath-scanner "1.9.17"]
                  [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
+                 [tranchis/photon-h2 "0.9.42"]
                  [tranchis/photon-cassandra "0.9.42"
                   :exclusions [com.taoensso/encore]]
                  [tranchis/photon-hazelcast "0.9.40"
