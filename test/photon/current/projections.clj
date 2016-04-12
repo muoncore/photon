@@ -1,5 +1,5 @@
 (ns photon.current.projections
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [photon.muon :as muon]
             [photon.config :as conf]
             [photon.api :as api]

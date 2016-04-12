@@ -1,5 +1,5 @@
 (ns photon.current.integration-test
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async :refer [go-loop <! <!!]]
             [photon.config :as conf]

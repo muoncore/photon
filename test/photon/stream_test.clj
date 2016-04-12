@@ -5,7 +5,7 @@
             [com.stuartsierra.component :as component]
             [photon.core :as core]
             [clojure.tools.logging :as log]
-            [muon-clojure.client :as cl]
+            [muon-clojure.core :as cl]
             [photon.current.common :refer :all]
             [photon.streams :as streams]
             [photon.muon :as m])

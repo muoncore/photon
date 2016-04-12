@@ -1,5 +1,5 @@
 (ns photon.current.common
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [photon.db :as db]
             [photon.core :as core]
             [photon.config :as conf]

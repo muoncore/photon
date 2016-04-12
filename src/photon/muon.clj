@@ -1,7 +1,7 @@
 (ns photon.muon
   (:require [photon.streams :as streams]
             [muon-clojure.common :as mcc]
-            [muon-clojure.server :as mcs]
+            [muon-clojure.core :as mcs]
             [com.stuartsierra.component :as component]
             [photon.api :as api]
             [clojure.core.async :refer [go <! chan tap]]
