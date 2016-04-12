@@ -264,27 +264,18 @@
   (log/trace (pr-str ev))
   (let [msg (transient ev)
         stream-name (:stream-name msg)
-        event-time (:event-time msg)
-        now (bigint (System/currentTimeMillis))
-        new-timestamp (if (nil? event-time)
-                        now
-                        (long event-time))
-        new-msg (assoc! msg :event-time
-                        new-timestamp)
-        new-msg (assoc! new-msg :event-time
-                        now)
+        new-timestamp (System/currentTimeMillis)
+        new-msg (assoc! msg :event-time new-timestamp)
         new-msg (assoc! new-msg :order-id
                         (+ (* 1000 new-timestamp)
-                           (rem (System/nanoTime)
-                                1000)))
+                           (rem (System/nanoTime) 1000)))
         new-msg (persistent! new-msg)]
-    (when (not= (:stream-name new-msg) "eventlog")
-      (swap! stats update :incoming inc)
-      (update-streams! stream (:stream-name new-msg))
-      (>!! (:channel global-channel) new-msg)
-      (>!! (:channel (publisher stream)) new-msg)
-      (db/store db new-msg)))
-  {:correct true})
+    (swap! stats update :incoming inc)
+    (update-streams! stream (:stream-name new-msg))
+    (>!! (:channel global-channel) new-msg)
+    (>!! (:channel (publisher stream)) new-msg)
+    (db/store db new-msg)
+    new-msg))
 
 (defrecord AsyncStream [db global-channel telnet-mix projection-mix
                         state stats proj-ch conf]

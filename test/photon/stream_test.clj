@@ -11,6 +11,8 @@
             [photon.muon :as m])
   (:use midje.sweet))
 
+(.delete (java.io.File. "/tmp/temporalphoton.log"))
+
 (def uuid (java.util.UUID/randomUUID))
 (def amazon-url :local)
 (def conf {:amqp.url :local

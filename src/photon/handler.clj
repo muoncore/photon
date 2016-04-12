@@ -252,7 +252,7 @@
                    (http/ok (api/post-projection! ms request)))
              (POST "/event" [& request]
                    :body [body sc/EventTemplate]
-                   :return sc/PostResponse
+                   :return sc/EventResponse
                    :summary "Add an event"
                    (let [res (api/post-event! ms request)]
                      (http/ok res)))
