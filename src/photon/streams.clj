@@ -102,13 +102,18 @@
 
 (defn updated-value [rq function ev]
   (let [rqt (transient rq)
+        new-processed (inc (:processed rq))
         start-ts (System/currentTimeMillis)
         to-merge (assoc-update-t! rqt function ev)
+        to-merge (if (= 1 (mod new-processed 90000))
+                   (assoc! to-merge :mem-used
+                           (count (pr-str (:current-value rq))))
+                   to-merge)
         delta (- (System/currentTimeMillis) start-ts)
         to-merge (assoc! to-merge :avg-global-time
                          (new-avg-g-time rqt))
         to-merge (assoc! to-merge :avg-time (new-avg-time rqt delta))
-        to-merge (assoc! to-merge :processed (inc (:processed rq)))
+        to-merge (assoc! to-merge :processed new-processed)
         to-merge (assoc! to-merge :last-event ev)]
     (persistent! to-merge)))
 
@@ -118,10 +123,9 @@
   (dosync
     (if (nil? current-event)
       (alter running-query assoc :status :finished)
-      (let [nrq (alter running-query updated-value
-                       function current-event)]
-        (log/trace "!!!!!!!! Processing event in projection:"
-                   (pr-str current-event))
+      (let [nrq (alter running-query updated-value function current-event)]
+        #_(log/trace "!!!!!!!! Processing event in projection:"
+                     (pr-str current-event))
         (>!! ch nrq)
         (when (= (:status nrq) :failed)
           (close! ch)
@@ -261,7 +265,7 @@
 (defn as-process-event! [{:keys [stats db global-channel] :as stream}
                          ev]
   ;; Think about the order of store+send to taps
-  (log/trace (pr-str ev))
+  #_(log/trace (pr-str ev))
   (let [msg (transient ev)
         stream-name (:stream-name msg)
         server-timestamp (:server-timestamp msg)
