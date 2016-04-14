@@ -14,14 +14,14 @@
                                org.jboss.logging/jboss-logging]]
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
                  [ring "1.4.0" :exclusions [org.clojure/tools.reader]]
-                 [buddy "0.11.0"]
+                 [buddy "0.12.0"]
                  [ring/ring-json "0.4.0"]
                  [tranchis/photon-db "0.9.45"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.2.374"]
                  [org.marianoguerra/clj-rhino "0.2.2"
                   :exclusions [org.mozilla/rhino]]
-                 [cheshire "5.5.0"]
+                 [cheshire "5.6.1"]
                  [clj-time "0.11.0"]
                  [compojure "1.5.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
@@ -31,7 +31,7 @@
                  [prismatic/schema "1.1.0"]
                  [metosin/ring-http-response "0.6.5"
                   :exclusions [potemkin]]
-                 [metosin/compojure-api "1.0.1"]
+                 [metosin/compojure-api "1.0.2"]
                  [dire "0.5.4"]
                  [org.slf4j/slf4j-log4j12 "1.7.21"]
                  [tranchis/clj-schema-inspector "0.5.2"]
@@ -43,17 +43,17 @@
                                com.cognitect/transit-cljs
                                com.cognitect/transit-java]]
                  [tailrecursion/cljson "1.0.7"]
-                 [clj-http "2.1.0"]
+                 [clj-http "3.0.0"]
                  [cljs-http "0.1.40"]
                  [org.omcljs/om "1.0.0-alpha32"]
                  [jayq "2.5.4"]
-                 [fipp "0.6.4"]
+                 [fipp "0.6.5"]
                  [reagent-utils "0.1.7"]
                  ;; photon plugins
-                 [io.github.lukehutch/fast-classpath-scanner "1.9.17"]
+                 [io.github.lukehutch/fast-classpath-scanner "1.9.18"]
                  [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-h2 "0.9.44"]
+                 [tranchis/photon-h2 "0.9.45"]
                  [tranchis/photon-cassandra "0.9.45"
                   :exclusions [com.taoensso/encore]]
                  [tranchis/photon-hazelcast "0.9.40"
