@@ -125,14 +125,17 @@
           (post-one-event m s-name)
           (Thread/sleep 5000)
           (let [current-2 (:processed @(:stats stm))]
-            (fact "1 event processed"
-                  (- current-2 current) => 1)
-            (api/delete-projection! stm "dummy-proj")
+            (fact "1 event processed" (- current-2 current) => 1)
+            (cl/with-muon m
+              (cl/request! (str url-req "/projection")
+                           {:projection-name "dummy-proj"
+                            :action "delete"}))
+            (fact "dummy-proj does not exist (muon endpoint)"
+                  (api/projection stm "dummy-proj") => nil)
             (post-one-event m s-name)
             (Thread/sleep 5000)
             (let [current-3 (:processed @(:stats stm))]
-              (fact "1 events processed"
-                    (- current-3 current-2) => 1)
+              (fact "1 events processed" (- current-3 current-2) => 1)
               (api/delete-projection! stm "__streams__")
               (Thread/sleep 5000)
               (fact "__streams__ does not get deleted"
@@ -141,8 +144,7 @@
               (post-one-event m s-name)
               (Thread/sleep 5000)
               (let [current-4 (:processed @(:stats stm))]
-                (fact "1 events processed"
-                      (- current-4 current-3) => 1)
+                (fact "1 events processed" (- current-4 current-3) => 1)
                 (cl/with-muon m (cl/request! (str url-req "/projections")
                                              {:projection-name "chatter-proj"
                                               :stream-name "chatter"

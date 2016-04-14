@@ -28,13 +28,18 @@
   (request-mappings [this]
     [{:endpoint "projection"
       :fn-process
-      (fn [resource]
+      (fn [{:keys [projection-name] :as resource}]
         (log/info ":::: QUERY " (pr-str resource))
-        (if-let [query-key (:query-key resource)]
-          (api/projection-value
-           stream-manager (:projection-name resource) query-key)
-          (api/projection stream-manager
-                          (:projection-name resource))))}
+        (if-let [action (:action resource)]
+          (condp = action
+            "delete"
+            (api/delete-projection! stream-manager projection-name)
+            {:error "Action not recognized"})
+          (if-let [query-key (:query-key resource)]
+            (api/projection-value
+             stream-manager (:projection-name resource) query-key)
+            (api/projection stream-manager
+                            (:projection-name resource)))))}
      {:endpoint "projection-keys"
       :fn-process (fn [resource]
                     (api/projection-keys stream-manager))}
