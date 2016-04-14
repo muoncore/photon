@@ -27,10 +27,14 @@
   mcs/MicroserviceRequest
   (request-mappings [this]
     [{:endpoint "projection"
-      :fn-process (fn [resource]
-                    (log/info ":::: QUERY " (pr-str resource))
-                    (api/projection stream-manager
-                                    (:projection-name resource)))}
+      :fn-process
+      (fn [resource]
+        (log/info ":::: QUERY " (pr-str resource))
+        (if-let [query-key (:query-key resource)]
+          (api/projection-value
+           stream-manager (:projection-name resource) query-key)
+          (api/projection stream-manager
+                          (:projection-name resource))))}
      {:endpoint "projection-keys"
       :fn-process (fn [resource]
                     (api/projection-keys stream-manager))}

@@ -215,9 +215,17 @@
                   :summary "Obtain the current status of a given projection,
           including the latest computed reduction value"
                   (let [pres (api/projection ms projection-name)]
-                    (if (nil? pres)
-                      (http/not-found)
-                      (http/ok pres))))
+                    (if (nil? pres) (http/not-found) (http/ok pres))))
+             (GET "/projection/:projection-name/:query-key"
+                  [projection-name query-key]
+                  :path-params [projection-name :- s/Str
+                                query-key :- s/Str]
+                  :return s/Any
+                  :summary "Obtain the value of a metadata field in
+                           the specified projection"
+                  (let [pres (api/projection-value
+                              ms projection-name query-key)]
+                    (if (nil? pres) (http/not-found) (http/ok pres))))
              (DELETE "/projection/:projection-name" [projection-name]
                      :path-params [projection-name :- s/Str]
                      :return sc/PostResponse

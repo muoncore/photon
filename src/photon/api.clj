@@ -72,6 +72,11 @@
     (log/trace "Result:" (pr-str (muon-clojure.utils/dekeywordize res)))
     res))
 
+(defn projection-value [stm projection-name query-key]
+  (if-let [val (get (projection stm projection-name) query-key)]
+    val
+    (get (projection stm projection-name) (keyword query-key))))
+
 (defn streams [stm]
   {:streams
    (into [] (map

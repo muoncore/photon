@@ -92,12 +92,22 @@
       (let [res (cl/with-muon m
                   (cl/request! (str url-req "/projection")
                                {:projection-name "chatter-proj"}))]
-        (fact (:current-value res) => 1004.0)))
+        (fact (:current-value res) => 1004.0))
+      (let [res (cl/with-muon m
+                  (cl/request! (str url-req "/projection")
+                               {:projection-name "chatter-proj"
+                                :query-key "current-value"}))]
+        (fact res => 1004.0)))
     (fact "The dummy-proj stream has generated nothing as of yet"
           (time-limited 3000 (<!! sd)) => (throws Exception))
 
     ;; TODO: Use muon instead of REST API
     (let [stm (:manager (:stream-manager ms))]
+      (facts "There are 4 events proccesed in chatter-proj (API)"
+             (fact (api/projection-value stm "chatter-proj" "current-value")
+                   => 1004)
+             (fact (api/projection-value stm "chatter-proj" :current-value)
+                   => 1004))
       (fact "chatter-proj is still available"
             (:projection-name (api/projection stm "chatter-proj"))
             => "chatter-proj")
