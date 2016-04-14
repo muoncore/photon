@@ -119,6 +119,17 @@ Alternatively, create a test photon client to interact with photon:
 lein new muon-clojure photon-test-client
 ```
 
+## Profiling
+
+In order to achieve the best performance and thoughput, photon has been intensively tested and profiled with the [YourKit](https://www.yourkit.com) profiler, with a license kindly provided by their creators as part of their support to the open source community.
+
+![YourKit logo](https://www.yourkit.com/images/yklogo.png)
+
+YourKit supports open source projects with its full-featured Java Profiler.
+YourKit, LLC is the creator of <a href="https://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
+and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profiler</a>,
+innovative and intelligent tools for profiling Java and .NET applications.
+
 ## License
 
 Copyright 2015, The authors.
