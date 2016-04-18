@@ -76,7 +76,9 @@
                           org.codehaus.plexus/plexus-utils]]]
   :main photon.core ;; http-kit
   #_#_:warn-on-reflection true
-  :jvm-opts ["-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
+  :jvm-opts ["-server"
+             "-agentpath:/opt/local/share/profiler/libyjpagent.jnilib"]
+  #_#_:jvm-opts ["-dsa" "-d64" "-da" "-XX:+UseConcMarkSweepGC"
              "-XX:+UseParNewGC" "-XX:ParallelCMSThreads=4"
              "-XX:+ExplicitGCInvokesConcurrent"
              "-XX:+CMSParallelRemarkEnabled"
