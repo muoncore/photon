@@ -13,11 +13,7 @@
   mcs/MicroserviceStream
   (stream-mappings [this]
     ;; TODO: Explore the case of pure hot/cold streams
-    [{:endpoint "test" :type :cold
-      :fn-process (fn [params]
-                    (log/info "Test:" params)
-                    (clojure.core.async/to-chan [{:val 1} {:val 2}]))}
-     {:endpoint "stream" :type :hot-cold
+    [{:endpoint "stream" :type :hot-cold
       :fn-process (fn [params]
                     (log/info "PhotonMS:" params)
                     (streams/stream->ch stream-manager params))}])
