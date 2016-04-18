@@ -226,7 +226,7 @@
                                  s-name language initial-value)
         new-descriptor (merge-t desc projection-descriptor)
         last-ts (str (inc (get (:last-event new-descriptor)
-                               :server-timestamp -1)))
+                               :event-time -1)))
         s (stream->ch stream {:from last-ts
                               :stream-type "hot-cold"
                               :stream-name s-name})
@@ -268,27 +268,18 @@
   #_(log/trace (pr-str ev))
   (let [msg (transient ev)
         stream-name (:stream-name msg)
-        server-timestamp (:server-timestamp msg)
-        now (bigint (System/currentTimeMillis))
-        new-timestamp (if (nil? server-timestamp)
-                        now
-                        (long server-timestamp))
-        new-msg (assoc! msg :server-timestamp
-                        new-timestamp)
-        new-msg (assoc! new-msg :photon-timestamp
-                        now)
+        new-timestamp (System/currentTimeMillis)
+        new-msg (assoc! msg :event-time new-timestamp)
         new-msg (assoc! new-msg :order-id
                         (+ (* 1000 new-timestamp)
-                           (rem (System/nanoTime)
-                                1000)))
+                           (rem (System/nanoTime) 1000)))
         new-msg (persistent! new-msg)]
-    (when (not= (:stream-name new-msg) "eventlog")
-      (swap! stats update :incoming inc)
-      (update-streams! stream (:stream-name new-msg))
-      (>!! (:channel global-channel) new-msg)
-      (>!! (:channel (publisher stream)) new-msg)
-      (db/store db new-msg)))
-  {:correct true})
+    (swap! stats update :incoming inc)
+    (update-streams! stream (:stream-name new-msg))
+    (>!! (:channel global-channel) new-msg)
+    (>!! (:channel (publisher stream)) new-msg)
+    (db/store db new-msg)
+    new-msg))
 
 (defrecord AsyncStream [db global-channel telnet-mix projection-mix
                         state stats proj-ch conf]

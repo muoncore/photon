@@ -1,7 +1,7 @@
 (ns photon.current.export-test
   (:require [photon.streams :as streams]
             [photon.db :as db]
-            [muon-clojure.server :as mcs]
+            [muon-clojure.core :as mcs]
             [clojure.core.async :as async :refer [<!!]]
             [com.stuartsierra.component :as component]
             [clojure.java.io :as io]

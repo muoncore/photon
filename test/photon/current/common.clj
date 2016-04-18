@@ -1,5 +1,5 @@
 (ns photon.current.common
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [photon.db :as db]
             [photon.core :as core]
             [photon.config :as conf]
@@ -18,25 +18,25 @@
             (first (db/search this order-id)))
   (db/delete! [this id]
               (let [all (db/lazy-events this "__all__" 0)
-                    filtered (remove #(= id (:local-id %)) all)]
+                    filtered (remove #(= id (:order-id %)) all)]
                 (db/delete-all! this)
                 (dorun (map #(db/store this %) filtered))))
   (db/delete-all! [this]
                   (.delete (new-file file-name))
                   (new-file file-name))
   (db/put [this data]
-          (db/delete! this (:local-id data))
+          (db/delete! this (:order-id data))
           (db/store this data))
   (db/search [this id]
              (let [all (db/lazy-events this "__all__" 0)
-                   filtered (filter #(= id (:local-id %)) all)]
+                   filtered (filter #(= id (:order-id %)) all)]
                filtered))
   (db/store [this payload]
-            (let [server-timestamp (:server-timestamp payload)
-                  new-payload (assoc (into {} payload) :server-timestamp
-                                     (if (nil? server-timestamp)
+            (let [event-time (:event-time payload)
+                  new-payload (assoc (into {} payload) :event-time
+                                     (if (nil? event-time)
                                        (System/currentTimeMillis)
-                                       (long server-timestamp)))]
+                                       (long event-time)))]
               (with-open [w (clojure.java.io/writer file-name :append true)]
                 (.write w (str (json/generate-string new-payload) "\n")))))
   (db/distinct-values [this k]
@@ -51,7 +51,7 @@
                                   (or (= "__all__" stream-name)
                                       (= :__all__ stream-name)
                                       (= stream-name (:stream-name ev)))
-                                  (<= date (:server-timestamp ev))))
+                                  (<= date (:event-time ev))))
                                (map #(json/parse-string % true)
                                     (line-seq rdr)))))
       (catch java.io.IOException e
@@ -63,7 +63,7 @@
    (cl/with-muon m
      (cl/request! (str "request://" url "/events")
                   {"service-id","request://chatter",
-                   "local-id", (java.util.UUID/randomUUID),
+                   "order-id", (* 1000 (System/currentTimeMillis)),
                    "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
                               "text","substitutable",
                               "textanalysis",
@@ -73,7 +73,7 @@
                                               "count",1}]}},
                    "schema", schema-version,
                    "stream-name","chatter",
-                   "server-timestamp",1420660080000})
+                   "event-time",1420660080000})
      #_(cl/query-event "request://photon/projection"
                        {:projection-name "count"}))) 
   ([m url]

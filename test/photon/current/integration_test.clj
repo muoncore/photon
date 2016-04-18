@@ -1,5 +1,5 @@
 (ns photon.current.integration-test
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async :refer [go-loop <! <!!]]
             [photon.config :as conf]
@@ -30,7 +30,17 @@
                           :stream-name "__all__"
                           :stream-type "cold"
                           :from 0))]
-  (fact "Post works correctly" res => {:correct true})
+  (facts "Post works correctly"
+         (fact (:event-time res) => (roughly (System/currentTimeMillis)))
+         (fact (:order-id res) => (roughly (* 1000 (System/currentTimeMillis))))
+         (fact res =>
+               (contains {:payload {:id "dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71"
+                                    :text "substitutable"
+                                    :textanalysis {:aggregateSentiment 40.0
+                                                   :keyphrases [{:count 1.0
+                                                                 :phrase "substitutable"}]}}
+                          :service-id "request://chatter"
+                          :stream-name "chatter"})))
   (fact "Two events on stream" (elem-count ch) => 2)
   (dorun (take 9 (repeatedly
                    (fn []

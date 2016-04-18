@@ -1,5 +1,5 @@
 (ns photon.current.projections
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [photon.muon :as muon]
             [photon.config :as conf]
             [photon.api :as api]
@@ -92,12 +92,22 @@
       (let [res (cl/with-muon m
                   (cl/request! (str url-req "/projection")
                                {:projection-name "chatter-proj"}))]
-        (fact (:current-value res) => 1004.0)))
+        (fact (:current-value res) => 1004.0))
+      (let [res (cl/with-muon m
+                  (cl/request! (str url-req "/projection")
+                               {:projection-name "chatter-proj"
+                                :query-key "current-value"}))]
+        (fact res => 1004.0)))
     (fact "The dummy-proj stream has generated nothing as of yet"
           (time-limited 3000 (<!! sd)) => (throws Exception))
 
     ;; TODO: Use muon instead of REST API
     (let [stm (:manager (:stream-manager ms))]
+      (facts "There are 4 events proccesed in chatter-proj (API)"
+             (fact (api/projection-value stm "chatter-proj" "current-value")
+                   => 1004)
+             (fact (api/projection-value stm "chatter-proj" :current-value)
+                   => 1004))
       (fact "chatter-proj is still available"
             (:projection-name (api/projection stm "chatter-proj"))
             => "chatter-proj")
@@ -115,14 +125,17 @@
           (post-one-event m s-name)
           (Thread/sleep 5000)
           (let [current-2 (:processed @(:stats stm))]
-            (fact "1 event processed"
-                  (- current-2 current) => 1)
-            (api/delete-projection! stm "dummy-proj")
+            (fact "1 event processed" (- current-2 current) => 1)
+            (cl/with-muon m
+              (cl/request! (str url-req "/projection")
+                           {:projection-name "dummy-proj"
+                            :action "delete"}))
+            (fact "dummy-proj does not exist (muon endpoint)"
+                  (api/projection stm "dummy-proj") => nil)
             (post-one-event m s-name)
             (Thread/sleep 5000)
             (let [current-3 (:processed @(:stats stm))]
-              (fact "1 events processed"
-                    (- current-3 current-2) => 1)
+              (fact "1 events processed" (- current-3 current-2) => 1)
               (api/delete-projection! stm "__streams__")
               (Thread/sleep 5000)
               (fact "__streams__ does not get deleted"
@@ -131,8 +144,7 @@
               (post-one-event m s-name)
               (Thread/sleep 5000)
               (let [current-4 (:processed @(:stats stm))]
-                (fact "1 events processed"
-                      (- current-4 current-3) => 1)
+                (fact "1 events processed" (- current-4 current-3) => 1)
                 (cl/with-muon m (cl/request! (str url-req "/projections")
                                              {:projection-name "chatter-proj"
                                               :stream-name "chatter"

@@ -1,5 +1,5 @@
 (ns photon.current.schema-test
-  (:require [muon-clojure.client :as cl]
+  (:require [muon-clojure.core :as cl]
             [photon.muon :as muon]
             [photon.config :as conf]
             [clojure.tools.logging :as log]

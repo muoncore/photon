@@ -21,6 +21,7 @@
             [ring.middleware.session :refer [wrap-session]]
             [immutant.web.async :as async]
             [immutant.web.middleware :as iwm]
+            [muon-schemas.core :as sc]
             [photon.api :as api]
             [photon.security :as sec]
             [compojure.handler :refer [site]])
@@ -194,32 +195,40 @@
              (GET "/ping" []
                   (http/ok {:auth "ok"}))
              (GET "/streams" []
-                  :return api/StreamInfoMap
+                  :return sc/StreamInfoMap
                   :summary "Obtain a list of active streams
                      and their current size"
                   (http/ok (api/streams ms)))
              (GET "/projection-keys" []
-                  :return api/ProjectionKeyMap
+                  :return sc/ProjectionKeyMap
                   :summary "Obtain a list of the names (IDs)
           of the current active projections"
                   (http/ok (api/projection-keys ms)))
              (GET "/projections" []
-                  :return api/ProjectionList
+                  :return sc/ProjectionList
                   :summary "Obtain a list of the states of the current active
           projections without their computed reduction values"
                   (http/ok (api/projections ms)))
              (GET "/projection/:projection-name" [projection-name]
                   :path-params [projection-name :- s/Str]
-                  :return api/ProjectionResponse
+                  :return sc/ProjectionResponse
                   :summary "Obtain the current status of a given projection,
           including the latest computed reduction value"
                   (let [pres (api/projection ms projection-name)]
-                    (if (nil? pres)
-                      (http/not-found)
-                      (http/ok pres))))
+                    (if (nil? pres) (http/not-found) (http/ok pres))))
+             (GET "/projection/:projection-name/:query-key"
+                  [projection-name query-key]
+                  :path-params [projection-name :- s/Str
+                                query-key :- s/Str]
+                  :return s/Any
+                  :summary "Obtain the value of a metadata field in
+                           the specified projection"
+                  (let [pres (api/projection-value
+                              ms projection-name query-key)]
+                    (if (nil? pres) (http/not-found) (http/ok pres))))
              (DELETE "/projection/:projection-name" [projection-name]
                      :path-params [projection-name :- s/Str]
-                     :return api/PostResponse
+                     :return sc/PostResponse
                      :summary "Stop and delete a running projection"
                      (http/ok
                       (api/delete-projection! ms projection-name)))
@@ -233,25 +242,25 @@
                          stream-name))))
              (GET "/stream-contents/:stream-name" [stream-name]
                   :path-params [stream-name :- s/Str]
-                  :return api/StreamContentsResponse
+                  :return sc/StreamContentsResponse
                   :summary "Obtain a list (maximum of 50) of events contained
           in a given stream"
                   (http/ok (api/stream ms stream-name :limit 50)))
              (GET "/event/:stream-name/:order-id" [stream-name order-id]
                   :path-params [stream-name :- s/Str order-id :- s/Str]
-                  :return api/EventResponse
+                  :return sc/EventResponse
                   :summary "Obtain the event identified by a given stream name
           and an order ID"
                   (let [res (api/event ms stream-name (read-string order-id))]
                     (if (nil? res) (http/not-found) (http/ok res))))
              (POST "/projection" [& request]
-                   :body [body api/ProjectionTemplate]
-                   :return api/PostResponse
+                   :body [body sc/ProjectionTemplate]
+                   :return sc/PostResponse
                    :summary "Add a projection"
                    (http/ok (api/post-projection! ms request)))
              (POST "/event" [& request]
-                   :body [body api/EventTemplate]
-                   :return api/PostResponse
+                   :body [body sc/EventTemplate]
+                   :return sc/EventResponse
                    :summary "Add an event"
                    (let [res (api/post-event! ms request)]
                      (http/ok res)))
