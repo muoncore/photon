@@ -7,11 +7,13 @@
             [clojure.pprint :as pp]
             [com.stuartsierra.component :as component]
             [clojure.string :as str]
+            [taoensso.nippy :as nippy]
             [clojure.core.async :as async
              :refer [go-loop go <!! <! >! chan buffer sliding-buffer
                      mult tap close! put! >!! mix admix onto-chan
                      pub sub alts!]])
-  (:import (java.net ServerSocket)))
+  (:import (java.net ServerSocket)
+           (java.io DataOutput)))
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
 
@@ -86,8 +88,8 @@
   (try
     (assoc! rqt :current-value (function (:current-value rqt) ev))
     (catch Exception e
-      (log/info (.getMessage e))
-      (.printStackTrace e)
+      #_(log/info (.getMessage e))
+      #_(.printStackTrace e)
       (let [rqt-failed (assoc! rqt :status :failed)]
         (assoc! rqt-failed :last-error (exception->error-str e))))))
 
@@ -100,37 +102,60 @@
 (defn new-avg-time [rqt delta]
   (next-avg (:avg-time rqt) delta (inc (:processed rqt))))
 
-(defn updated-value [rq function ev]
+(defn data-output [size]
+  (reify DataOutput
+    (^void write [this ^bytes b] (swap! size + (count b)))
+    (^void write [this ^bytes b ^int off ^int len] (swap! size + len))
+    (^void write [this ^int b] (swap! size inc))
+    (^void writeBoolean [this ^boolean v] (swap! size inc))
+    (^void writeByte [this ^int v] (swap! size inc))
+    (^void writeBytes [this ^String s] (swap! size + (* 2 (count s))))
+    (^void writeChar [this ^int v] (swap! size + 2))
+    (^void writeChars [this ^String s] (swap! size + (* 2 (count s))))
+    (^void writeDouble [this ^double v] (swap! size + 8))
+    (^void writeFloat [this ^float v] (swap! size + 4))
+    (^void writeInt [this ^int v] (swap! size + 4))
+    (^void writeLong [this ^long v] (swap! size + 8))
+    (^void writeShort [this ^int v] (swap! size + 2))
+    (^void writeUTF [this ^String s] (swap! size + (* 2 (count s))))))
+
+(defn updated-value [rq function ev sch-meta]
   (let [rqt (transient rq)
         new-processed (inc (:processed rq))
         start-ts (System/currentTimeMillis)
         to-merge (assoc-update-t! rqt function ev)
-        to-merge (if (= 1 (mod new-processed 90000))
-                   (assoc! to-merge :mem-used
-                           (count (pr-str (:current-value rq))))
+        to-merge (if (and
+                      (:measure.active sch-meta)
+                      (> (- start-ts (:last-measured rq))
+                         (:measure.rate sch-meta)))
+                   (let [size (atom 0)
+                         do (data-output size)]
+                     (time (nippy/freeze-to-out! do (:current-value rq)))
+                     (assoc! (assoc! to-merge :mem-used @size)
+                             :last-measured start-ts))
                    to-merge)
         delta (- (System/currentTimeMillis) start-ts)
-        to-merge (assoc! to-merge :avg-global-time
-                         (new-avg-g-time rqt))
+        to-merge (assoc! to-merge :avg-global-time (new-avg-g-time rqt))
         to-merge (assoc! to-merge :avg-time (new-avg-time rqt delta))
         to-merge (assoc! to-merge :processed new-processed)
         to-merge (assoc! to-merge :last-event ev)]
     (persistent! to-merge)))
 
-(defn schedule
-  [{:keys [stream running-query current-event function ch]}]
-  (swap! (:stats stream) update :processed inc)
-  (dosync
-    (if (nil? current-event)
-      (alter running-query assoc :status :finished)
-      (let [nrq (alter running-query updated-value function current-event)]
-        #_(log/trace "!!!!!!!! Processing event in projection:"
-                     (pr-str current-event))
-        (>!! ch nrq)
-        (when (= (:status nrq) :failed)
-          (close! ch)
-          (alter (:state stream) update-in [:virtual-streams]
-                 (fn [m] (dissoc m :projection-name))))))))
+(defn schedule [sch-meta]
+  (fn [{:keys [stream running-query current-event function ch]}]
+    (swap! (:stats stream) update :processed inc)
+    (dosync
+     (if (nil? current-event)
+       (alter running-query assoc :status :finished)
+       (let [nrq (alter running-query
+                        updated-value function current-event sch-meta)]
+         #_(log/trace "!!!!!!!! Processing event in projection:"
+                      (pr-str current-event))
+         (>!! ch nrq)
+         (when (= (:status nrq) :failed)
+           (close! ch)
+           (alter (:state stream) update-in [:virtual-streams]
+                  (fn [m] (dissoc m :projection-name)))))))))
 
 (defn as-init-stream-manager! [stream projections-path]
   (let [db-streams (db/distinct-values (:db stream) :stream-name)]
@@ -191,18 +216,21 @@
 
 (defn descriptor-default [projection-name function-descriptor
                           s-name language initial-value]
-  {:projection-name projection-name
-   :fn (:persist function-descriptor)
-   :stream-name s-name
-   :language language
-   :current-value initial-value
-   :processed 0
-   :init-time (System/currentTimeMillis)
-   :last-event nil
-   :last-error nil
-   :avg-time 0
-   :avg-global-time 0
-   :status :running})
+  (let [now (System/currentTimeMillis)]
+    {:projection-name projection-name
+     :fn (:persist function-descriptor)
+     :stream-name s-name
+     :language language
+     :current-value initial-value
+     :processed 0
+     :init-time now
+     :last-event nil
+     :last-error nil
+     :last-measured now
+     :mem-used 0
+     :avg-time 0
+     :avg-global-time 0
+     :status :running}))
 
 (defn projection-queue-mix [stream running-query function ch s]
   (clojure.core.async/map
@@ -212,7 +240,7 @@
    [s]))
 
 (defn as-register-query!
-  [{:keys [conf state projection-mix telnet-mix] :as stream}
+  [{:keys [conf state projection-mix] :as stream}
    {:keys [stream-name language reduction
            initial-value projection-name]
     :as projection-descriptor}]
@@ -230,15 +258,11 @@
         s (stream->ch stream {:from last-ts
                               :stream-type "hot-cold"
                               :stream-name s-name})
-        running-query (ref new-descriptor)
+        running-query (ref new-descriptor :max-history 0)
         function (:computable function-descriptor)
         to-mix (projection-queue-mix stream running-query
                                      function ch s)]
     (log/info "Retrieved stream for" projection-name)
-    (let [telnet-tap (chan)
-          mult-ch (:mult-channel virtual-stream)]
-      (tap mult-ch telnet-tap)
-      (admix telnet-mix telnet-tap))
     (log/info "Starting projection loop for" projection-name)
     (dosync
      (alter state
@@ -281,7 +305,7 @@
     (db/store db new-msg)
     new-msg))
 
-(defrecord AsyncStream [db global-channel telnet-mix projection-mix
+(defrecord AsyncStream [db global-channel projection-mix
                         state stats proj-ch conf]
   StreamProtocol
   (init-stream-manager! [this path] (as-init-stream-manager! this path))
@@ -380,43 +404,6 @@
 (defrecord AsyncStreamState [projections publication active-streams
                              virtual-streams all-channels])
 
-(defn create-telnet-socket! [port ch text]
-  (try
-    (let [ss (ServerSocket. (read-string (str port)))
-          sockets (atom #{})]
-      (log/info "Opening stream output on port" port "for"
-                text "streaming...")
-      (go
-        (loop [elem (<! ch)]
-          (if (nil? elem)
-            (swap! sockets (fn [_] #{}))
-            (do
-              (when (not (or (nil? elem) (empty? @sockets)))
-                (let [edn (prn-str elem)
-                      bs (bytes (byte-array (map (comp byte int) edn)))]
-                  (dorun (pmap #(let [os (.getOutputStream %)]
-                                  (try
-                                    (.write os bs)
-                                    (catch Exception e
-                                      (swap! sockets disj %))))
-                               @sockets))))
-              (log/trace "LOOP: create-telnet-socket!")
-              (recur (<! ch))))))
-      (go
-        (loop [s (try
-                   (.accept ss)
-                   (catch java.net.SocketException e
-                     (log/trace "Socket closed")
-                     nil))]
-          (when-not (nil? s)
-            (swap! sockets conj s)
-            (log/trace "LOOP: create-telnet-socket! - accept")
-            (recur (.accept ss)))))
-      ss)
-    (catch java.net.BindException e
-      (log/error (str "Port " port " unavailable, "
-                      "deactivating telnet " text " streaming")))))
-
 (defn pipeline [num fn ch]
   (loop [i 0]
     (when-not (= i num)
@@ -438,20 +425,17 @@
   (log/trace "Channel" ch "empty, closing")
   (close! ch))
 
-(defrecord StreamManager [options database manager channels
-                          sockets proj-ch]
+(defrecord StreamManager [options database manager channels proj-ch]
   component/Lifecycle
   (start [component]
     (if (nil? manager)
       (let [projections-port (:projections.port options)
             events-port (:events.port options)
             threads (:parallel.projections options)
+            sch-meta (select-keys options [:measure.active :measure.rate])
             c (chan 1)
             mult-global (mult c)
             global-channel {:channel c :mult-channel mult-global}
-            telnet-projections-channel (chan (sliding-buffer 1024))
-            telnet-events-channel (chan (sliding-buffer 1024))
-            telnet-mix (mix telnet-projections-channel)
             projection-channel (chan)
             projection-mix (mix projection-channel)
             initial-state (map->AsyncStreamState
@@ -461,36 +445,27 @@
                             :virtual-streams {}
                             :all-channels #{}})
             as (->AsyncStream (:driver database) global-channel
-                              telnet-mix projection-mix
-                              (ref initial-state)
+                              projection-mix
+                              (ref initial-state :max-history 0)
                               (atom {:incoming 0 :processed 0})
                               (chan 1024)
                               options)]
         (init-stream-manager! as (:projections.path options))
-        (tap mult-global telnet-events-channel)
-        (pipeline threads schedule projection-channel)
-        (let [proj-socket (create-telnet-socket! projections-port
-                                                 telnet-projections-channel
-                                                 "projections")
-              events-socket (create-telnet-socket! events-port
-                                                   telnet-events-channel
-                                                   "events")]
-          (merge component {:manager as
-                            :channels [projection-channel
-                                       telnet-projections-channel
-                                       telnet-events-channel c]
-                            :sockets [proj-socket events-socket]})))
+        (pipeline threads (schedule sch-meta) projection-channel)
+        (merge component {:manager as :channels [c projection-channel]}))
       component))
   (stop [component]
     (if (nil? manager)
       component
       (do
+        (log/info "Stopping stream manager...")
         (empty! (:proj-ch manager))
         (close! (:proj-ch manager))
         (dorun (map empty! channels))
-        (dorun (map #(if (not (nil? %)) (.close %)) sockets))
         (dorun (map empty! (:all-channels @(:state manager))))
-        (let [new-comp (merge component {:manager nil :channels nil :sockets nil})]
+        (dosync (alter (:state manager) (fn [_] nil)))
+        (let [new-comp (merge component {:manager nil :channels nil
+                                         :state nil})]
           (log/info "new-comp" new-comp)
           new-comp)))))
 

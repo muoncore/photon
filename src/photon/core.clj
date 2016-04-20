@@ -87,7 +87,7 @@
 (defn photon-component [conf]
   (log/info "Starting photon...")
   (let [system (photon-system conf)
-        comp {:web-server (component/using (web-server conf) [:ui])}
+        comp {} #_{:web-server (component/using (web-server conf) [:ui])}
         web-system (merge system comp)]
     (component/start web-system)))
 
