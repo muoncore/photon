@@ -7,6 +7,7 @@
             [cljs.pprint :as pprint]))
 
 (def k->header {:stream "Stream name"
+                :mem-used "Memory used (bytes)"
                 :fn "Function"
                 :export "Export"
                 :last-error "Last error"

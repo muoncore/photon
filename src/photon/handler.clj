@@ -11,6 +11,7 @@
             [cheshire.core :as json]
             [cheshire.generate :refer [add-encoder]]
             [clojure.pprint :as pp]
+            [compojure.api.api :as capi]
             [compojure.api.sweet :refer :all]
             [ring.swagger.swagger2 :as rs]
             [ring.swagger.json-schema-dirty :refer :all]
@@ -155,136 +156,137 @@
    (f-ws-handler stm)))
 
 (defn app [http-kit? ms m-sec]
-  (defapi app-no-reload
-    {:swagger {:ui "/api-docs"
-               :spec "/swagger.json"
-               :data {:info {:title "Photon API"
-                             :description "Photon API"}
-                      :tags [{:name "api", :description "Core API"}]}}}
-    (context "/auth" []
-             :tags ["auth"]
-             :middleware [(sec/basic-or-session-mw m-sec)
-                          (sec/cors-mw m-sec)
-                          (sec/authenticated-mw m-sec)]
-             ;; TODO: Add refresh-token functionality
-             (GET "/login" {session :session}
-                  (assoc (http/ok {:logged-in true})
-                         :session (assoc session :identity "user")))
-             (GET "/logout" {session :session}
-                  (-> (http/ok {:logged-out true})
-                      (assoc :session (dissoc session :identity))))
-             (GET "/token" req
-                  (http/ok (sec/auth-credentials-response m-sec req))))
-    (context "/export" []
-             :no-doc true
-             :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
-                          (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
-             (GET "/stream/:stream-name" [stream-name]
-                  :path-params [stream-name :- s/Str]
-                  (let [f (api/stream->file ms stream-name)]
-                    (-> (response/file-response (.getAbsolutePath f))
-                        (http/header "Content-Type" "application/octet-stream")
-                        (http/header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
-                        (http/header "Content-Length" (.length f))))))
-    (context "/api" []
-             :tags ["api"]
-             :middleware [(sec/qs->token-mw m-sec)
-                          (sec/session-or-token-mw m-sec)
-                          (sec/cors-mw m-sec)
-                          (sec/authenticated-mw m-sec)]
-             (GET "/ping" []
-                  (http/ok {:auth "ok"}))
-             (GET "/streams" []
-                  :return sc/StreamInfoMap
-                  :summary "Obtain a list of active streams
+  (let [app-no-reload
+        (capi/api
+         {:swagger {:ui "/api-docs"
+                    :spec "/swagger.json"
+                    :data {:info {:title "Photon API"
+                                  :description "Photon API"}
+                           :tags [{:name "api", :description "Core API"}]}}}
+         (context "/auth" []
+                  :tags ["auth"]
+                  :middleware [(sec/basic-or-session-mw m-sec)
+                               (sec/cors-mw m-sec)
+                               (sec/authenticated-mw m-sec)]
+                  ;; TODO: Add refresh-token functionality
+                  (GET "/login" {session :session}
+                       (assoc (http/ok {:logged-in true})
+                              :session (assoc session :identity "user")))
+                  (GET "/logout" {session :session}
+                       (-> (http/ok {:logged-out true})
+                           (assoc :session (dissoc session :identity))))
+                  (GET "/token" req
+                       (http/ok (sec/auth-credentials-response m-sec req))))
+         (context "/export" []
+                  :no-doc true
+                  :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
+                               (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
+                  (GET "/stream/:stream-name" [stream-name]
+                       :path-params [stream-name :- s/Str]
+                       (let [f (api/stream->file ms stream-name)]
+                         (-> (response/file-response (.getAbsolutePath f))
+                             (http/header "Content-Type" "application/octet-stream")
+                             (http/header "Content-Disposition" (str "attachment; filename=" stream-name ".pev"))
+                             (http/header "Content-Length" (.length f))))))
+         (context "/api" []
+                  :tags ["api"]
+                  :middleware [(sec/qs->token-mw m-sec)
+                               (sec/session-or-token-mw m-sec)
+                               (sec/cors-mw m-sec)
+                               (sec/authenticated-mw m-sec)]
+                  (GET "/ping" []
+                       (http/ok {:auth "ok"}))
+                  (GET "/streams" []
+                       :return sc/StreamInfoMap
+                       :summary "Obtain a list of active streams
                      and their current size"
-                  (http/ok (api/streams ms)))
-             (GET "/projection-keys" []
-                  :return sc/ProjectionKeyMap
-                  :summary "Obtain a list of the names (IDs)
+                       (http/ok (api/streams ms)))
+                  (GET "/projection-keys" []
+                       :return sc/ProjectionKeyMap
+                       :summary "Obtain a list of the names (IDs)
           of the current active projections"
-                  (http/ok (api/projection-keys ms)))
-             (GET "/projections" []
-                  :return sc/ProjectionList
-                  :summary "Obtain a list of the states of the current active
+                       (http/ok (api/projection-keys ms)))
+                  (GET "/projections" []
+                       :return sc/ProjectionList
+                       :summary "Obtain a list of the states of the current active
           projections without their computed reduction values"
-                  (http/ok (api/projections ms)))
-             (GET "/projection/:projection-name" [projection-name]
-                  :path-params [projection-name :- s/Str]
-                  :return sc/ProjectionResponse
-                  :summary "Obtain the current status of a given projection,
+                       (http/ok (api/projections ms)))
+                  (GET "/projection/:projection-name" [projection-name]
+                       :path-params [projection-name :- s/Str]
+                       :return sc/ProjectionResponse
+                       :summary "Obtain the current status of a given projection,
           including the latest computed reduction value"
-                  (let [pres (api/projection ms projection-name)]
-                    (if (nil? pres) (http/not-found) (http/ok pres))))
-             (GET "/projection/:projection-name/:query-key"
-                  [projection-name query-key]
-                  :path-params [projection-name :- s/Str
-                                query-key :- s/Str]
-                  :return s/Any
-                  :summary "Obtain the value of a metadata field in
+                       (let [pres (api/projection ms projection-name)]
+                         (if (nil? pres) (http/not-found) (http/ok pres))))
+                  (GET "/projection/:projection-name/:query-key"
+                       [projection-name query-key]
+                       :path-params [projection-name :- s/Str
+                                     query-key :- s/Str]
+                       :return s/Any
+                       :summary "Obtain the value of a metadata field in
                            the specified projection"
-                  (let [pres (api/projection-value
-                              ms projection-name query-key)]
-                    (if (nil? pres) (http/not-found) (http/ok pres))))
-             (DELETE "/projection/:projection-name" [projection-name]
-                     :path-params [projection-name :- s/Str]
-                     :return sc/PostResponse
-                     :summary "Stop and delete a running projection"
-                     (http/ok
-                      (api/delete-projection! ms projection-name)))
-             (GET "/schema/:stream-name" [stream-name]
-                  :path-params [stream-name :- s/Str]
-                  :return s/Any ;; Refine this
-                  :summary "Obtain the inferred schema for a given stream"
-                  (http/ok
-                   (:schemas
-                    (get (:current-value (api/projection ms "__streams__"))
-                         stream-name))))
-             (GET "/stream-contents/:stream-name" [stream-name]
-                  :path-params [stream-name :- s/Str]
-                  :return sc/StreamContentsResponse
-                  :summary "Obtain a list (maximum of 50) of events contained
+                       (let [pres (api/projection-value
+                                   ms projection-name query-key)]
+                         (if (nil? pres) (http/not-found) (http/ok pres))))
+                  (DELETE "/projection/:projection-name" [projection-name]
+                          :path-params [projection-name :- s/Str]
+                          :return sc/PostResponse
+                          :summary "Stop and delete a running projection"
+                          (http/ok
+                           (api/delete-projection! ms projection-name)))
+                  (GET "/schema/:stream-name" [stream-name]
+                       :path-params [stream-name :- s/Str]
+                       :return s/Any ;; Refine this
+                       :summary "Obtain the inferred schema for a given stream"
+                       (http/ok
+                        (:schemas
+                         (get (:current-value (api/projection ms "__streams__"))
+                              stream-name))))
+                  (GET "/stream-contents/:stream-name" [stream-name]
+                       :path-params [stream-name :- s/Str]
+                       :return sc/StreamContentsResponse
+                       :summary "Obtain a list (maximum of 50) of events contained
           in a given stream"
-                  (http/ok (api/stream ms stream-name :limit 50)))
-             (GET "/event/:stream-name/:order-id" [stream-name order-id]
-                  :path-params [stream-name :- s/Str order-id :- s/Str]
-                  :return sc/EventResponse
-                  :summary "Obtain the event identified by a given stream name
+                       (http/ok (api/stream ms stream-name :limit 50)))
+                  (GET "/event/:stream-name/:order-id" [stream-name order-id]
+                       :path-params [stream-name :- s/Str order-id :- s/Str]
+                       :return sc/EventResponse
+                       :summary "Obtain the event identified by a given stream name
           and an order ID"
-                  (let [res (api/event ms stream-name (read-string order-id))]
-                    (if (nil? res) (http/not-found) (http/ok res))))
-             (POST "/projection" [& request]
-                   :body [body sc/ProjectionTemplate]
-                   :return sc/PostResponse
-                   :summary "Add a projection"
-                   (http/ok (api/post-projection! ms request)))
-             (POST "/event" [& request]
-                   :body [body sc/EventTemplate]
-                   :return sc/EventResponse
-                   :summary "Add an event"
-                   (let [res (api/post-event! ms request)]
-                     (http/ok res)))
-             (POST "/event/:stream-name" [& request]
-                   :no-doc true
-                   (api/post-event! ms request))
-             (mp/wrap-multipart-params
-              (cc/POST "/new-stream" {params :params}
-                       (http/ok {:status "OK"
-                                 :stream-name (api/new-stream ms params)}))))
-    (context "/ws" []
-             :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
-                          (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
-             (routes (rjson/wrap-json-body
-                      (pms/wrap-params
-                       (site (if http-kit?
-                               (routes (ws-route-projections-hk ms)
-                                       (ws-route-streams-hk ms)
-                                       (ws-route-stats-hk ms))
-                               (routes (ws-route ms)))))
-                      {:keywords? true})))
-    (GET "/" []
-         :no-doc true
-         (response/resource-response "index.html" {:root "public/ui"}))
-    (route/resources "/")
-    (route/not-found (http/not-found "Not found")))
-  (wrap-session (reload/wrap-reload #'app-no-reload)))
+                       (let [res (api/event ms stream-name (read-string order-id))]
+                         (if (nil? res) (http/not-found) (http/ok res))))
+                  (POST "/projection" [& request]
+                        :body [body sc/ProjectionTemplate]
+                        :return sc/PostResponse
+                        :summary "Add a projection"
+                        (http/ok (api/post-projection! ms request)))
+                  (POST "/event" [& request]
+                        :body [body sc/EventTemplate]
+                        :return sc/EventResponse
+                        :summary "Add an event"
+                        (let [res (api/post-event! ms request)]
+                          (http/ok res)))
+                  (POST "/event/:stream-name" [& request]
+                        :no-doc true
+                        (api/post-event! ms request))
+                  (mp/wrap-multipart-params
+                   (cc/POST "/new-stream" {params :params}
+                            (http/ok {:status "OK"
+                                      :stream-name (api/new-stream ms params)}))))
+         (context "/ws" []
+                  :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
+                               (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
+                  (routes (rjson/wrap-json-body
+                           (pms/wrap-params
+                            (site (if http-kit?
+                                    (routes (ws-route-projections-hk ms)
+                                            (ws-route-streams-hk ms)
+                                            (ws-route-stats-hk ms))
+                                    (routes (ws-route ms)))))
+                           {:keywords? true})))
+         (GET "/" []
+              :no-doc true
+              (response/resource-response "index.html" {:root "public/ui"}))
+         (route/resources "/")
+         (route/not-found (http/not-found "Not found")))]
+    (wrap-session (reload/wrap-reload app-no-reload))))
