@@ -81,6 +81,7 @@
            {:leaves ~(om/get-query main/MenuLeaf)}
            {:stats ~(om/get-query dsh/DashboardStats)}
            {:ui-state ~(om/get-query main/TopBar)}
+           {:ui-state ~(om/get-query main/SidebarButtons)}
            :subscriptions
            {:projection-info ~(om/get-query proj/ActiveProjections)}
            {:stream-info ~(om/get-query stm/ActiveStreams)}
@@ -139,6 +140,7 @@
 
 (go
   (let [res (<! (ws/get-api "/api/ping"))
+        _ (println (pr-str res))
         page (if (or (= (:status res) 500) (= (:status res) 401))
                LoginPage App)]
     (om/add-root! reconciler page (gdom/getElement "main-area"))))

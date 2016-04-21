@@ -1,11 +1,14 @@
 (ns photon.ui.main
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:use [jayq.core :only [$ css html]])
   (:require [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
+            [cljs.core.async :refer [chan <! >! put! close!]]
             [photon.ui.streams :as stm]
             [photon.ui.streams.analyser :as anal]
             [photon.ui.projections :as proj]
             [photon.ui.dashboard :as dsh]
+            [photon.ui.ws :as ws]
             [photon.ui.external :as external]))
 
 (def components
@@ -134,6 +137,8 @@
              (map (om/factory MenuSection) sections))))))
 
 (defui SidebarButtons
+  static om/IQuery
+  (query [this] [:ui-state])
   Object
   (render
    [this]
@@ -156,7 +161,13 @@
                           :aria-hidden "true"}))
     (dom/a #js {:data-toggle "tooltip"
                 :data-placement "top"
-                :title-data-original-title "Logout"}
+                :title-data-original-title "Logout"
+                :onClick (fn [_]
+                           (om/transact!
+                            this `[(root/update ~{:auth nil})])
+                           (go
+                             (println (<! (ws/get-api "/auth/logout")))
+                             (set! (.-location js/window) "/")))}
            (dom/span #js {:className "glyphicon glyphicon-off"
                           :aria-hidden "true"})))))
 
@@ -200,7 +211,7 @@
         #js {:id "sidebar-menu"
              :className "main_menu_side hidden-print main_menu"}
         (map (om/factory MenuCategory) (:categories (om/props this))))
-       ((om/factory SidebarButtons)))))))
+       ((om/factory SidebarButtons) (om/props this)))))))
 
 (defui TopBar
   static om/IQuery
