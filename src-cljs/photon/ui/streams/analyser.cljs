@@ -252,7 +252,7 @@
                  (if (nil? sk)
                    `(~s-conj ~s-prev ~s-next)
                    `(~s-update ~s-prev ~sk ~s-concat [~s-next]))
-                 `(~s-update-in ~s-prev ~sk-gbs
+                 `(~s-update ~s-prev ~sk-gbs
                    (~s-fn [~s-old]
                     (~s-if (~s-nil? ~s-old)
                      [~s-next] (~s-conj ~s-old ~s-next)))))

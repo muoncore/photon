@@ -29,7 +29,7 @@
                  [compojure "1.5.0" :exclusions [commons-codec]]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.44"]
-                 [tranchis/muon-schemas "0.1.2"]
+                 [tranchis/muon-schemas "0.1.5"]
                  [io.muoncore/muon-clojure "6.4-20160414143622"
                   :exclusions [org.clojure/tools.reader]]
                  [prismatic/schema "1.1.0"]
