@@ -216,7 +216,7 @@
     {:group-by
      (apply merge
             (map (fn [x y]
-                   {y `(~s--> ~s-next ~@(map keyword (:path x)))})
+                   {y `(~s--> ~s-orig-next ~@(map keyword (:path x)))})
                  schs paths))}))
 
 (defn select-structure [gs]
@@ -239,7 +239,7 @@
         sk (if (contains? action-list :split-4-weeks)
              `(~s-mult
                2419200000
-               (~s-int (~s-div (:photon-timestamp ~s-orig-next)
+               (~s-int (~s-div (:event-time ~s-orig-next)
                         2419200000)))
              nil)
         group-bys (:group-by action-list)
