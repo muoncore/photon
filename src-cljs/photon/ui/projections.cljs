@@ -7,7 +7,7 @@
 
 (defn filter-projection [proj]
   (assoc
-   (select-keys proj [:stream
+   (select-keys proj [:stream :mem-used
                       :avg-time :status :language :processed
                       :stream-name :projection-name])
    :url :action/view-projection
@@ -107,7 +107,7 @@
          :data {:data (map filter-projection projections)
                 :owner this
                 :flash [:projection-name (:new-projection ui-state)]
-                :rows [:projection-name
+                :rows [:projection-name :mem-used
                        :init-time :avg-time :status :language
                        :processed :stream-name :url]}}))
       ((om/factory comp/Modal)

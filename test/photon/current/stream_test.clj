@@ -1,13 +1,15 @@
 (ns photon.current.stream-test
   (:require [photon.streams :as streams]
             [photon.db :as db]
-            [muon-clojure.server :as mcs]
+            [muon-clojure.core :as mcs]
             [clojure.core.async :as async :refer [<!!]]
             [com.stuartsierra.component :as component]
             [photon.current.common :refer :all]
             [photon.core :as core]
             [clojure.tools.logging :as log])
   (:use midje.sweet))
+
+(.delete (java.io.File. "/tmp/temporalphoton.log"))
 
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
 (def conf {:amqp.url :local

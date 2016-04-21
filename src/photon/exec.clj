@@ -41,8 +41,8 @@
                          (js/from-js res))]
           converted)
         (catch Exception e
-          (println (.getMessage e))
-          (.printStackTrace e)
+          #_(println (.getMessage e))
+          #_(.printStackTrace e)
           res)))))
 
 (defmethod generate-function "javascript" [_ f]

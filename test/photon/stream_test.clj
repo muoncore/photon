@@ -5,11 +5,13 @@
             [com.stuartsierra.component :as component]
             [photon.core :as core]
             [clojure.tools.logging :as log]
-            [muon-clojure.client :as cl]
+            [muon-clojure.core :as cl]
             [photon.current.common :refer :all]
             [photon.streams :as streams]
             [photon.muon :as m])
   (:use midje.sweet))
+
+(.delete (java.io.File. "/tmp/temporalphoton.log"))
 
 (def uuid (java.util.UUID/randomUUID))
 (def amazon-url :local)
@@ -89,7 +91,7 @@
                               (str "request://photon-test-" uuid "/events")
                               {:payload {:test :ok}
                                :service-id "muon://client"
-                               :local-id (java.util.UUID/randomUUID)
+                               :order-id (* 1000 (System/currentTimeMillis))
                                :stream-name "dummy"})))))
   #_(Thread/sleep 120000)
   (fact "Correct count" (test-cold) => 4))
