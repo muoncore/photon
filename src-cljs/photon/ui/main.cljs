@@ -163,8 +163,6 @@
                 :data-placement "top"
                 :title-data-original-title "Logout"
                 :onClick (fn [_]
-                           (om/transact!
-                            this `[(root/update ~{:auth nil})])
                            (go
                              (println (<! (ws/get-api "/auth/logout")))
                              (set! (.-location js/window) "/")))}
