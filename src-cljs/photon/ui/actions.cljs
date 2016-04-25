@@ -51,7 +51,7 @@
                 (ui/update {:k :modal-events :v true})
                 :stream-info]))]
      (dom/a #js {:href "#event-browser" :onClick f}
-            (str ws/localhost "/api/event/" (:stream-name item)
+            (str "/api/event/" (:stream-name item)
                  "/" (:order-id item))))))
 
 (def k->action {:action/export-stream ExportAction

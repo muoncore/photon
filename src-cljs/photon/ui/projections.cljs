@@ -15,7 +15,7 @@
 
 (defn load-value! [owner projection-name]
   (ws/call-back
-   (str ws/localhost "/api/projection/" projection-name) {}
+   (str "/api/projection/" projection-name) {}
    (fn [res]
      (om/update-state!
       owner assoc

@@ -28,78 +28,6 @@
                   :parser (om/parser {:read parser/read
                                       :mutate parser/mutate})}))
 
-(defui LoginPage
-  ;; TODO: Breakdown and move pieces to components.cljs
-  static om/IQuery
-  (query [this] [:username :auth :password :server])
-  Object
-  (render
-   [this]
-   (let [{:keys [username auth password server]} (om/props this)
-         fn-clk (fn [_]
-                  (ws/call-back "/auth/login"
-                                {:basic-auth {:username username
-                                              :password password}}
-                                (fn [m]
-                                  (om/transact!
-                                   this `[(root/update ~{:auth m})]))))]
-     (if (= 200 (:status auth))
-       (set! (.-location js/window) "/")
-       (dom/div
-        #js {:id "wrapper"}
-        (dom/div
-         #js {:id "login" :className "animate form"}
-         (dom/section
-          #js {:className "login_content"}
-          (dom/form
-           #js {:onSubmit #(.preventDefault %)}
-           (dom/h1 nil "photon admin console")
-           (dom/p nil (if (= 401 (:status auth)) "Wrong credentials"))
-           (dom/div
-            nil
-            (dom/input
-            #js {:name "username" :type "text"
-                 :className "form-control" :placeholder "Username"
-                 :value username
-                 :onChange
-                 (fn [ev]
-                   (om/transact!
-                    this `[(root/update {:username
-                                         ~(.-value (.-target ev))})]))
-                 :onKeyDown #(if (= 13 (.-keyCode %)) (fn-clk nil))}))
-           (dom/div
-            nil
-            (dom/input
-            #js {:type "password" :name "password"
-                 :className "form-control" :placeholder "Password"
-                 :value password
-                 :onKeyDown #(if (= 13 (.-keyCode %)) (fn-clk nil))
-                 :onChange
-                 (fn [ev]
-                   (om/transact!
-                    this `[(root/update
-                            {:password ~(.-value (.-target ev))})]))}))
-           (dom/div
-            nil
-            (dom/select
-             #js {:className "form-control"
-                  :onKeyDown #(if (= 13 (.-keyCode %)) (fn-clk nil))
-                  :onChange
-                  (fn [ev]
-                    (om/transact!
-                     this `[(root/update
-                             {:server ~(.-value (.-target ev))})]))}
-             (dom/option #js {:value ws/localhost} ws/localhost)
-             (dom/option
-              #js {:value "https://photon-ext.cistechfutures.net"}
-              "https://photon-ext.cistechfutures.net")))
-           (dom/div #js {:style #js {:height "20px"}})
-           (dom/div
-            nil
-            (dom/button #js {:type "Submit" :onClick fn-clk
-                             :className "btn btn-default submit"}
-                        "Login"))))))))))
-
 (defui App
   static om/IQuery
   (query [this]
@@ -164,6 +92,86 @@
    [this]
    ;; TODO: Check the idiomatic way to do this
    ((om/factory main/MainPage) (om/props this))))
+
+(defui LoginPage
+  ;; TODO: Breakdown and move pieces to components.cljs
+  static om/IQuery
+  (query [this] [:username :auth :password :server])
+  Object
+  (componentDidMount
+   [this]
+   (let [v (.-value (.getDOMNode (om/react-ref this "select")))]
+     (ck/set "server" v)
+     (om/transact! this `[(root/update ~{:server v})])))
+  (render
+   [this]
+   (let [{:keys [username auth password server]} (om/props this)
+         fn-clk (fn [_]
+                  (ws/call-back "/auth/login"
+                                {:basic-auth {:username username
+                                              :password password}}
+                                (fn [m]
+                                  (om/transact!
+                                   this `[(root/update ~{:auth m})]))))]
+     (if (= 200 (:status auth))
+       (set! (.-location js/window) "/")
+       (dom/div
+        #js {:id "wrapper"}
+        (dom/div
+         #js {:id "login" :className "animate form"}
+         (dom/section
+          #js {:className "login_content"}
+          (dom/form
+           #js {:onSubmit #(.preventDefault %)}
+           (dom/h1 nil "photon admin console")
+           (dom/p nil (if (= 401 (:status auth)) "Wrong credentials"))
+           (dom/div
+            nil
+            (dom/input
+            #js {:name "username" :type "text"
+                 :className "form-control" :placeholder "Username"
+                 :value username
+                 :onChange
+                 (fn [ev]
+                   (om/transact!
+                    this `[(root/update {:username
+                                         ~(.-value (.-target ev))})]))
+                 :onKeyDown #(if (= 13 (.-keyCode %)) (fn-clk nil))}))
+           (dom/div
+            nil
+            (dom/input
+            #js {:type "password" :name "password"
+                 :className "form-control" :placeholder "Password"
+                 :value password
+                 :onKeyDown #(if (= 13 (.-keyCode %)) (fn-clk nil))
+                 :onChange
+                 (fn [ev]
+                   (om/transact!
+                    this `[(root/update
+                            {:password ~(.-value (.-target ev))})]))}))
+           (dom/div
+            nil
+            (dom/select
+             #js {:className "form-control"
+                  :onKeyDown #(if (= 13 (.-keyCode %)) (fn-clk nil))
+                  :ref "select"
+                  :onChange
+                  (fn [ev]
+                    (let [v (.-value (.-target ev))]
+                      (ck/set "server" v)
+                      (om/transact! this `[(root/update {:server ~v})])))}
+             (dom/option #js {:value ws/localhost} ws/localhost)
+             (dom/option
+              #js {:value "https://photon-ext.cistechfutures.net"}
+              "https://photon-ext.cistechfutures.net")))
+           (dom/div #js {:style #js {:height "20px"}})
+           (dom/div
+            nil
+            (dom/button #js {:type "Submit" :onClick fn-clk
+                             :className "btn btn-default submit"}
+                        "Login"))))))))))
+
+(println (ck/get "server"))
 
 (go
   (let [res (<! (ws/get-api "/api/ping"))
