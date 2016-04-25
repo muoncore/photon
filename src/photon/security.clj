@@ -89,7 +89,7 @@
   (authenticated-mw [this]
     (fn [handler]
       (fn [request]
-        (if (authenticated? request)
+        (if (or (= :options (:request-method request)) (authenticated? request))
           (handler request)
           (unauthorized {:error "Not authorized"})))))
   (cors-mw [this]
@@ -97,11 +97,13 @@
       (fn [request]
         (let [response (handler request)]
           (-> response
-              (assoc-in [:headers "Access-Control-Allow-Origin"] "*")
+              (assoc-in [:headers "Access-Control-Allow-Origin"]
+                        "http://localhost:3000")
+              (assoc-in [:headers "Access-Control-Allow-Credentials"] "true")
               (assoc-in [:headers "Access-Control-Allow-Methods"]
                         "GET, PUT, PATCH, POST, DELETE, OPTIONS")
               (assoc-in [:headers "Access-Control-Allow-Headers"]
-                        "Authorization, Content-Type"))))))
+                        "Authorization, Content-Type, Accept, If-None-Match, Accept-Language, Accept-Encoding"))))))
   (session-or-token-mw [this]
     (fn [handler]
       (wrap-authentication

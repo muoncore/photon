@@ -30,6 +30,7 @@
   (fact "The streams projection indicates 0 events processed"
         (:processed sp) => 0.0)
   (post-one-event m s-name)
+  (Thread/sleep 2000)
   (let [new-sp (cl/with-muon m
                  (cl/request! (str url-req "/projection")
                               {:projection-name "__streams__"}))]

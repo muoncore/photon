@@ -98,6 +98,18 @@
       (GET "/ws-stats" []
            (wrap-websocket-handler ws-stats-handler)))))
 
+(defn ws-cors [handler]
+  (fn [request]
+    (let [response (handler request)]
+      (-> response
+          (assoc-in [:headers "Access-Control-Allow-Origin"]
+                    "http://localhost:3000")
+          (assoc-in [:headers "Access-Control-Allow-Credentials"] "true")
+          (assoc-in [:headers "Access-Control-Allow-Methods"]
+                    "GET, PUT, PATCH, POST, DELETE")
+          (assoc-in [:headers "Access-Control-Allow-Headers"]
+                    "Authorization, Content-Type, Accept")))))
+
 (defmulti on-open (fn [ch stream]
                     (let [req (async/originating-request ch)]
                       (apply str (rest (:path-info req))))))
@@ -246,13 +258,13 @@
                        :path-params [stream-name :- s/Str]
                        :return sc/StreamContentsResponse
                        :summary "Obtain a list (maximum of 50) of events contained
-          in a given stream"
+                                in a given stream"
                        (http/ok (api/stream ms stream-name :limit 50)))
                   (GET "/event/:stream-name/:order-id" [stream-name order-id]
                        :path-params [stream-name :- s/Str order-id :- s/Str]
                        :return sc/EventResponse
                        :summary "Obtain the event identified by a given stream name
-          and an order ID"
+                                and an order ID"
                        (let [res (api/event ms stream-name (read-string order-id))]
                          (if (nil? res) (http/not-found) (http/ok res))))
                   (POST "/projection" [& request]

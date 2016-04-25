@@ -63,7 +63,6 @@
    (cl/with-muon m
      (cl/request! (str "request://" url "/events")
                   {"service-id","request://chatter",
-                   "order-id", (* 1000 (System/currentTimeMillis)),
                    "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
                               "text","substitutable",
                               "textanalysis",

@@ -3,7 +3,10 @@
   (:require [om.next :as om]
             [chord.client :refer [ws-ch]]
             [cljs-http.client :as client]
+            [goog.net.cookies :as ck]
             [cljs.core.async :refer [chan <! >! put! close!]]))
+
+(enable-console-print!)
 
 (defonce localhost (let [href (.-href (.-location js/window))]
                      (if (= (last href) \/)
@@ -12,11 +15,10 @@
                         "/"
                         (drop-last (clojure.string/split href #"/"))))))
 
-(defonce ws-localhost (let [tokens (clojure.string/split localhost #":")
-                            prefix (if (= (first tokens) "https")
-                                     "wss" "ws")]
-                        (clojure.string/join
-                         ":" (conj (rest tokens) prefix))))
+(def ws-server
+  (let [tokens (clojure.string/split (ck/get "server") #":")
+        prefix (if (= (first tokens) "https") "wss" "ws")]
+    (clojure.string/join ":" (conj (rest tokens) prefix))))
 
 (defn get-chart-data [new-val previous last-25 is-first?]
   (let [difference (if is-first? 0 (- new-val previous))
@@ -34,17 +36,22 @@
                           ""
                           (str "?" qs)))]
      #_(.log js/console query)
-     (f query))))
+     (f (str ws-server query)))))
 
 (defn call-oauth [f & args]
   (let [m (if (> (count args) 1)
             (merge (second args) {})
             {})]
     #_(.log js/console (pr-str m))
-    (f (first args) (assoc m :accept "application/edn"))))
+    (f (str (ck/get "server") (first args))
+       (assoc m :accept "application/edn"))))
 
 (defn call-back [url params upd]
-  (go (let [res (<! (client/get url params))]
+  (go
+    (let [res (try
+                (<! (client/get (str (ck/get "server") url) params))
+                (catch js/Error e
+                  (println e)))]
         (upd res))))
 
 (defn ws-api   [& args] (apply call-api ws-ch args))
@@ -55,7 +62,7 @@
 (defn subscribe-projections! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-api (str ws-localhost "/ws/ws-projections")))]
+          (<! (ws-api "/ws/ws-projections"))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
@@ -72,7 +79,7 @@
 (defn subscribe-stats! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-api (str ws-localhost "/ws/ws-stats")))]
+          (<! (ws-api "/ws/ws-stats"))]
       (if-not error
         (do
           (>! ws-channel {:ok true})
@@ -113,7 +120,7 @@
 (defn subscribe-streams! [stats upd]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-api (str ws-localhost "/ws/ws-streams")))]
+          (<! (ws-api "/ws/ws-streams"))]
       (if-not error
         (do
           (>! ws-channel {})
