@@ -42,6 +42,7 @@
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.8.40"]
+                 [com.github.jsqlparser/jsqlparser "0.9.5"]
                  [jarohen/chord "0.7.0"
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs
