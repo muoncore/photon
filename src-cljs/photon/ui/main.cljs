@@ -9,6 +9,7 @@
             [photon.ui.projections :as proj]
             [photon.ui.dashboard :as dsh]
             [photon.ui.ws :as ws]
+            [photon.ui.api :as api]
             [photon.ui.external :as external]))
 
 (def components
@@ -19,7 +20,8 @@
    :projections/new proj/NewProjection
    :streams/analyse anal/DataAnalyser
    :api/swagger external/Swagger
-   :dashboard/debug external/DebugMode})
+   :dashboard/debug external/DebugMode
+   :api/manager api/ManageKeys})
 
 (defui Footer
   Object

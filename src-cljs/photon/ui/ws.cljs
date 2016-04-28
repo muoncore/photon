@@ -59,20 +59,21 @@
 (defn post-api [& args] (apply call-oauth client/post args))
 (defn post-api-async [& args] (go (<! (apply call-oauth client/post args))))
 
-(defn subscribe-projections! [stats upd]
+(defn subscribe-projections! [stats upd msg]
   (go
     (let [{:keys [ws-channel error]}
           (<! (ws-api "/ws/ws-projections"))]
       (if-not error
         (do
-          (>! ws-channel {:ok true})
+          ;; TODO: Fix first result, projection-name not applied
+          (>! ws-channel msg)
           (loop [elem (<! ws-channel)]
             (when-not (nil? elem)
               (if (contains? elem :error)
                 (do
                   #_(.log js/console (pr-str elem)))
-                (upd {:projections (:projections (:message elem))}))
-              (>! ws-channel {:ok true})
+                (upd elem))
+              (>! ws-channel msg)
               (recur (<! ws-channel)))))
         (do (.log js/console "Error:" (pr-str error)))))))
 

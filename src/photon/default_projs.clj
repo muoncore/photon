@@ -25,11 +25,20 @@
                 [(:stream-name n) :schemas schema-version]
                 {:total-events new-local-total :schema schema}))))
 
+(def security-fn
+  (sfn/fn [p n]
+    p))
+ 
 (def default-projections
   [{:projection-name "__streams__"
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
+    :initial-value {}}
+   {:projection-name "__security-state__"
+    :stream-name "__security__"
+    :language :clojure
+    :reduction (pr-str security-fn)
     :initial-value {}}])
 
 (defn init-projection! [proj-file]

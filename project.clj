@@ -93,11 +93,11 @@
              "-XX:CMSIncrementalSafetyFactor=10"
              "-XX:+CMSClassUnloadingEnabled" "-XX:+DoEscapeAnalysis"]
   :figwheel {:server-port 3000
-             :load-warninged-code true
              :open-file-command "atom"
              :ring-handler photon.core/figwheel-init!}
   :cljsbuild
-  {:builds [{:source-paths ["src-cljs"]
+  {:builds [{:id "production"
+             :source-paths ["src-cljs"]
              :figwheel true
              :compiler {:main photon.ui.frontend
                         :asset-path "ui/js/out"

@@ -13,6 +13,7 @@
             [photon.ui.streams.analyser :as anal]
             [photon.ui.state :as st]
             [photon.ui.streams :as stm]
+            [photon.ui.api :as api]
             [photon.ui.ws :as ws]
             [photon.ui.projections :as proj]
             [photon.ui.dashboard :as dsh]
@@ -37,6 +38,7 @@
            {:stats ~(om/get-query dsh/DashboardStats)}
            {:ui-state ~(om/get-query main/TopBar)}
            {:ui-state ~(om/get-query main/SidebarButtons)}
+           {:security-info ~(om/get-query api/ManageKeys)}
            :subscriptions
            {:projection-info ~(om/get-query proj/ActiveProjections)}
            {:stream-info ~(om/get-query stm/ActiveStreams)}
@@ -48,11 +50,19 @@
    [this]
    (when-not (:subscriptions (om/props this))
      (let [upd (fn [x] (om/transact! this `[(stats/update ~x) :stats]))
+           upd-proj (fn [x]
+                      (let [y {:projections (:projections (:message x))}]
+                        (om/transact! this `[(stats/update ~y) :stats])))
+           upd-sec (fn [x]
+                     (let [y (:current-value (:message x))]
+                       (om/transact! this `[(sec/update ~y) :security-info])))
            stats (let [stats (get-in (om/props this) [:stats :stats :last-25])]
                    (if (or (nil? stats) (= :not-found stats)) {} stats))]
        (println "Subscribing...")
        (ws/subscribe-streams! stats upd)
-       (ws/subscribe-projections! stats upd)
+       (ws/subscribe-projections! stats upd-proj {})
+       (ws/subscribe-projections!
+        stats upd-sec {:projection-name "__security-state__"})
        (ws/subscribe-stats! stats upd)
        (om/transact! this `[(subscriptions/update {:subscriptions true})]))))
   (componentDidUpdate
@@ -170,8 +180,6 @@
             (dom/button #js {:type "Submit" :onClick fn-clk
                              :className "btn btn-default submit"}
                         "Login"))))))))))
-
-(println (ck/get "server"))
 
 (go
   (let [res (<! (ws/get-api "/api/ping"))
