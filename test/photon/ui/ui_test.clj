@@ -6,7 +6,6 @@
 
 (let [system (-main "-rest.port" "6969"
                     "-projections.path" "/tmp/dummy-folder/"
-                    "-amqp.url" "amqp://localhost"
                     "-db.backend" "file"
                     "-file.path" "/tmp/events.tmp")]
   (fact (client/get "http://localhost:6969/swagger.json")

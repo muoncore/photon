@@ -27,7 +27,7 @@
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.44"]
                  [tranchis/muon-schemas "0.1.5"]
-                 [io.muoncore/muon-clojure "6.4-20160414143622"
+                 [io.muoncore/muon-clojure "7.0-20160427202846"
                   :exclusions [potemkin org.clojure/tools.reader]]
                  [prismatic/schema "1.1.0"]
                  [metosin/ring-http-response "0.6.5"
@@ -39,7 +39,7 @@
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.8.40"]
+                 [org.clojure/clojurescript "1.8.51"]
                  [com.github.jsqlparser/jsqlparser "0.9.5"]
                  [jarohen/chord "0.7.0"
                   :exclusions [com.cognitect/transit-clj
