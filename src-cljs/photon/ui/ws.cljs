@@ -62,7 +62,9 @@
 (defn subscribe-projections! [stats upd msg]
   (go
     (let [{:keys [ws-channel error]}
-          (<! (ws-api "/ws/ws-projections"))]
+          (<! (ws-api (if-let [pn (:projection-name msg)]
+                        (str "/ws/ws-projections?projection-name=" pn)
+                        "/ws/ws-projections")))]
       (if-not error
         (do
           ;; TODO: Fix first result, projection-name not applied

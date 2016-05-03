@@ -32,15 +32,15 @@
   (async/send! ch (pr-str msg)))
 
 (defn f-ws-projections-handler-hk [stream]
-  (fn [{:keys [ws-channel] :as req}]
+  (fn [{:keys [ws-channel query-params] :as req}]
     (go
       (loop [t 0]
         (if-let [{:keys [message]} (<! ws-channel)]
           (do
             (<! (timeout t))
             (>! ws-channel
-                (if (contains? message :projection-name)
-                  (api/projection stream (:projection-name message))
+                (if-let [pn (get query-params "projection-name")]
+                  (api/projection stream pn)
                   (api/projections-without-val stream)))
             (recur 1000))
           (do
