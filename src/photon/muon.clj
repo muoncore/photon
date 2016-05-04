@@ -19,7 +19,10 @@
                     (streams/stream->ch stream-manager params))}])
   mcs/MicroserviceEvent
   (handle-event [this event]
-    (api/post-event! stream-manager event))
+    (try
+      (api/post-event! stream-manager event)
+      (catch clojure.lang.ExceptionInfo e
+        {:error (.getMessage e)})))
   mcs/MicroserviceRequest
   (request-mappings [this]
     [{:endpoint "projection"
