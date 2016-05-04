@@ -49,7 +49,7 @@
       {:correct false})))
 
 (defn post-event! [stm ev]
-  (s/validate ms/EventTemplate (streams/process-event! stm ev)))
+  (streams/process-event! stm (s/validate ms/EventTemplate ev)))
 
 (defn filtered-projections [stm filter-keys]
   {:projections

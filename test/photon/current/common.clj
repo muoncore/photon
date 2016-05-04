@@ -72,7 +72,7 @@
                                               "count",1}]}},
                    "schema", schema-version,
                    "stream-name","chatter",
-                   "event-time",1420660080000})
+                   "event-type","chatter"})
      #_(cl/query-event "request://photon/projection"
                        {:projection-name "count"}))) 
   ([m url]

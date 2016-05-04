@@ -91,7 +91,7 @@
                               (str "request://photon-test-" uuid "/events")
                               {:payload {:test :ok}
                                :service-id "muon://client"
-                               :order-id (* 1000 (System/currentTimeMillis))
+                               :event-type "dummy"
                                :stream-name "dummy"})))))
   #_(Thread/sleep 120000)
   (fact "Correct count" (test-cold) => 4))
