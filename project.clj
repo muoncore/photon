@@ -27,7 +27,7 @@
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.44"]
                  [tranchis/muon-schemas "0.1.5"]
-                 [io.muoncore/muon-clojure "7.0-20160427202846"
+                 [io.muoncore/muon-clojure "7.0-20160503141230"
                   :exclusions [potemkin org.clojure/tools.reader]]
                  [prismatic/schema "1.1.0"]
                  [metosin/ring-http-response "0.6.5"

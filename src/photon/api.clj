@@ -5,6 +5,8 @@
             [photon.default-projs :as dp]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
+            [schema.core :as s]
+            [muon-schemas.core :as ms]
             [clojure.core.async :as async])
   (:import (java.util Map)
            (java.io File FileInputStream FileOutputStream)
@@ -47,7 +49,7 @@
       {:correct false})))
 
 (defn post-event! [stm ev]
-  (streams/process-event! stm ev))
+  (s/validate ms/EventTemplate (streams/process-event! stm ev)))
 
 (defn filtered-projections [stm filter-keys]
   {:projections
