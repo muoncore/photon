@@ -57,6 +57,7 @@
 (defn ws-api   [& args] (apply call-api ws-ch args))
 (defn get-api  [& args] (apply call-oauth client/get args))
 (defn post-api [& args] (apply call-oauth client/post args))
+(defn delete-api [& args] (apply call-oauth client/delete args))
 (defn post-api-async [& args] (go (<! (apply call-oauth client/post args))))
 
 (defn subscribe-projections! [stats upd msg]
@@ -176,6 +177,27 @@
                            (om/transact!
                             owner
                             `[(ui/update ~{:k :new-projection :v pn})]))}]}}
+            {:title "Unexpected problem"
+             :type "error"
+             :text (str "Error code: " (:status res) "\n"
+                        "Message: " (pr-str (:body res)))})))
+        (.positionAll js/PNotify)))))
+
+(defn delete-stream [owner sm]
+  (let [noti (js/PNotify.
+              #js {:title "Deleting stream..."
+                   :type "info"
+                   :text (str "Stream: " sm)})]
+    (go
+      (let [res (<! (delete-api (str "/api/stream/" sm)))]
+        (println res)
+        (.removeAll js/PNotify)
+        (js/PNotify.
+         (clj->js
+          (if (= 200 (:status res))
+            {:title "Success"
+             :type "success"
+             :text (str "Stream " sm " deleted successfully")}
             {:title "Unexpected problem"
              :type "error"
              :text (str "Error code: " (:status res) "\n"

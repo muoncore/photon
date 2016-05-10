@@ -10,9 +10,10 @@
   (:import goog.net.IframeIo
            goog.net.EventType))
 
-(def k->header {:stream "Stream name"
+#_(def k->header {:stream "Stream name"
                 :fn "Function"
                 :export "Export"
+                :delete "Delete"
                 :last-error "Last error"
                 :contents "Contents"
                 :current-value "Current value"
@@ -37,6 +38,7 @@
   (-> stream
       (dissoc :schemas)
       (assoc :export :action/export-stream)
+      (assoc :delete :action/delete-stream)
       (assoc :contents :action/view-contents)))
 
 (defn strip-event [event]
@@ -106,7 +108,7 @@
          :data {:data streams
                 :flash [:stream (:new-stream (:ui-state data))]
                 :owner this
-                :rows [:stream :total-events :contents :export]}}))
+                :rows [:stream :total-events :contents :export :delete]}}))
       (if (not (nil? active-stream))
         (dom/div
          #js {:id "event-browser" :className "row"}

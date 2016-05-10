@@ -26,8 +26,17 @@
                 {:total-events new-local-total :schema schema}))))
 
 (def security-fn
-  (sfn/fn [p n]
-    p))
+  (sfn/fn [p {:keys [event-type payload] :as n}]
+    (let [new-p (condp = event-type
+                  "create-app"
+                  (assoc-in p [(:username payload)
+                               (:client-id payload)] payload)
+                  "delete-app"
+                  (assoc p (:username payload)
+                         (dissoc (get p (:username payload))
+                                 (:client-id payload)))
+                  p)]
+      new-p)))
  
 (def default-projections
   [{:projection-name "__streams__"

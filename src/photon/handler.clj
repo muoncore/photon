@@ -181,17 +181,18 @@
                                (sec/cors-mw m-sec)
                                (sec/authenticated-mw m-sec)]
                   ;; TODO: Add refresh-token functionality
-                  (GET "/login" {session :session}
-                       (assoc (http/ok {:logged-in true})
-                              :session (assoc session :identity "user")))
+                  (GET "/login" {session :session username :username}
+                       (http/ok {:logged-in true}))
                   (GET "/logout" {session :session}
                        (-> (http/ok {:logged-out true})
                            (assoc :session (dissoc session :identity))))
+                  (POST "/app" {params :params identity :identity}
+                        (http/ok (api/create-app! ms m-sec identity params)))
                   (GET "/token" req
                        (http/ok (sec/auth-credentials-response m-sec req))))
          (context "/export" []
                   :no-doc true
-                  :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
+                  :middleware [(sec/qs->token-mw m-sec ms) (sec/session-or-token-mw m-sec)
                                (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
                   (GET "/stream/:stream-name" [stream-name]
                        :path-params [stream-name :- s/Str]
@@ -202,7 +203,7 @@
                              (http/header "Content-Length" (.length f))))))
          (context "/api" []
                   :tags ["api"]
-                  :middleware [(sec/qs->token-mw m-sec)
+                  :middleware [(sec/qs->token-mw m-sec ms)
                                (sec/session-or-token-mw m-sec)
                                (sec/cors-mw m-sec)
                                (sec/authenticated-mw m-sec)]
@@ -246,6 +247,11 @@
                           :summary "Stop and delete a running projection"
                           (http/ok
                            (api/delete-projection! ms projection-name)))
+                  (DELETE "/stream/:stream-name" [stream-name]
+                          :path-params [stream-name :- s/Str]
+                          :return sc/PostResponse
+                          :summary "Unsafely delete an active stream"
+                          (http/ok (api/delete-stream! ms stream-name)))
                   (GET "/schema/:stream-name" [stream-name]
                        :path-params [stream-name :- s/Str]
                        :return s/Any ;; Refine this
@@ -286,7 +292,7 @@
                             (http/ok {:status "OK"
                                       :stream-name (api/new-stream ms params)}))))
          (context "/ws" []
-                  :middleware [(sec/qs->token-mw m-sec) (sec/session-or-token-mw m-sec)
+                  :middleware [(sec/qs->token-mw m-sec ms) (sec/session-or-token-mw m-sec)
                                (sec/cors-mw m-sec) (sec/authenticated-mw m-sec)]
                   (routes (rjson/wrap-json-body
                            (pms/wrap-params

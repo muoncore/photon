@@ -58,7 +58,7 @@
                  [congomongo "0.4.8"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-h2 "0.9.45" :exclusions [potemkin]]
-                 [tranchis/photon-cassandra "0.9.46"
+                 [tranchis/photon-cassandra "0.9.49"
                   :exclusions [potemkin]]
                  [tranchis/photon-hazelcast "0.9.40"]
                  [tranchis/photon-redis "0.9.42"

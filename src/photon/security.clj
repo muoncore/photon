@@ -6,10 +6,17 @@
             [buddy.sign.jws :as jws]
             [clojure.tools.logging :as log]
             [clj-time.core :as time]
+            [clj-time.coerce :as c]
             [ring.util.http-response :refer :all]
             [buddy.auth.backends.token :refer [jws-backend token-backend]]
             [buddy.auth.backends.session :refer [session-backend]]
             [com.stuartsierra.component :as component]))
+
+(defn user-profile [username]
+  {:id username
+   :permissions []
+   :email username
+   :username username})
 
 (defn basic-auth [user-info]
   (fn [request auth-data]
@@ -17,10 +24,7 @@
           password    (:password auth-data)]
       ;; TODO: Improve security with buddy/hashers
       (if (and user-info (hashers/check password (:password user-info)))
-        {:id identifier
-         :permissions []
-         :email identifier
-         :username identifier}
+        (user-profile identifier)
         false))))
 
 (defn basic-backend [user-info]
@@ -61,6 +65,20 @@
           false))
       false)))
 
+(defn app-token-fn [secret]
+  (fn [req token]
+    (try
+      (if-let [token-contents (jws/unsign token secret {:alg :hs256})]
+        (do
+          (if (time/before? (time/now)
+                            (c/from-long (long (* 1000 (:exp token-contents)))))
+            token-contents
+            false))
+        false)
+      (catch Exception e
+        (println (.getMessage e))
+        false))))
+
 (defprotocol SecurityProtocol
   (basic-auth-mw [this])
   (authenticated-mw [this])
@@ -70,7 +88,17 @@
   (basic-or-session-mw [this])
   (session-or-token-mw [this])
   (auth-credentials-response [this req])
-  (qs->token-mw [this]))
+  (qs->token-mw [this ms])
+  (create-app-token! [this identity name description website]))
+
+(defn token-from-id-secret [ms client-id client-secret]
+  (let [proj (get (:projections @(:state ms)) "__security-state__")
+        v (:current-value @(:projection-descriptor proj))
+        all-apps (mapcat vals (vals v))
+        valid-app (first (filter #(and (= (:client-id %) client-id)
+                                       (= (:client-secret %) client-secret))
+                                 all-apps))]
+    (when-not (nil? valid-app) (second (:tks valid-app)))))
 
 (defrecord SecurityImpl [jws-tokens tokens secret username password]
   SecurityProtocol
@@ -90,7 +118,8 @@
     (fn [handler]
       (fn [request]
         (if (or (= :options (:request-method request)) (authenticated? request))
-          (handler request)
+          (assoc-in (handler request) [:session :identity]
+                    (:identity request))
           (unauthorized {:error "Not authorized"})))))
   (cors-mw [this]
     (fn [handler]
@@ -108,6 +137,7 @@
     (fn [handler]
       (wrap-authentication
        handler (session-backend) (jws-token-backend secret)
+       (token-backend {:authfn (app-token-fn secret)})
        (token-backend {:authfn (simple-token-fn tokens)}))))
   (token-auth-mw [this]
     (fn [handler]
@@ -125,14 +155,30 @@
        :token         (create-token secret user)
        :simple-token  (create-simple-token tokens user)
        :refreshToken  refresh-token}))
-  (qs->token-mw [this]
+  (qs->token-mw [this ms]
     (fn [handler]
       (fn [req]
         (if-let [token (:access_token (:params req))]
           (let [new-req (assoc-in req [:headers "authorization"]
                                   (str "Token " token))]
             (handler new-req))
-          (handler req))))))
+          (let [client-id (:client_id (:params req))
+                client-secret (:client_secret (:params req))]
+            (if-let [token (token-from-id-secret ms client-id client-secret)]
+              (handler (assoc-in req [:headers "authorization"]
+                                 (str "Token " token)))
+              (handler req)))))))
+  (create-app-token! [this identity name description website]
+    (let [tn (time/plus (time/now) (time/years 5))
+          token-id {:username (:username identity) :exp tn}
+          token-secret {:username (:username identity)
+                        :exp tn
+                        :name name
+                        :description description
+                        :website website}
+          client-id (jws/sign token-id secret {:alg :hs256})
+          client-secret (jws/sign token-secret secret {:alg :hs256})]
+      {:client-id client-id :client-secret client-secret})))
 
 (defrecord Security [options m-sec]
   component/Lifecycle
