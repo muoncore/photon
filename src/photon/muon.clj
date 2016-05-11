@@ -61,10 +61,16 @@
         (let [stream-manager (:manager stream-manager)
               impl (PhotonMicroservice. stream-manager)
               projections (:proj-ch stream-manager)
-              conf {:url (:amqp.url options)
-                    :service-name (:microservice.name options)
-                    :tags ["photon" "eventstore"]
-                    :implementation impl}
+              conf (if-let [mcb (:muon-builder options)]
+                     {:config
+                      (.build
+                       (.withTags
+                        mcb (into-array String ["photon" "eventstore"])))
+                      :implementation impl}
+                     {:url (:amqp.url options)
+                      :service-name (:microservice.name options)
+                      :tags ["photon" "eventstore"]
+                      :implementation impl})
               comp (mcs/micro-service conf)
               ms (component/start comp)]
           (go
