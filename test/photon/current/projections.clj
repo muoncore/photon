@@ -90,6 +90,7 @@
       (fact "There are 4 events proccesed in chatter-proj"
             (:current-value val) => 4.0)
       (dorun (take 1000 (repeatedly #(post-one-event m s-name))))
+      (Thread/sleep 5000)
       (let [res (cl/with-muon m
                   (cl/request! (str url-req "/projection")
                                {:projection-name "chatter-proj"}))]
