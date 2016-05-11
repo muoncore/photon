@@ -65,6 +65,10 @@
   {:value {:projections (:projections (:stats @state))
            :ui-state (:ui-state @state)}})
 
+(defmethod read :security-info
+  [{:keys [state] :as env} key params]
+  {:value {:security (:security @state) :ui-state (:ui-state @state)}})
+
 (defmethod read :default
   [{:keys [state] :as env} key params]
   {:value (get @state key :not-found)})
@@ -88,8 +92,7 @@
 (defmethod mutate 'section/update
   [{:keys [state]} _ {:keys [section k v]}]
   {:action
-   (fn []
-     (swap! state assoc-in [:section/by-name section k] v))})
+   (fn [] (swap! state assoc-in [:section/by-name section k] v))})
 
 (defn unique-val [m route k-set k-comp val]
   (update-in m route
@@ -129,14 +132,16 @@
 (defmethod mutate 'ui/update
   [{:keys [state]} _ {:keys [k v]}]
   {:action
-   (fn []
-     (swap! state assoc-in [:ui-state k] v))})
+   (fn [] (swap! state assoc-in [:ui-state k] v))})
 
 (defmethod mutate 'stats/update
   [{:keys [state]} _ m]
   {:action
-   (fn []
-     (swap! state update-in [:stats] #(merge % m)))})
+   (fn [] (swap! state update-in [:stats] #(merge % m)))})
+
+(defmethod mutate 'sec/update
+  [{:keys [state]} _ m]
+  {:action (fn [] (swap! state update-in [:security] (fn [_] m)))})
 
 (defmethod mutate :default [{:keys [state]} _ m]
   (swap! state merge m))

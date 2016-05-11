@@ -31,6 +31,7 @@
 
 (defprotocol ColdStream
   (clean! [this])
+  (delete-event! [this ev])
   (event [this stream-name order-id])
   (data-from [this stream-name date-string]))
 
@@ -318,6 +319,7 @@
   (streams [this] (as-streams this))
   ColdStream
   (event [this stream-name order-id] (db/fetch db stream-name order-id))
+  (delete-event! [this ev] (db/delete! db ev))
   (clean! [this] (db/delete-all! db))
   (data-from [this stream-name date]
     (log/info "data-from" stream-name)

@@ -32,13 +32,8 @@
                    filtered (filter #(= id (:order-id %)) all)]
                filtered))
   (db/store [this payload]
-            (let [event-time (:event-time payload)
-                  new-payload (assoc (into {} payload) :event-time
-                                     (if (nil? event-time)
-                                       (System/currentTimeMillis)
-                                       (long event-time)))]
-              (with-open [w (clojure.java.io/writer file-name :append true)]
-                (.write w (str (json/generate-string new-payload) "\n")))))
+    (with-open [w (clojure.java.io/writer file-name :append true)]
+      (.write w (str (json/generate-string payload) "\n"))))
   (db/distinct-values [this k]
                       (into #{} (map #(get % k)
                                      (db/lazy-events this "__all__" 0))))
@@ -63,6 +58,7 @@
    (cl/with-muon m
      (cl/request! (str "request://" url "/events")
                   {"service-id","request://chatter",
+                   "event-type","chatter-event",
                    "payload",{"id","dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71",
                               "text","substitutable",
                               "textanalysis",
@@ -71,8 +67,7 @@
                                               "substitutable",
                                               "count",1}]}},
                    "schema", schema-version,
-                   "stream-name","chatter",
-                   "event-type","chatter"})
+                   "stream-name","chatter"})
      #_(cl/query-event "request://photon/projection"
                        {:projection-name "count"}))) 
   ([m url]

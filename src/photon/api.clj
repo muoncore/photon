@@ -1,6 +1,7 @@
 (ns photon.api
   (:require [photon.streams :as streams]
             [photon.exec :as exec]
+            [photon.security :as sec]
             [cheshire.core :as json]
             [photon.default-projs :as dp]
             [clojure.java.io :as io]
@@ -144,6 +145,24 @@
                                  :stream-name stream-name}))))
     (gzip-compress f)))
 
+(defn delete-stream-once! [stm stream-name]
+  (async/<!!
+   (async/reduce
+    (fn [prev n]
+      (do
+        (streams/delete-event! stm n)
+        (inc prev))) 0
+    (streams/stream->ch stm {:from 0
+                             :stream-type "cold"
+                             :stream-name stream-name}))))
+
+(defn delete-stream! [stm stream-name]
+  ;; TODO: Improve by implementing delete-by-key in photon-db
+  (loop [i (delete-stream-once! stm stream-name)]
+    (if (= i 0)
+      {:correct true}
+      (recur (delete-stream-once! stm stream-name)))))
+
 (defn find-name [stm stream-name]
   (loop [i -1 stms (into #{}
                          (map :stream-name (:streams (streams stm))))]
@@ -197,3 +216,20 @@
         stats {:total-memory total-memory :available-memory avail-memory
                :cpu-load (read-string cpu-load)}]
     stats))
+
+(defn create-app! [stm m-sec identity {:keys [description name website]}]
+  (let [tks (sec/create-app-token! m-sec identity description name website)
+        uuid-id (java.util.UUID/randomUUID)
+        uuid-secret (java.util.UUID/randomUUID)
+        res {:client-id uuid-id :client-secret uuid-secret}
+        payload (merge res
+                       {:username (:username identity)
+                        :app-name name
+                        :description description
+                        :website website
+                        :tks [(:client-id tks) (:client-secret tks)]})]
+    (post-event! stm {:payload payload
+                      :service-id "self"
+                      :stream-name "__security__"
+                      :event-type "create-app"})
+    res))

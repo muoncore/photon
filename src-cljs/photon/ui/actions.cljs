@@ -11,6 +11,29 @@
          link (str "/export/stream/" (:stream item))]
      (dom/a #js {:href link} "Export"))))
 
+(defui DeleteStreamAction
+  Object
+  (render
+   [this]
+   (let [{:keys [item owner]} (om/props this)
+         f (fn [_]
+             (let [sm (:stream item)]
+               (when (js/confirm
+                      (str "Are you sure you want to delete the "
+                           "stream " sm "?\n\n"
+                           "NOTE: This is an advanced, unsafe "
+                           "operation. The consistency of "
+                           "currently active projections "
+                           "will probably be lost. Proceed if "
+                           "you REALLY know what you are doing."))
+                 (ws/delete-stream this sm)))
+             #_(ws/fn-update owner (:stream item))
+             #_(om/transact!
+                owner
+                `[(ui/update {:k :active-stream :v ~(:stream item)})
+                  :stream-info]))]
+     (dom/a #js {:href "#" :onClick f} "Delete"))))
+
 (defui ViewContentsAction
   Object
   (render
@@ -54,7 +77,23 @@
             (str "/api/event/" (:stream-name item)
                  "/" (:order-id item))))))
 
+(defui ShowKeysAction
+  Object
+  (render
+   [this]
+   (let [{:keys [item owner]} (om/props this)
+         f (fn [_]
+             (om/transact!
+              owner
+              `[(ui/update {:k :selected-app :v ~(:meta/original item)})
+                (ui/update {:k :new-app :v false}) 
+                :ui-state]))]
+     (dom/a #js {:href "#event-browser" :onClick f}
+            "See keys"))))
+
 (def k->action {:action/export-stream ExportAction
                 :action/view-contents ViewContentsAction
                 :action/show-payload ShowPayloadAction
+                :action/delete-stream DeleteStreamAction
+                :action/show-keys ShowKeysAction
                 :action/view-projection ViewProjectionAction})

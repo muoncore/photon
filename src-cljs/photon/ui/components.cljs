@@ -10,6 +10,7 @@
                 :mem-used "Memory used (bytes)"
                 :fn "Function"
                 :export "Export"
+                :delete "Delete"
                 :last-error "Last error"
                 :contents "Contents"
                 :current-value "Current value"
@@ -27,9 +28,13 @@
                 :schema "Schema URL"
                 :service-id "Sending Service"
                 :local-id "Local UUID"
+                :app-name "App name"
+                :description "Description"
+                :website "Callback URL"
                 :photon-timestamp "Photon Timestamp"
                 :server-timestamp "Service Timestamp"
                 :action/show-payload "Payload"
+                :action/show-keys "Details"
                 :projection-name "Projection name"})
 
 (defui StatTile
@@ -527,3 +532,7 @@
                     (.preventDefault ev)
                     ((:onClick (om/props this)) ev))}
     (:label (om/props this)))))
+
+(def label-input (om/factory LabelAndTextInput))
+(def form-button (om/factory FormButton))
+(def label-label (om/factory LabelAndLabel))
