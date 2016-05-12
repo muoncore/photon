@@ -2,9 +2,16 @@
   (:use [jayq.core :only [$ css html]])
   (:require [photon.ui.ws :as ws]
             [photon.ui.actions :as actions]
+            [cljs.reader :as reader]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
             [cljs.pprint :as pprint]))
+
+(declare label-input)
+(declare form-button)
+(declare label-label)
+(declare code-block)
+(declare listing)
 
 (def k->header {:stream "Stream name"
                 :mem-used "Memory used (bytes)"
@@ -13,6 +20,10 @@
                 :delete "Delete"
                 :last-error "Last error"
                 :contents "Contents"
+                :initial-value "Initial value"
+                :reduction "Reduction function"
+                :last-measured "Last memory measurement"
+                :avg-global-time "Average time per event"
                 :current-value "Current value"
                 :avg-time "Avg. time/event"
                 :status "Status"
@@ -388,13 +399,23 @@
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
               (max 300 (- (.-innerHeight js/window) 325))))
-   (update-code-blocks!))
+   (update-code-blocks!)
+   (when-let [k (:edit-key (om/props this))]
+     (om/transact!
+      (:owner (om/props this))
+      `[(ui/update ~{:k k :v (.-textContent (om/react-ref this "cb"))})
+        :ui-state])))
   (componentDidUpdate
    [this _ _]
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
               (max 300 (- (.-innerHeight js/window) 325))))
-   (update-code-blocks!))
+   (update-code-blocks!)
+   (when-let [k (:edit-key (om/props this))]
+     (om/transact!
+      (:owner (om/props this))
+      `[(ui/update ~{:k k :v (.-textContent (om/react-ref this "cb"))})
+        :ui-state])))
   (render
    [this]
    (let [c (:code (om/props this))]
@@ -406,6 +427,7 @@
        (dom/div
         (clj->js (if-let [k (:edit-key (om/props this))]
                    {:contentEditable "true"
+                    :ref "cb"
                     :onBlur
                     (fn [ev]
                       (update-code-blocks!)
@@ -533,6 +555,46 @@
                     ((:onClick (om/props this)) ev))}
     (:label (om/props this)))))
 
+(defn preprocess [s]
+  (if (and (not (nil? s))
+           (clojure.string/starts-with? s "(serializable.fn/fn"))
+    (let [new-s (clojure.string/replace s #"serializable.fn/" "")]
+      (reader/read-string (str new-s)))
+    (reader/read-string (str s))))
+
+(defui Listing
+  Object
+  (render
+   [this]
+   (let [{:keys [code dates data] :as props} (om/props this)]
+     (dom/div
+      #js {:className "row"}
+      (dom/div
+       #js {:className "col-xs-12 table"}
+       (dom/table
+        #js {:className "table table-striped"
+             :style #js {:wordBreak "break-word"}}
+        (dom/thead
+         nil
+         (dom/tr nil (dom/th nil "Key") (dom/th nil "Value")))
+        (apply dom/tbody
+               nil
+               (map #(let [k (key %) v (val %)]
+                       (dom/tr
+                        nil
+                        (dom/td #js {:style #js {:minWidth "250px"}}
+                                (str (k->header k) " (" (pr-str k) ")"))
+                        (let [sv (if (contains? dates k)
+                                   (.toString (js/Date. v))
+                                   (if (contains? code k)
+                                     (code-block {:code (preprocess (str v))
+                                                  :modal? false})
+                                     (str v)))]
+                          (dom/td nil sv))))
+                    data))))))))
+
 (def label-input (om/factory LabelAndTextInput))
 (def form-button (om/factory FormButton))
 (def label-label (om/factory LabelAndLabel))
+(def code-block (om/factory CodeBlock))
+(def listing (om/factory Listing))

@@ -51,7 +51,7 @@
        #js {:href "#projection-tab1"
             :role "tab"
             :aria-expanded "true"}
-       "Projection metadata"))
+       "Current value"))
      (dom/li
       #js {:role "presentation"
            :onClick (fn [_] (om/update-state! this assoc :value? true))
@@ -61,17 +61,17 @@
        #js {:href "#projection-tab1"
             :role "tab"
             :aria-expanded "true"}
-       "Current value")))
+       "Projection metadata")))
     (let [projection (:meta/original (om/props this))]
       (if (:value? (om/get-state this))
+        (comp/listing {:data (dissoc projection :fn)
+                       :dates #{:init-time :last-measured}
+                       :code #{:last-event :reduction :initial-value
+                               :last-error}})
         (let [current-value (:current-value (om/get-state this))]
           (if (nil? current-value)
             (dom/p nil "Loading...")
-            ((om/factory comp/CodeBlock) {:code current-value
-                                          :modal? true})))
-        ((om/factory comp/CodeBlock)
-         {:code (if-let [code projection] code "")
-          :modal? true}))))))
+            (comp/code-block {:code current-value :modal? true}))))))))
 
 (defui ActiveProjections
   static om/IQuery
