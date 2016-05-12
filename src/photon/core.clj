@@ -33,6 +33,7 @@
 (defrecord DBComponent [options driver]
   component/Lifecycle
   (start [component]
+    (log/info "Final options" options)
     (if (nil? driver)
       (let [driver ((db/default-db options) options)]
         (db/distinct-values driver :stream-name) ;; Test driver

@@ -63,11 +63,11 @@
               projections (:proj-ch stream-manager)
               conf (if-let [mcb (:muon-builder options)]
                      {:config
-                      (.build
-                       (.withTags
-                        mcb (into-array String ["photon" "eventstore"])))
+                      (-> mcb
+                          (.withTags (into-array String ["photon" "eventstore"]))
+                          .build)
                       :implementation impl}
-                     {:url (:amqp.url options)
+                     {:url (:muon.url options)
                       :service-name (:microservice.name options)
                       :tags ["photon" "eventstore"]
                       :implementation impl})

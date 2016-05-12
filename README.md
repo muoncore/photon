@@ -46,7 +46,7 @@ Options:
 -admin.secret         : A secret string that will be used to encode authentication tokens (default is random on launch)
 -projections.port     : Port to stream projection updates to (default = 8375)
 -events.port          : Port to stream incoming events to (default = 8376)
--amqp.url             : AMQP endpoint (default = amqp://localhost)
+-muon.url             : AMQP endpoint for Muon-based transport and discovery (default = amqp://localhost)
 -parallel.projections : Number of cores assigned for parallel stream processing (default = number of cores on your machine)
 -projections.path     : Local folder with projections, in EDN format, to pre-load on start (default = /tmp/photon)
 -db.backend           : DB backend plugin to use (default=h2). Depending on the build of photon, this can be one of:
@@ -74,7 +74,7 @@ Example of property file:
 # Microservice identifier (default = photon):
 microservice.name=photon
 # AMQP endpoint (default = amqp://localhost):
-amqp.url=amqp://username:password@localhost
+muon.url=amqp://username:password@localhost
 # Number of cores assigned for parallel stream processing
 # (default = number of cores on your machine):
 parallel.projections=8
