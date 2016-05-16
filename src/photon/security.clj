@@ -95,9 +95,10 @@
   (let [proj (get (:projections @(:state ms)) "__security-state__")
         v (:current-value @(:projection-descriptor proj))
         all-apps (mapcat vals (vals v))
-        valid-app (first (filter #(and (= (:client-id %) client-id)
-                                       (= (:client-secret %) client-secret))
-                                 all-apps))]
+        valid-app (first
+                   (filter #(and (= (str (:client-id %)) client-id)
+                                 (= (str (:client-secret %)) client-secret))
+                           all-apps))]
     (when-not (nil? valid-app) (second (:tks valid-app)))))
 
 (defrecord SecurityImpl [jws-tokens tokens secret username password]
