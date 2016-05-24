@@ -4,6 +4,7 @@
   (:require [om.next :as om :refer-macros [defui]]
             [cljs.core.async :refer [chan <! >! put! close!]]
             [om.dom :as dom]
+            [cljs.reader :as reader]
             [goog.events :as events]
             [photon.ui.utils :as u]
             [photon.ui.components :as comp]
@@ -372,6 +373,8 @@
         "Update available"))))))
 
 (defui DataProjector
+  static om/IQuery
+  (query [this] [:ui-state])
   Object
   (render
    [this]
@@ -452,9 +455,12 @@
       ((om/factory comp/LabelAndSomething)
        {:label "Initial value"
         :component ((om/factory comp/CodeBlock) {:code iv})})
+      #_(dom/p nil (pr-str (:code-anal ui-state)))
       ((om/factory comp/LabelAndSomething)
        {:label "Code"
-        :component ((om/factory comp/CodeBlock) {:code code})})
+        :component ((om/factory comp/CodeBlock) {:code code
+                                                 :owner this
+                                                 :edit-key :code-anal})})
       ((om/factory comp/LabelAndTextInput)
        {:label "Projection name" :key :analyser-projection-name
         :owner owner})
@@ -467,7 +473,10 @@
            {:projection-name (:analyser-projection-name ui-state)
             :stream-name (:analyse-stream ui-state)
             :initial-value (if (string? iv) iv (pr-str iv))
-            :reduction (if (string? code) code (pr-str code))
+            :reduction (let [code (:code-anal ui-state)]
+                         (if (string? code)
+                           (pr-str (reader/read-string code))
+                           (pr-str code)))
             :language "clojure"}))})))))
 
 (defui DataAnalyser

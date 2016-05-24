@@ -59,6 +59,10 @@
              :section "Projections"
              :link :projections/new
              :active false}
+            {:name "Manage keys"
+             :section "API"
+             :link :api/manager
+             :active false}
             {:name "Swagger Interface"
              :section "API"
              :link :api/swagger

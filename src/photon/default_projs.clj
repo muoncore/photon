@@ -25,11 +25,29 @@
                 [(:stream-name n) :schemas schema-version]
                 {:total-events new-local-total :schema schema}))))
 
+(def security-fn
+  (sfn/fn [p {:keys [event-type payload] :as n}]
+    (let [new-p (condp = event-type
+                  "create-app"
+                  (assoc-in p [(:username payload)
+                               (:client-id payload)] payload)
+                  "delete-app"
+                  (assoc p (:username payload)
+                         (dissoc (get p (:username payload))
+                                 (:client-id payload)))
+                  p)]
+      new-p)))
+ 
 (def default-projections
   [{:projection-name "__streams__"
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
+    :initial-value {}}
+   {:projection-name "__security-state__"
+    :stream-name "__security__"
+    :language :clojure
+    :reduction (pr-str security-fn)
     :initial-value {}}])
 
 (defn init-projection! [proj-file]

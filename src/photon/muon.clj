@@ -19,7 +19,10 @@
                     (streams/stream->ch stream-manager params))}])
   mcs/MicroserviceEvent
   (handle-event [this event]
-    (api/post-event! stream-manager event))
+    (try
+      (api/post-event! stream-manager event)
+      (catch clojure.lang.ExceptionInfo e
+        {:error (.getMessage e)})))
   mcs/MicroserviceRequest
   (request-mappings [this]
     [{:endpoint "projection"
@@ -58,10 +61,16 @@
         (let [stream-manager (:manager stream-manager)
               impl (PhotonMicroservice. stream-manager)
               projections (:proj-ch stream-manager)
-              conf {:url (:amqp.url options)
-                    :service-name (:microservice.name options)
-                    :tags ["photon" "eventstore"]
-                    :implementation impl}
+              conf (if-let [mcb (:muon-builder options)]
+                     {:config
+                      (-> mcb
+                          (.withTags (into-array String ["photon" "eventstore"]))
+                          .build)
+                      :implementation impl}
+                     {:url (:muon.url options)
+                      :service-name (:microservice.name options)
+                      :tags ["photon" "eventstore"]
+                      :implementation impl})
               comp (mcs/micro-service conf)
               ms (component/start comp)]
           (go
