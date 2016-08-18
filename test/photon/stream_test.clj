@@ -40,9 +40,9 @@
         _ (log/info "test-cold :: 2")
         c (cl/with-muon b (cl/subscribe!
                            (str "stream://photon-test-" uuid "/stream")
-                           :stream-name "dummy"
-                           :stream-type :cold
-                           :from 0))
+                           {:stream-name "dummy"
+                            :stream-type :cold
+                            :from 0}))
         res (do
               (log/info "test-cold :: 3")
               (loop [ev (<!! c) n 0]
@@ -63,9 +63,9 @@
   (let [b (cl/muon-client amazon-url "1monitor-client" "2monitor" "3lient")
         c (cl/with-muon b (cl/subscribe!
                            (str "stream://photon-test-" uuid "/stream")
-                           :stream-name "dummy"
-                           :stream-type :hot-cold
-                           :from 0))]
+                           {:stream-name "dummy"
+                            :stream-type :hot-cold
+                            :from 0}))]
     (go
       (loop [ev (<! c) n 0]
         (if (nil? ev)

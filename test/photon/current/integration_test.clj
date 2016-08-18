@@ -27,9 +27,9 @@
       ch (cl/with-muon m
            (cl/subscribe! (str "stream://photon-integration-test-"
                                uuid "/stream")
-                          :stream-name "__all__"
-                          :stream-type "cold"
-                          :from 0))]
+                          {:stream-name "__all__"
+                           :stream-type "cold"
+                           :from 0} ))]
   (facts "Post works correctly"
          (fact (:event-time res) => (roughly (System/currentTimeMillis)))
          (fact (:order-id res) => (roughly (* 1000 (System/currentTimeMillis))))
@@ -43,36 +43,36 @@
                           :stream-name "chatter"})))
   (fact "Two events on stream" (elem-count ch) => 2)
   (dorun (take 9 (repeatedly
-                   (fn []
-                      (post-one-event
-                      m (str "photon-integration-test-" uuid))))))
+                  (fn []
+                    (post-one-event
+                     m (str "photon-integration-test-" uuid))))))
   (let [ch (cl/with-muon m
              (cl/subscribe! (str "stream://photon-integration-test-"
                                  uuid "/stream")
-                            :stream-name "__all__"
-                            :stream-type "cold"
-                            :from 0))]
+                            {:stream-name "__all__"
+                             :stream-type "cold"
+                             :from 0}))]
     (fact "11 events on stream" (elem-count ch) => 11))
   (dorun (take 100 (repeatedly
-                     (fn []
-                       (post-one-event
-                        m (str "photon-integration-test-" uuid))))))
+                    (fn []
+                      (post-one-event
+                       m (str "photon-integration-test-" uuid))))))
   (let [ch (cl/with-muon m
              (cl/subscribe! (str "stream://photon-integration-test-"
                                  uuid "/stream")
-                            :stream-name "__all__"
-                            :stream-type "cold"
-                            :from 0))]
+                            {:stream-name "__all__"
+                             :stream-type "cold"
+                             :from 0}))]
     (fact "111 events on stream" (elem-count ch) => 111))
   #_(dorun (take 10000 (repeatedly
-                      (fn []
-                        (post-one-event
-                         m (str "photon-integration-test-" uuid))))))
+                        (fn []
+                          (post-one-event
+                           m (str "photon-integration-test-" uuid))))))
   #_(let [ch (cl/with-muon m
                (cl/subscribe! (str "stream://photon-integration-test-"
                                    uuid "/stream")
-                              :stream-name "__all__"
-                              :stream-type "cold"
-                              :from 0))]
-    (fact "11011 events on stream" (elem-count ch) => 11011)))
+                              {:stream-name "__all__"
+                               :stream-type "cold"
+                               :from 0}))]
+      (fact "11011 events on stream" (elem-count ch) => 11011)))
 

@@ -38,19 +38,19 @@
           (:processed new-sp) => 1.0))
   (let [sn (cl/with-muon m
              (cl/subscribe! (str url-str "/projection/imaginary")
-                            :from 0 :stream-type :hot))]
+                            {:from 0 :stream-type :hot}))]
     (fact "There is no stream for a non-existing projection"
           (class (<!! sn)) => io.muoncore.exception.MuonException))
   (let [s (cl/with-muon m
             (cl/subscribe! (str url-str "/projection/__streams__")
-                           :from 0 :stream-type :hot))]
+                           {:from 0 :stream-type :hot}))]
     (post-one-event m s-name)
     (fact "Two events in projection"
           (:processed (<!! s)) => 2.0)
     (let [s2 (cl/with-muon m
                (cl/subscribe! (str url-str "/projection/__streams__")
-                              :from 0 :stream-type :hot
-                              :stream-name "__all__"))]
+                              {:from 0 :stream-type :hot
+                               :stream-name "__all__"}))]
       (post-one-event m s-name)
       (let [val2 (<!! s2)]
         (fact "Two streams receive the same result..."
@@ -73,12 +73,12 @@
               (cl/request! (str url-req "/projection-keys") {}))
         sd (cl/with-muon m
              (cl/subscribe! (str url-str "/projection/dummy-proj")
-                            :from 0 :stream-type :hot
-                            :stream-name "__all__"))
+                            {:from 0 :stream-type :hot
+                             :stream-name "__all__"}))
         sc (cl/with-muon m
              (cl/subscribe! (str url-str "/projection/chatter-proj")
-                            :from 0 :stream-type :hot
-                            :stream-name "__all__"))]
+                            {:from 0 :stream-type :hot
+                             :stream-name "__all__"}))]
     (fact "There is now a chatter count projection"
           (contains? (into #{} (:projection-keys res)) "chatter-proj")
           => true)

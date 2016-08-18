@@ -8,54 +8,54 @@
                    :creds :gpg}]
                  ["releases" "https://simplicityitself.artifactoryonline.com/simplicityitself/repo/"]]
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.immutant/web "2.1.4"
+                 [org.immutant/web "2.1.5"
                   :exclusions [potemkin ring/ring-core]]
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
-                 [ring "1.4.0"]
+                 [ring "1.5.0"]
                  [buddy "0.13.0"]
-                 [com.taoensso/nippy "2.11.1"
+                 [com.taoensso/nippy "2.12.1"
                   :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
                  [tranchis/photon-db "0.9.45"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.2.374"
+                 [org.clojure/core.async "0.2.385"
                   :exclusions [org.clojure/tools.reader]]
                  [org.marianoguerra/clj-rhino "0.2.3"]
-                 [cheshire "5.6.1"]
-                 [clj-time "0.11.0"]
-                 [compojure "1.5.0"]
+                 [cheshire "5.6.3"]
+                 [clj-time "0.12.0"]
+                 [compojure "1.5.1"]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.50"]
-                 [tranchis/muon-schemas "0.1.5"]
-                 [io.muoncore/muon-clojure "7.0-20160503141240"
+                 [tranchis/muon-schemas "0.1.7"]
+                 [io.muoncore/muon-clojure "7.0-20160503141241"
                   :exclusions [potemkin org.clojure/tools.reader]]
-                 [prismatic/schema "1.1.0"]
-                 [metosin/ring-http-response "0.6.5"
+                 [prismatic/schema "1.1.3"]
+                 [metosin/ring-http-response "0.8.0"
                   :exclusions [potemkin]]
-                 [metosin/compojure-api "1.1.0"
+                 [metosin/compojure-api "1.1.6"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  [dire "0.5.4"]
                  [org.slf4j/slf4j-log4j12 "1.7.21"]
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.8.51"]
+                 [org.clojure/clojurescript "1.9.216"]
                  [com.github.jsqlparser/jsqlparser "0.9.5"]
                  [jarohen/chord "0.7.0"
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs
                                com.cognitect/transit-java]]
                  [tailrecursion/cljson "1.0.7"]
-                 [clj-http "3.0.1" :exclusions [potemkin]]
-                 [cljs-http "0.1.40"
+                 [clj-http "3.1.0" :exclusions [potemkin]]
+                 [cljs-http "0.1.41"
                   :exclusions [org.clojure/tools.reader]]
                  [org.omcljs/om "1.0.0-alpha32"]
                  [jayq "2.5.4"]
-                 [fipp "0.6.5"]
-                 [reagent-utils "0.1.8"]
+                 [fipp "0.6.6"]
+                 [reagent-utils "0.2.0"]
                  ;; photon plugins
-                 [io.github.lukehutch/fast-classpath-scanner "1.9.18"]
-                 [congomongo "0.4.8"]
+                 [io.github.lukehutch/fast-classpath-scanner "2.0.0"]
+                 [congomongo "0.5.0"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-h2 "0.9.45" :exclusions [potemkin]]
                  [tranchis/photon-cassandra "0.9.49"
