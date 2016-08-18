@@ -31,6 +31,7 @@
   (http-basic-backend {:authfn (basic-auth user-info)}))
 
 (defn create-token [secret user]
+  {:post [(jws/unsign % secret {:alg :hs512})]}
   (let [stringify-user
         (-> user
             (update-in [:username] str)
