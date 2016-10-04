@@ -9,44 +9,48 @@
                  ["releases" "https://simplicityitself.artifactoryonline.com/simplicityitself/repo/"]]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.immutant/web "2.1.5"
-                  :exclusions [potemkin ring/ring-core]]
+                  :exclusions [ring/ring-core]]
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
                  [ring "1.5.0"]
-                 [buddy "0.13.0"]
-                 [com.taoensso/nippy "2.12.1"
-                  :exclusions [org.clojure/tools.reader]]
+                 [buddy "1.1.0"]
+                 [com.taoensso/nippy "2.12.2"
+                  #_#_:exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
-                 [tranchis/photon-db "0.9.45"]
+                 [tranchis/photon-db "0.9.45"
+                  :exclusions [org.clojure/java.classpath]]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.2.385"
+                 [org.clojure/core.async "0.2.391"
                   :exclusions [org.clojure/tools.reader]]
                  [org.marianoguerra/clj-rhino "0.2.3"]
                  [cheshire "5.6.3"]
                  [clj-time "0.12.0"]
                  [compojure "1.5.1"]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.50"]
+                 [tranchis/photon-config "0.9.50"
+                  :exclusions [io.muoncore/muon-core
+                               io.muoncore/muon-transport-amqp
+                               io.muoncore/muon-discovery-amqp]]
                  [tranchis/muon-schemas "0.1.7"]
-                 [io.muoncore/muon-clojure "7.0-20160503141241"
-                  :exclusions [potemkin org.clojure/tools.reader]]
+                 [io.muoncore/muon-clojure "7.1.1"
+                  :exclusions [org.clojure/tools.reader
+                               com.google.guava/guava]]
                  [prismatic/schema "1.1.3"]
-                 [metosin/ring-http-response "0.8.0"
-                  :exclusions [potemkin]]
-                 [metosin/compojure-api "1.1.6"
-                  :exclusions [com.fasterxml.jackson.core/jackson-databind]]
+                 [metosin/ring-http-response "0.8.0"]
+                 [metosin/compojure-api "1.1.8"]
                  [dire "0.5.4"]
                  [org.slf4j/slf4j-log4j12 "1.7.21"]
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.9.216"]
-                 [com.github.jsqlparser/jsqlparser "0.9.5"]
+                 [org.clojure/clojurescript "1.9.229"
+                  :exclusions [org.clojure/tools.reader
+                               com.google.code.findbugs/jsr305]]
+                 [com.github.jsqlparser/jsqlparser "0.9.6"]
                  [jarohen/chord "0.7.0"
                   :exclusions [com.cognitect/transit-clj
-                               com.cognitect/transit-cljs
-                               com.cognitect/transit-java]]
+                               com.cognitect/transit-cljs]]
                  [tailrecursion/cljson "1.0.7"]
-                 [clj-http "3.1.0" :exclusions [potemkin]]
+                 [clj-http "3.3.0"]
                  [cljs-http "0.1.41"
                   :exclusions [org.clojure/tools.reader]]
                  [org.omcljs/om "1.0.0-alpha32"]
@@ -54,23 +58,22 @@
                  [fipp "0.6.6"]
                  [reagent-utils "0.2.0"]
                  ;; photon plugins
-                 [io.github.lukehutch/fast-classpath-scanner "2.0.0"]
+                 [io.github.lukehutch/fast-classpath-scanner "2.0.4"]
                  [congomongo "0.5.0"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-h2 "0.9.45" :exclusions [potemkin]]
-                 [tranchis/photon-cassandra "0.9.49"
-                  :exclusions [potemkin]]
-                 [tranchis/photon-hazelcast "0.9.40"]
-                 [tranchis/photon-redis "0.9.42"
-                  :exclusions [com.taoensso/encore]]
+                 [tranchis/photon-h2 "0.9.45"]
+                 [tranchis/photon-cassandra "0.9.49"]
+                 [tranchis/photon-hazelcast "0.9.40"
+                  :exclusions [com.fasterxml.jackson.core/jackson-databind]]
+                 [tranchis/photon-redis "0.9.42"]
                  #_[tranchis/photon-mongo "0.9.45"]
                  [tranchis/photon-file "0.9.45"]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
-  :plugins [[lein-cljsbuild "1.1.3" :exclusions [org.clojure/clojure]]
+  :plugins [[lein-cljsbuild "1.1.3"]
             [lein-midje "3.2"]
             [lein-ring "0.9.7" :exclusions [org.clojure/clojure]]
-            [lein-figwheel "0.5.2" :exclusions [org.clojure/clojure]]]
+            [lein-figwheel "0.5.8" :exclusions [org.clojure/clojure]]]
   :main photon.core ;; http-kit
   #_#_:warn-on-reflection true
   :jvm-opts ["-server" #_#_#_#_"-Xmx1g" "-Xms1g" "-XX:MaxMetaspaceSize=1g"

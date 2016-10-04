@@ -8,8 +8,6 @@
             [photon.current.common :refer :all])
   (:use midje.sweet))
 
-(set! (. io.muoncore.channel.async.StandardAsyncChannel echoOut) true)
-
 (defn elem-count [ch]
   (loop [elem (<!! ch) n 0]
     (if (nil? elem)
