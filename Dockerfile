@@ -3,4 +3,4 @@ COPY . /muon/photon
 WORKDIR /muon/photon
 COPY resources/config.properties.vagrant /muon/photon/config.properties
 ENTRYPOINT ["java"]
-CMD ["-jar", "app-standalone.jar"]
+CMD ["-jar", "target/photon.jar"]
