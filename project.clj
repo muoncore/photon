@@ -70,7 +70,7 @@
                  [tranchis/photon-file "0.9.45"]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
-  :plugins [[lein-cljsbuild "1.1.3"]
+  :plugins [[lein-cljsbuild "1.1.4"]
             [lein-midje "3.2"]
             [lein-ring "0.9.7" :exclusions [org.clojure/clojure]]
             [lein-figwheel "0.5.8" :exclusions [org.clojure/clojure]]]
@@ -91,10 +91,12 @@
   :figwheel {:server-port 3000
              :open-file-command "atom"
              :ring-handler photon.core/figwheel-init!}
+  :prep-tasks ["compile" ["cljsbuild" "once"]]
   :cljsbuild
   {:builds [{:id "production"
              :source-paths ["src-cljs"]
              :figwheel true
+             :jar true
              :compiler {:main photon.ui.frontend
                         :asset-path "ui/js/out"
                         :output-to "resources/public/ui/js/main.js"
