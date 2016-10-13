@@ -3,7 +3,7 @@
             [buddy.auth.middleware :refer [wrap-authentication]]
             [buddy.auth.backends.httpbasic :refer [http-basic-backend]]
             [buddy.hashers :as hashers]
-            [buddy.sign.jws :as jws]
+            [buddy.sign.jwt :as jws]
             [clojure.tools.logging :as log]
             [clj-time.core :as time]
             [clj-time.coerce :as c]

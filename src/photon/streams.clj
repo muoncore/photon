@@ -55,7 +55,7 @@
     (log/info (pr-str params))
     (let [st (get params :stream-type "hot")]
       (log/info "stream type:" st)
-      st)))
+      (name st))))
 
 (defn extract-date [params]
   (let [pre-date (get params :from 0)
