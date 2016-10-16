@@ -36,7 +36,7 @@
                               {:projection-name "__streams__"}))]
     (fact "Now there is one event processed"
           (:processed new-sp) => 1.0))
-  (let [sn (cl/with-muon m
+  #_(let [sn (cl/with-muon m
              (cl/subscribe! (str url-str "/projection/imaginary")
                             {:from 0 :stream-type :hot}))]
     (fact "There is no stream for a non-existing projection"
