@@ -19,7 +19,7 @@
                  [tranchis/photon-db "0.9.45"
                   :exclusions [org.clojure/java.classpath]]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.2.391"
+                 [org.clojure/core.async "0.2.395"
                   :exclusions [org.clojure/tools.reader]]
                  [org.marianoguerra/clj-rhino "0.2.3"]
                  [cheshire "5.6.3"]
@@ -31,7 +31,7 @@
                                io.muoncore/muon-transport-amqp
                                io.muoncore/muon-discovery-amqp]]
                  [tranchis/muon-schemas "0.1.7"]
-                 [io.muoncore/muon-clojure "7.1.1"
+                 [io.muoncore/muon-clojure "7.1.3"
                   :exclusions [org.clojure/tools.reader
                                com.google.guava/guava]]
                  [prismatic/schema "1.1.3"]
@@ -51,7 +51,7 @@
                                com.cognitect/transit-cljs]]
                  [tailrecursion/cljson "1.0.7"]
                  [clj-http "3.3.0"]
-                 [cljs-http "0.1.41"
+                 [cljs-http "0.1.42"
                   :exclusions [org.clojure/tools.reader]]
                  [org.omcljs/om "1.0.0-alpha32"]
                  [jayq "2.5.4"]
