@@ -1,6 +1,7 @@
 (ns photon.exec
   (:require [clj-rhino :as js]
             [cheshire.core :as json]
+            [incanter.stats :as stats]
             [photon.db :as db])
   (:import (org.mozilla.javascript ConsString)
            (java.util HashMap)
@@ -12,6 +13,23 @@
 
 ;; Code handling
 ;;;;;;;;;;;;;;;;
+(defmulti plugin (fn [k & args] k))
+
+(defmethod plugin :iqr [_ prev next path]
+  (let [val (get-in next path)
+        prev-vals (get prev :vals [])
+        new-vals (conj prev-vals val)
+        q (into [] (stats/quantile new-vals))
+        q1 (q 1)
+        q3 (q 3)
+        iq (- q3 q1)
+        lif (double (- q1 (* 1.5 iq)))
+        uif (double (+ q3 (* 1.5 iq)))
+        lof (double (- q1 (* 3 iq)))
+        uof (double (+ q3 (* 3 iq)))]
+    {:vals new-vals :lif lif :uif uif :lof lof :uof uof}))
+
+(defmethod plugin :get-in [_ prev next path] (get-in next path)) 
 
 (defmulti generate-function (fn [lang _] (name lang)))
 
@@ -181,4 +199,3 @@
     :javascript (json/parse-string str-val)
     (throw (UnsupportedOperationException.
              (str (name k-language) " not supported")))))
-

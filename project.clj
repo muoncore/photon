@@ -13,6 +13,9 @@
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
                  [ring "1.5.0"]
                  [buddy "1.1.0"]
+                 [cc.artifice/clj-ml "0.8.5"]
+                 [incanter "1.9.1"
+                  :exclusions [bouncycastle/bcprov-jdk14]]
                  [com.taoensso/nippy "2.12.2"
                   #_#_:exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
@@ -62,7 +65,8 @@
                  [congomongo "0.5.0"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-h2 "0.9.45"]
-                 [tranchis/photon-cassandra "0.9.49"]
+                 [tranchis/photon-cassandra "0.9.49"
+                  :exclusions [org.clojure/math.combinatorics]]
                  [tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  [tranchis/photon-redis "0.9.42"]

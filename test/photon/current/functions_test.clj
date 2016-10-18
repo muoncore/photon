@@ -64,5 +64,23 @@
  (fact "Wrong syntax makes babies cry (javascript)"
        (exec/generate-function "js-experimental" "function(prev,next) {return 0")
        =>
-       (throws Exception)))
+       (throws Exception))
+
+ (fact "Run simple plugin (clojure)"
+       (let [f (exec/generate-function
+                "clojure"
+                "(fn [a b] (photon.exec/plugin :get-in a b [:val]))")]
+         (clojure.pprint/pprint f)
+         ((:computable f) nil {:val 1.0}))
+       =>
+       1.0)
+
+ (fact "Run iqr plugin (clojure)"
+       (let [f (exec/generate-function
+                "clojure"
+                "(fn [a b] (photon.exec/plugin :iqr a b [:val]))")]
+         (clojure.pprint/pprint f)
+         ((:computable f) {:vals [2.0 3.0]} {:val 1.0}))
+       =>
+       {:lif 0.0, :lof -1.5, :uif 4.0, :uof 5.5, :vals [2.0 3.0 1.0]}))
 
