@@ -5,8 +5,7 @@
 When opening an issue:
 
 * include the full **backtrace** with your error
-* include your Sidekiq initializer
-* list versions you are using: Ruby, Rails, Sidekiq, OS, etc.
+* list versions you are using: Muon, Photon, AMQP, Java, Node .... 
 
 It's always better to include more info rather than less.
 
@@ -20,7 +19,7 @@ your idea can best fit into Muon
 ## Legal
 
 By submitting a Pull Request, you disavow any rights or claims to any changes
-submitted to the Sidekiq project and assign the copyright of
+submitted to the Muon project and assign the copyright of
 those changes to Muon Core Ltd, Registered in England and Wales.
 
 If you cannot or do not want to reassign those rights (your employment

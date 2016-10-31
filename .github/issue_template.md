@@ -1,4 +1,4 @@
-Ruby version:
-Sidekiq / Pro / Enterprise version(s):
+Muon Version:
+Language:
 
-If relevant, please include your initializer and any error message with the full backtrace.
+Services in Use:
