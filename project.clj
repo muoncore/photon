@@ -30,7 +30,7 @@
                   :exclusions [io.muoncore/muon-core
                                io.muoncore/muon-transport-amqp
                                io.muoncore/muon-discovery-amqp]]
-                 [tranchis/muon-schemas "0.1.7"]
+                 [tranchis/muon-schemas "0.1.8"]
                  [io.muoncore/muon-clojure "7.1.3"
                   :exclusions [org.clojure/tools.reader
                                com.google.guava/guava]]
