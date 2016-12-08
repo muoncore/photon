@@ -26,7 +26,7 @@
                  [clj-time "0.12.0"]
                  [compojure "1.5.1"]
                  [serializable-fn "1.1.4"]
-                 [tranchis/photon-config "0.9.50"
+                 [tranchis/photon-config "0.9.51"
                   :exclusions [io.muoncore/muon-core
                                io.muoncore/muon-transport-amqp
                                io.muoncore/muon-discovery-amqp]]

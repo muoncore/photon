@@ -3,6 +3,7 @@
   (:require [photon.handler :as h]
             [photon.db :as db]
             [photon.api :as api]
+            [photon.exec :as exec]
             [photon.muon :as m]
             [photon.config :as conf]
             [photon.streams :as streams]
@@ -10,6 +11,7 @@
             [photon.default-projs :as dp]
             [immutant.web :as web]
             [com.stuartsierra.component :as component]
+            [clojure.core.async :refer [<! go-loop]]
             [clojure.tools.logging :as log])
   (:import (java.net ServerSocket)
            (io.undertow UndertowOptions)))
@@ -75,16 +77,48 @@
 (defn web-server [options]
   (map->WebServer {:options options}))
 
+(defmulti process-config-event!
+  (fn [_ {:keys [event-type]}] (keyword event-type)))
+
+(defmethod process-config-event! :post-projection!
+  [stm {:keys [event-type payload]}]
+  (let [body (:request payload)
+        projection-name (:projection-name body)
+        stream-name (:stream-name body)
+        language (:language body)
+        code (:reduction body)
+        initial-value (:initial-value body)
+        k-language (keyword language)
+        parsed-initial-value (exec/parse-value initial-value k-language)
+        projection-descriptor {:projection-name projection-name
+                               :stream-name stream-name
+                               :language k-language
+                               :reduction code
+                               :initial-value parsed-initial-value}]
+    (streams/register-query! stm projection-descriptor)
+    {:correct true}))
+
+(defmethod process-config-event! :delete-projection!
+  [stm {:keys [event-type payload]}]
+  (let [projection-name (:projection-name payload)
+        defaults (into #{} (map :projection-name dp/default-projections))]
+    (when-not (contains? defaults projection-name)
+      (streams/unregister-query! stm projection-name))))
+
 (defrecord ConfigManager [options stream-manager]
   component/Lifecycle
   (start [component]
     (log/info "Loading default projections...")
-    (let [projs (dp/starting-projections (:projections.path options))]
-      (try
-        (dorun (map #(api/post-projection! (:manager stream-manager) %)
-                    projs))
-        (catch Throwable soe
-          (println soe))))
+    (let [stm (:manager stream-manager)
+          projs (dp/starting-projections)]
+      (dorun (map #(api/post-projection! stm %) projs))
+      (let [subs (streams/stream->ch
+                  stm
+                  {:stream-type "hot-cold"
+                   :stream-name "__config__"})]
+        (go-loop [ev (<! subs)]
+          (process-config-event! stm ev)
+          (recur (<! subs)))))
     (log/info "Projections loaded!")
     component)
   (stop [component] component))

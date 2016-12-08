@@ -43,39 +43,15 @@
     :stream-name "__all__"
     :language :clojure
     :reduction (pr-str stream-fn)
-    :initial-value {}}
+    :initial-value (pr-str {})}
    {:projection-name "__security-state__"
     :stream-name "__security__"
     :language :clojure
     :reduction (pr-str security-fn)
-    :initial-value {}}])
-
-(defn init-projection! [proj-file]
-  (read-string (slurp proj-file)))
+    :initial-value (pr-str {})}])
 
 (defn projs->keyed [m]
   (zipmap (map :projection-name m) m))
 
-(defn absolute-path [^File f] (.getAbsolutePath f))
-
-(defn ends-with [^String s ^String e] (.endsWith s e))
-
-(defn starting-projections [path]
-  (let [all-files (file-seq (io/file path))
-        proj-files (filter #(ends-with (absolute-path %)
-                                       ".edn")
-                           all-files)
-        projs (map #(do
-                      (log/info "Loading" %)
-                      (read-string (slurp %)))
-                   proj-files)
-        projs (map #(if (list? (:reduction %))
-                      (update-in % [:reduction] pr-str)
-                      %)
-                   projs)
-        projs (map #(if (string? (:initial-value %))
-                      %
-                      (update-in % [:initial-value] pr-str))
-                   projs)]
-    (vals (merge (projs->keyed default-projections)
-                 (projs->keyed projs)))))
+(defn starting-projections []
+  (vals (projs->keyed default-projections)))

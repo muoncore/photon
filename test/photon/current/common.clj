@@ -81,7 +81,6 @@
         conf {:amqp.url :local
               :rest.port 9997
               :microservice.name (str "photon-integration-test-" uuid)
-              :projections.path "/tmp/non-existing-path"
               :parallel.projections 2
               :admin.user "test"
               :admin.pass (hashers/encrypt "test")

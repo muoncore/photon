@@ -1,6 +1,5 @@
 (ns photon.api
   (:require [photon.streams :as streams]
-            [photon.exec :as exec]
             [photon.security :as sec]
             [cheshire.core :as json]
             [photon.default-projs :as dp]
@@ -23,39 +22,14 @@
                                :stream-name "__config__"
                                :service-id "me"
                                :payload {:request request}})
-  (let [body request
-        projection-name (:projection-name body)
-        stream-name (:stream-name body)
-        language (:language body)
-        code (:reduction body)
-        initial-value (:initial-value body)
-        k-language (keyword language)
-        parsed-initial-value (exec/parse-value initial-value k-language)
-        projection-descriptor {:projection-name projection-name
-                               :stream-name stream-name
-                               :language k-language
-                               :reduction code
-                               :initial-value parsed-initial-value}]
-    (try
-      (spit (str (:projections.path (:conf stm)) "/" projection-name ".edn")
-            (with-out-str (clojure.pprint/pprint projection-descriptor)))
-      (catch java.io.FileNotFoundException e
-        (log/fatal "projections.path is not writable. Not stopping, but"
-                   "this means that configuration is not correct!")))
-    (streams/register-query! stm projection-descriptor)
-    {:correct true}))
+  {:correct true})
 
 (defn delete-projection! [{:keys [conf] :as stm} projection-name]
   (streams/process-event! stm {:event-type "delete-projection!"
                                :stream-name "__config__"
                                :service-id "me"
                                :payload {:projection-name projection-name}})
-  (let [defaults (into #{} (map :projection-name dp/default-projections))]
-    (if-not (contains? defaults projection-name)
-      (let [f (str (:projections.path conf) "/" projection-name ".edn")]
-        (.delete (File. f))
-        {:correct (streams/unregister-query! stm projection-name)})
-      {:correct false})))
+  {:correct true})
 
 (defn post-event! [stm ev]
   (streams/process-event! stm (s/validate ms/EventTemplate ev)))
