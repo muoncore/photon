@@ -2,10 +2,12 @@
   (:gen-class)
   (:require [photon.handler :as h]
             [photon.db :as db]
+            [photon.api :as api]
             [photon.muon :as m]
             [photon.config :as conf]
             [photon.streams :as streams]
             [photon.security :as sec]
+            [photon.default-projs :as dp]
             [immutant.web :as web]
             [com.stuartsierra.component :as component]
             [clojure.tools.logging :as log])
@@ -73,6 +75,23 @@
 (defn web-server [options]
   (map->WebServer {:options options}))
 
+(defrecord ConfigManager [options stream-manager]
+  component/Lifecycle
+  (start [component]
+    (log/info "Loading default projections...")
+    (let [projs (dp/starting-projections (:projections.path options))]
+      (try
+        (dorun (map #(api/post-projection! (:manager stream-manager) %)
+                    projs))
+        (catch Throwable soe
+          (println soe))))
+    (log/info "Projections loaded!")
+    component)
+  (stop [component] component))
+
+(defn config-manager [options]
+  (map->ConfigManager {:options options}))
+
 (defn photon-system [conf]
   (component/system-map
    :security (component/using (sec/security conf) [])
@@ -81,6 +100,8 @@
                                     [:database])
    :muon-service (component/using (m/muon-service conf)
                                   [:stream-manager])
+   :config-manager (component/using (config-manager conf)
+                                    [:stream-manager])
    :ui (component/using (ui-handler conf) [:stream-manager :security])))
 
 ;; Workaround to have http-kit as the provider for Ring

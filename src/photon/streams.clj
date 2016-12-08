@@ -1,7 +1,6 @@
 (ns photon.streams
   (:require [clojure.tools.logging :as log]
             [muon-clojure.common :as mcc]
-            [photon.default-projs :as dp]
             [photon.exec :refer :all]
             [photon.db :as db]
             [clojure.pprint :as pp]
@@ -44,7 +43,7 @@
   (process-event! [this ev]))
 
 (defprotocol StreamProtocol
-  (init-stream-manager! [this path])
+  (init-stream-manager! [this])
   (update-streams! [this stream-name])
   (create-stream-endpoint! [this stream-name])
   (create-virtual-stream-endpoint! [this stream-name])
@@ -158,16 +157,12 @@
            (alter (:state stream) update-in [:virtual-streams]
                   (fn [m] (dissoc m :projection-name)))))))))
 
-(defn as-init-stream-manager! [stream projections-path]
+(defn as-init-stream-manager! [stream]
   (let [db-streams (db/distinct-values (:db stream) :stream-name)]
     (dorun (map #(update-streams! stream %) db-streams)))
   (dosync
     (alter (:state stream) assoc-in
-           [:active-streams :virtual-streams] #{"__all__"}))
-  (log/info "Loading default projections...")
-  (let [projs (dp/starting-projections projections-path)]
-    (dorun (map #(register-query! stream %) projs)))
-  (log/info "Projections loaded!"))
+           [:active-streams :virtual-streams] #{"__all__"})))
 
 (defn as-update-streams! [{:keys [state] :as stream} stream-name]
   (dosync
@@ -309,7 +304,7 @@
 (defrecord AsyncStream [db global-channel projection-mix
                         state stats proj-ch conf]
   StreamProtocol
-  (init-stream-manager! [this path] (as-init-stream-manager! this path))
+  (init-stream-manager! [this] (as-init-stream-manager! this))
   (update-streams! [this stream-name]
     (as-update-streams! this stream-name))
   (create-virtual-stream-endpoint! [this stream-name]
@@ -452,7 +447,7 @@
                               (atom {:incoming 0 :processed 0})
                               (chan 1024)
                               options)]
-        (init-stream-manager! as (:projections.path options))
+        (init-stream-manager! as)
         (pipeline threads (schedule sch-meta) projection-channel)
         (merge component {:manager as :channels [c projection-channel]}))
       component))

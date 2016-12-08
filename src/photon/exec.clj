@@ -175,7 +175,6 @@
         {:-to-rhino (fn [obj scope ctx] (str obj))})
 
 (defn parse-value [str-val k-language]
-  (println k-language)
   (condp = k-language
     :clojure (read-string str-val)
     :javascript (json/parse-string str-val)

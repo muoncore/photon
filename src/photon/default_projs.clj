@@ -72,6 +72,10 @@
         projs (map #(if (list? (:reduction %))
                       (update-in % [:reduction] pr-str)
                       %)
+                   projs)
+        projs (map #(if (string? (:initial-value %))
+                      %
+                      (update-in % [:initial-value] pr-str))
                    projs)]
     (vals (merge (projs->keyed default-projections)
                  (projs->keyed projs)))))

@@ -19,6 +19,10 @@
   (streams/event stm stream-name order-id))
 
 (defn post-projection! [stm request]
+  (streams/process-event! stm {:event-type "post-projection!"
+                               :stream-name "__config__"
+                               :service-id "me"
+                               :payload {:request request}})
   (let [body request
         projection-name (:projection-name body)
         stream-name (:stream-name body)
@@ -42,6 +46,10 @@
     {:correct true}))
 
 (defn delete-projection! [{:keys [conf] :as stm} projection-name]
+  (streams/process-event! stm {:event-type "delete-projection!"
+                               :stream-name "__config__"
+                               :service-id "me"
+                               :payload {:projection-name projection-name}})
   (let [defaults (into #{} (map :projection-name dp/default-projections))]
     (if-not (contains? defaults projection-name)
       (let [f (str (:projections.path conf) "/" projection-name ".edn")]
