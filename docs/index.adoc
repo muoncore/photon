@@ -7,13 +7,36 @@
 
 ## Streams
 
-### Special stream: \\__ALL__
-
-
 
 ### Replay
 
-TODO, the replay api.
+Streams can be replayed using the Reactive Streams protocol.
+
+```bash
+
+> muon replay mystream
+```
+
+#### Partial Replay
+
+### Special Stream
+
+There are two special streams created by Photon to manage its internal state. You can replay data from these, and they
+ are useful for creating backups of Photon state.
+
+#### \\__config__
+
+Photon internal configuration is stored in the //__config__ stream. Internally, this stream is played into a data structure
+that represents the current Photon configuration.
+
+The Photon API layer acts as a front on this stream.
+
+#### \\__all__
+
+The second special stream is //__all__. This contains all events, on all streams.
+
+You can play this to obtain all events ever recieved by photon, in the order they were added in, no matter which stream, using
+the global order_id.
 
 ## Projections
 
@@ -87,6 +110,18 @@ You can instruct photon to replay this stream in its entirety and persist this t
 use that file to recreate a runtime clone of the original Photon.
 
 This method is fully portable, and will be compatible over major version upgrades of Photon.
+
+```bash
+> muon replay __all__ >> /tmp/backup
+```
+
+This creates a log file that contains all events in the Photon.
+
+To restore from this file
+
+```bash
+> cat /tmp/backup | muon event
+```
 
 ### Monitoring
 
