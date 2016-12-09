@@ -1,0 +1,92 @@
+# Photon
+
+
+
+## Quickstart
+
+
+## Streams
+
+### Special stream: \\__ALL__
+
+
+
+### Replay
+
+TODO, the replay api.
+
+## Projections
+
+### Creating
+
+### Querying
+
+### Deleting
+
+
+
+## Operations
+
+### Installation
+
+#### Running bare
+
+TODO - update with released artifacts and download instructions.
+
+#### Running in a Docker based system
+
+This includes Docker itself and related projects (compose, machine etc), and also in systems that can use Docker containers,
+such as Kubernetes, Mesos and the like.
+
+Photon is published to an Artifactory backed Docker registry.
+
+The coordinates for the image is `simplicityitself-muon-image.jfrog.io/photon:latest`
+
+You can set the configuration options by altering the command line to be used.
+
+You set the variable MUON_URL to the correct location for your system to enable Photon to connect to the Muon network.
+
+This Docker Compose snippet shows how this can be done.
+
+
+```yaml
+    photon:
+    image: simplicityitself-muon-image.jfrog.io/photon
+    environment:
+      - MUON_URL=amqp://muon:microservices@rabbitmq
+    links:
+      - rabbitmq
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
+    command: -jar target/photon.jar -rest.host 0.0.0.0
+```
+
+This updates photon to listen for HTTP traffic on all network interfaces.
+
+### Backup
+
+Photon is internally fully event sourced. All changes in internal state are mediated via one of the internal streams (denoted with \\__XX__)
+
+You can perform a backup in one of two ways.
+
+#### Copy backing data store
+
+The backing data store (H2, Cassandra etc) contains all information necessary to back up the system. The data store, such as the
+h2 db file, can be copied and archived to create a usable backup.
+
+The contents of the backing data store are kept compatible over *minor* version updates only, and may not be compatible over major versions.
+
+#### Stream based
+
+The stream \\__all__ contains all of the configuration updates made over the lifetime of the system, along with all of the data
+that it has persisted.
+
+You can instruct photon to replay this stream in its entirety and persist this to disk. Once it has done so, you can
+use that file to recreate a runtime clone of the original Photon.
+
+This method is fully portable, and will be compatible over major version upgrades of Photon.
+
+### Monitoring
+

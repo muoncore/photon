@@ -6,6 +6,39 @@ In microservices, each service is supposed to take responsibility for a single f
 
 Photon is an attempt at avoiding such redundancy by abstracting and encapsulating both the storage and the transformation of data as service methods. It is designed as a black box with an internal database with a projection engine, both generic enough to store free-form data and allow for a wide range of expressivity for data transformation, in real time. In this way, business rules can be implemented and deployed in Photon instances via projections, effectively decoupling business logic and data storage and processing.
 
+## Quickstart
+
+Download the [Muon Starter](https://github.com/muoncore/muon-starter) repository and run `make`. The latest released version 
+of photon will be started, along with a contained RabbitMQ instance for communication.
+
+Install the [Muon CLI](https://github.com/muoncore/muon-cli) and set up with the URL `amqp://muon:microservices@localhost`
+
+You can then see photon running
+
+```bash
+> muon d
+
+┌──────────────────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ SERVICE NAME                 │ TAGS                         │ CONTENT/TYPE                 │
+├──────────────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ molecule                     │                              │ application/json             │
+├──────────────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ photon                       │ photon,eventstore            │ application/json             │
+└──────────────────────────────┴──────────────────────────────┴──────────────────────────────┘
+```
+
+You can emit an event using the CLI
+
+```bash
+> muon event '{ "event-type": "SomethingHappened", "schema": "1","stream-name": "something","payload": {"message": "Hi there!"}}'
+```
+
+This will persist the event in the given stream. It can be replayed at any point later on
+
+You can replay the persisted
+
+Check the latest [documentation](http://muoncore.io) for more information
+
 ## Prerequisites
 
 You will need [Leiningen][] 2.0.0 or above installed.
