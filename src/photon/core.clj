@@ -117,7 +117,11 @@
                   {:stream-type "hot-cold"
                    :stream-name "__config__"})]
         (go-loop [ev (<! subs)]
-          (process-config-event! stm ev)
+          (try
+            (process-config-event! stm ev)
+            (catch Throwable t
+              (log/error (.getMessage t))
+              (.printStackTrace t)))
           (recur (<! subs)))))
     (log/info "Projections loaded!")
     component)
@@ -161,7 +165,8 @@
             (if-let [instance @figwheel-instance]
               instance
               (let [system (photon-system (assoc (conf/config)
-                                                 :http-kit? true))
+                                                 :http-kit? true
+                                                 :db.backend "file"))
                     m-photon (component/start system)
                     handler (:handler (:ui m-photon))]
                 (alter figwheel-instance (fn [_] handler))

@@ -148,16 +148,16 @@
         :onClick
         (fn [_]
           (let [all (zipmap
-                      [:projection-name :stream-name :initial-value
-                       :reduction :language]
-                      (vals (select-keys data
-                                         [:pform/projection-name :pform/stream-name
-                                          :pform/initial-value :pform/reduction
-                                          :pform/language])))
+                     [:projection-name :stream-name :initial-value
+                      :reduction :language]
+                     (vals (select-keys data
+                                        [:pform/projection-name :pform/stream-name
+                                         :pform/initial-value :pform/reduction
+                                         :pform/language])))
                 proj (if (= "javascript" (:language all))
                        (do
                          (js/eval
-                           (str "var __proj_eval = " (:initial-value all) ";"))
+                          (str "var __proj_eval = " (:initial-value all) ";"))
                          (assoc all :initial-value (.stringify js/JSON js/__proj_eval)))
                        all)]
             (ws/post-projection-and-notify owner proj)))})))))

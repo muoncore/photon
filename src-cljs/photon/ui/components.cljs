@@ -389,9 +389,6 @@
   (clojure.string/replace
    (with-out-str (pprint/pprint c)) #"}nil" "}"))
 
-(defn update-code-blocks! []
-  (dorun (map #(.highlightBlock js/hljs %) ($ "pre code"))))
-
 (defui CodeBlock
   Object
   (componentDidMount
@@ -399,44 +396,36 @@
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
               (max 300 (- (.-innerHeight js/window) 325))))
-   (update-code-blocks!)
-   (when-let [k (:edit-key (om/props this))]
-     (om/transact!
-      (:owner (om/props this))
-      `[(ui/update ~{:k k :v (.-textContent (om/react-ref this "cb"))})
-        :ui-state])))
+   (let [dn (.getDOMNode (om/react-ref this "cb"))
+         k (:edit-key (om/props this))
+         editable? (not (nil? k))
+         cm (.fromTextArea js/CodeMirror dn
+                           #js {:lineNumbers editable?
+                                :viewportMargin js/Infinity
+                                :mode "clojure"
+                                :readOnly (if editable?
+                                            false "nocursor")})]
+     (.on cm
+          "change"
+          (fn []
+            (om/transact!
+             (:owner (om/props this))
+             `[(ui/update ~{:k k :v (.getValue cm)})])))
+     (om/set-state! this {:cm cm})))
   (componentDidUpdate
    [this _ _]
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
-              (max 300 (- (.-innerHeight js/window) 325))))
-   (update-code-blocks!)
-   (when-let [k (:edit-key (om/props this))]
-     (om/transact!
-      (:owner (om/props this))
-      `[(ui/update ~{:k k :v (.-textContent (om/react-ref this "cb"))})
-        :ui-state])))
+              (max 300 (- (.-innerHeight js/window) 325)))))
   (render
    [this]
    (let [c (:code (om/props this))]
-     (dom/pre
-      #js {:overflow-y "scroll" :ref "code-block"
-           :style #js {:width "100%"}}
-      (dom/code
-       #js {:className "clojure" :ref "code"}
-       (dom/div
-        (clj->js (if-let [k (:edit-key (om/props this))]
-                   {:contentEditable "true"
-                    :ref "cb"
-                    :onBlur
-                    (fn [ev]
-                      (update-code-blocks!)
-                      (om/transact!
-                       (:owner (om/props this))
-                       `[(ui/update
-                          ~{:k k :v (.-textContent (.-target ev))})]))}
-                   {}))
-        (if (string? c) c (clj->str c))))))))
+     (dom/textarea
+      (clj->js
+       (merge
+        {:style #js {:width "100%" :border "1px solid #eee"}
+         :overflow-y "scroll" :className "clojure" :ref "cb"
+         :value (if (string? c) c (clj->str c)) :height "auto"}))))))
 
 (defui LabelAndSomething
   Object

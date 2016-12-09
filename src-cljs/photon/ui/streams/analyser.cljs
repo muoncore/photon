@@ -452,15 +452,11 @@
                               this
                               update-in [:action-list k] (fn [x] (disj x v))))})
                         acs))))))
-      ((om/factory comp/LabelAndSomething)
-       {:label "Initial value"
-        :component ((om/factory comp/CodeBlock) {:code iv})})
+      ((om/factory comp/LabelAndTextInput)
+       {:label "Initial value" :val iv})
       #_(dom/p nil (pr-str (:code-anal ui-state)))
-      ((om/factory comp/LabelAndSomething)
-       {:label "Code"
-        :component ((om/factory comp/CodeBlock) {:code code
-                                                 :owner this
-                                                 :edit-key :code-anal})})
+      ((om/factory comp/LabelAndTextInput)
+       {:label "Code" :val code})
       ((om/factory comp/LabelAndTextInput)
        {:label "Projection name" :key :analyser-projection-name
         :owner owner})
