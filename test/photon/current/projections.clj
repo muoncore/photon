@@ -86,6 +86,7 @@
           (contains? (into #{} (:projection-keys res)) "dummy-proj")
           => true)
     (post-one-event m s-name)
+    (Thread/sleep 2000)
     (let [val (time-limited 3000 (<!! sc))]
       (fact "There are 4 events proccesed in chatter-proj"
             (:current-value val) => 4.0)
@@ -122,12 +123,13 @@
           (fact "2 events processed"
                 (- current processed) => 2)
           (api/delete-projection! stm "chatter-proj")
+          (Thread/sleep 3000)
           (fact "chatter-proj does not exist"
                 (api/projection stm "chatter-proj") => nil)
           (post-one-event m s-name)
           (Thread/sleep 5000)
           (let [current-2 (:processed @(:stats stm))]
-            (fact "1 event processed" (- current-2 current) => 1)
+            (fact "2 events processed" (- current-2 current) => 2)
             (cl/with-muon m
               (cl/request! (str url-req "/projection")
                            {:projection-name "dummy-proj"
@@ -137,7 +139,7 @@
             (post-one-event m s-name)
             (Thread/sleep 5000)
             (let [current-3 (:processed @(:stats stm))]
-              (fact "1 events processed" (- current-3 current-2) => 1)
+              (fact "2 events processed" (- current-3 current-2) => 2)
               (api/delete-projection! stm "__streams__")
               (Thread/sleep 5000)
               (fact "__streams__ does not get deleted"
@@ -146,7 +148,7 @@
               (post-one-event m s-name)
               (Thread/sleep 5000)
               (let [current-4 (:processed @(:stats stm))]
-                (fact "1 events processed" (- current-4 current-3) => 1)
+                (fact "2 events processed" (- current-4 current-3) => 2)
                 (cl/with-muon m (cl/request! (str url-req "/projections")
                                              {:projection-name "chatter-proj"
                                               :stream-name "chatter"
@@ -157,8 +159,8 @@
                 (post-one-event m s-name)
                 (Thread/sleep 5000)
                 (let [current-5 (:processed @(:stats stm))]
-                  (fact "1010 events processed"
-                        (- current-5 current-4) => 1010)
+                  (fact "1011 events processed"
+                        (- current-5 current-4) => 1011)
                   (cl/with-muon m (cl/request! (str url-req "/projections")
                                                {:projection-name "chatter-proj"
                                                 :stream-name "chatter"
@@ -169,13 +171,13 @@
                   (post-one-event m s-name)
                   (Thread/sleep 5000)
                   (let [current-6 (:processed @(:stats stm))]
-                    (fact "1011 events processed"
-                          (- current-6 current-5) => 1011)
+                    (fact "1012 events processed"
+                          (- current-6 current-5) => 1012)
                     (api/delete-projection! stm "chatter-proj")
                     (Thread/sleep 5000)
                     (post-one-event m s-name)
                     (Thread/sleep 5000)
                     (let [current-7 (:processed @(:stats stm))]
-                      (fact "1 events processed"
-                            (- current-7 current-6) => 1)))))))))))
+                      (fact "2 events processed"
+                            (- current-7 current-6) => 2)))))))))))
   (component/stop ms))

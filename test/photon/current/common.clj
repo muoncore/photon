@@ -95,14 +95,15 @@
                                      :file.path temp-file}))))
         d (:driver (:database comp))]
     (db/delete-all! d)
+    (Thread/sleep 3000)
     comp))
 
 (defn new-server
   ([uuid] (new-server uuid nil))
   ([uuid secret]
    (let [comp (new-component core/photon-system uuid secret)]
-     (assoc (:muon (:muon-service comp)) :stream-manager
-            (:stream-manager comp)))))
+     (assoc (:muon (:muon-service comp))
+            :stream-manager (:stream-manager comp))))) 
 
 (defn new-web-server
   ([uuid] (new-web-server uuid nil))

@@ -117,12 +117,13 @@
                   {:stream-type "hot-cold"
                    :stream-name "__config__"})]
         (go-loop [ev (<! subs)]
-          (try
-            (process-config-event! stm ev)
-            (catch Throwable t
-              (log/error (.getMessage t))
-              (.printStackTrace t)))
-          (recur (<! subs)))))
+          (when ev
+            (try
+              (process-config-event! stm ev)
+              (catch Throwable t
+                (log/error (.getMessage t))
+                (.printStackTrace t)))
+            (recur (<! subs))))))
     (log/info "Projections loaded!")
     component)
   (stop [component] component))
