@@ -112,7 +112,7 @@ use that file to recreate a runtime clone of the original Photon.
 This method is fully portable, and will be compatible over major version upgrades of Photon.
 
 ```bash
-> muon replay __all__ >> /tmp/backup
+> muon replay __all__ '{"stream-type":"cold"}' >> /tmp/backup
 ```
 
 This creates a log file that contains all events in the Photon.
