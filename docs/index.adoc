@@ -1,6 +1,22 @@
+---
+layout: documentation
+---
+:title: Photon
+:date: 2015-01-05 11:40
+:comments: true
+:sharing: true
+:source-highlighter: pygments
+:toc: right
+:toc-title: Photon
+:toclevels: 6
+
+:includedir: .
+ifdef::env-doc[]
+:includedir: submodules/photon/docs
+endif::[]
+
+
 # Photon
-
-
 
 ## Quickstart
 
