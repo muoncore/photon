@@ -24,6 +24,8 @@ Muon is designed to enable the construction and expression of distributed progra
 Event Systems are a very important and flexible programming model, especially when paired with the
 Event Sourcing approach designed by Greg Young, which you can read about link:http://codebetter.com/gregyoung/2010/02/20/why-use-event-sourcing/[here]
 
+Photon provides stream persistence and data analysis functionality that, along with the Event Client protocol
+in the Muon libraries, enables you to implement Events, Event Sourcing and CQRS within a Muon system
 
 ### Quickstart
 Download the [Muon Starter](https://github.com/muoncore/muon-starter) repository and run through the instructions and
@@ -63,6 +65,8 @@ You can replay the persisted events using the CLI
 ```
 
 All the events stored will then be replayed.
+
+
 
 ## Muon Events
 
@@ -112,28 +116,56 @@ Streams can be replayed using the Reactive Streams protocol.
 > muon replay mystream
 ```
 
+This connects to photon using the _Reactive Streams Protocol_, and creates a subscription to the
+logical stream you have requested.
+
+The default replay mode is 'hot-cold', where all of the historical events will be replayed, then
+ all new data will continue to be played, including everything in the future. This subscription
+ will never *complete* by itself, it remains open until the client closes it.
+
+[[streams]]
+.Stream Replay
+image::images/streams-replay.png[Stream Replay]
+
+
 #### Partial Replay
 
-#### Special Streams
+TODO, describe how to play from an order-id or timestamp
 
-There are two special streams created by Photon to manage its internal state. You can replay data from these, and they
- are useful for creating backups of Photon state.
+#### Internal Streams
+
+Photon persists everything as streams, including its own data structures.
+
+The streams internal to Photon have a __ prefix/ suffix.
+
+You can replay data from these internal streams, and they are useful for creating backups of Photon state.
+
+In a future version of Photon, these streams will form the basis for a feature called _Federation_, complex, multi node installations.
 
 ##### \\__config__
 
-Photon internal configuration is stored in the //__config__ stream. Internally, this stream is played into a data structure
+Photon internal configuration is stored in the \\__config__ stream. Internally, this stream is played into a data structure
 that represents the current Photon configuration.
 
 The Photon API layer acts as a front on this stream.
 
 ##### \\__all__
 
-The second special stream is //__all__. This contains all events, on all streams.
+The second special stream is \\__all__. This contains all events, on all streams.
 
 You can play this to obtain all events ever recieved by photon, in the order they were added in, no matter which stream, using
 the global order_id.
 
 ### Projections
+
+A very common pattern when dealing with stream based systems is aggregating the stream into a state
+representation. This goes by many names, but is fundamentally the _reduce_ from the the well known
+_map/ reduce_ pattern.
+
+In this pattern, using a stateless function, you incrementally build a data structure by running the elements of
+ the stream through the function. The function receives the current state, the event to process, and returns the new state.
+
+This is such a common pattern that Photon has support this feature built in, known as stream *_Projections_*.
 
 #### Creating
 
@@ -145,7 +177,13 @@ the global order_id.
 
 ## Operations
 
+Photon is designed to be lightweight when it comes to operational maintenance.
+
+It is, however, a stateful component, and so that state needs to be looked after.
+
 ### Installation
+
+Photon is distributed as an uberjar and as a Docker image.
 
 #### Running bare
 
