@@ -1,3 +1,5 @@
+.PHONY: docs
+
 all: build
 
 run: build
@@ -16,4 +18,3 @@ docker-release: build docker
 clean:
 	lein clean
 	rm -fR resources/public/ui/js
-

@@ -18,10 +18,60 @@ endif::[]
 
 # Photon
 
+Muon is designed to enable the construction and expression of distributed programming models,
+ especially those following Reactive principles.
+
+Event Systems are a very important and flexible programming model, especially when paired with the
+Event Sourcing approach designed by Greg Young, which you can read about link:http://codebetter.com/gregyoung/2010/02/20/why-use-event-sourcing/[here]
+
+
 ## Quickstart
+Download the [Muon Starter](https://github.com/muoncore/muon-starter) repository and run through the instructions and
+pre-requisites from there. The latest released version of photon will be started using Docker Compose,
+along with a contained RabbitMQ instance for communication and other support microservices.
+
+Install the [Muon CLI](https://github.com/muoncore/muon-cli) and set up with the URL `amqp://muon:microservices@localhost`
+
+You can then see photon running
+
+```bash
+> muon d
+
+┌──────────────────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ SERVICE NAME                 │ TAGS                         │ CONTENT/TYPE                 │
+├──────────────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ molecule                     │                              │ application/json             │
+├──────────────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ photon                       │ photon,eventstore            │ application/json             │
+└──────────────────────────────┴──────────────────────────────┴──────────────────────────────┘
+```
+
+You can emit an event using the CLI
+
+```bash
+> muon event '{ "event-type": "SomethingHappened", "schema": "1","stream-name": "something","payload": {"message": "Hi there!"}}'
+```
+
+This will persist the event in the given stream. It can be replayed at any point later on
+
+You can replay the persisted events using the CLI
+
+```bash
+
+> muon replay something
+
+```
+
+All the events stored will then be replayed.
 
 
 ## Streams
+
+The central concept in Muon Events, and so Photon, is the _stream_
+
+[[cap-theorum]]
+.Comparison of CP (top) and AP.
+image::images/streams.png[Streams]
 
 
 ### Replay

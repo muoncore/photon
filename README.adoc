@@ -8,10 +8,11 @@ Photon is an attempt at avoiding such redundancy by abstracting and encapsulatin
 
 ## Quickstart
 
-Download the [Muon Starter](https://github.com/muoncore/muon-starter) repository and run `make`. The latest released version 
-of photon will be started, along with a contained RabbitMQ instance for communication.
+Download the link:https://github.com/muoncore/muon-starter[Muon Starter] repository and run through the instructions and
+pre-requisites from there. The latest released version of photon will be started using Docker Compose,
+along with a contained RabbitMQ instance for communication and other support microservices.
 
-Install the [Muon CLI](https://github.com/muoncore/muon-cli) and set up with the URL `amqp://muon:microservices@localhost`
+Install the link:https://github.com/muoncore/muon-cli[Muon CLI] and set up with the URL `amqp://muon:microservices@localhost`
 
 You can then see photon running
 
@@ -35,17 +36,30 @@ You can emit an event using the CLI
 
 This will persist the event in the given stream. It can be replayed at any point later on
 
-You can replay the persisted
+You can replay the persisted events using the CLI
 
-Check the latest [documentation](http://muoncore.io) for more information
+```bash
 
-## Prerequisites
+> muon replay something
+
+```
+
+All the events stored will then be replayed.
+
+
+Check the latest http://muoncore.io/submodules/photon/docs/index.html[photon documentation] for more information.
+
+Check the http://muoncore.io/guide/index.html[Muon Guide "12 Days of Muon"] to see patterns for developing with events using Photon
+
+## Developing Photon
+
+### Prerequisites
 
 You will need [Leiningen][] 2.0.0 or above installed.
 
-[leiningen]: https://github.com/technomancy/leiningen
+https://github.com/technomancy/leiningen[leiningen]
 
-## Running
+### Running
 
 You can run photon directly from the source:
 
@@ -60,9 +74,14 @@ lein do cljsbuild once, uberjar
 java -jar photon-*-standalone.jar
 ```
 
-## Admin Console
+### Admin Console
 
 Once running, point your browser to: `http[s]://HOST:PORT/index.html`. HOST and PORT can be configured as seen below.
+
+.Migration of UI
+****
+This console will be migrated to the Molecule project once the Molecule plugin system is stable.
+****
 
 ### Startup options
 
@@ -92,7 +111,7 @@ Options:
 -riak.node.X          : If using Riak, the nodes that form the cluster (riak.node.1, riak.node.2, etc.)
 ```
 
-## Setting up a file for static configuration
+### Setting up a file for static configuration
 
 Photon can be configured either directly from the command line or from a file, and parameters can be combined from different sources. The order of priority in which the configuration is build is the following:
 
@@ -126,11 +145,11 @@ riak.node.2=riak2.yourdomain.com
 riak.node.3=riak3.yourdomain.com
 ```
 
-## Muon schemas
+### Muon schemas
 
-The endpoints and expected schemas to interact with `photon` can be found [here](docs/schemas.md).
+The endpoints and expected schemas to interact with `photon` can be found [here](doc/schemas.md).
 
-## Testing
+### Testing
 
 Tests are run by executing
 
@@ -152,11 +171,11 @@ Alternatively, create a test photon client to interact with photon:
 lein new muon-clojure photon-test-client
 ```
 
-## Profiling
+### Profiling
 
 In order to achieve the best performance and thoughput, photon has been intensively tested and profiled with the [YourKit](https://www.yourkit.com) profiler, with a license kindly provided by their creators as part of their support to the open source community.
 
-![YourKit logo](https://www.yourkit.com/images/yklogo.png)
+image:https://www.yourkit.com/images/yklogo.png[YourKit logo]
 
 YourKit supports open source projects with its full-featured Java Profiler.
 YourKit, LLC is the creator of <a href="https://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
