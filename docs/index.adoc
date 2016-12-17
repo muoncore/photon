@@ -28,11 +28,11 @@ Photon provides stream persistence and data analysis functionality that, along w
 in the Muon libraries, enables you to implement Events, Event Sourcing and CQRS within a Muon system
 
 ### Quickstart
-Download the [Muon Starter](https://github.com/muoncore/muon-starter) repository and run through the instructions and
+Download the https://github.com/muoncore/muon-starter[Muon Starter] repository and run through the instructions and
 pre-requisites from there. The latest released version of photon will be started using Docker Compose,
 along with a contained RabbitMQ instance for communication and other support microservices.
 
-Install the [Muon CLI](https://github.com/muoncore/muon-cli) and set up with the URL `amqp://muon:microservices@localhost`
+Install the https://github.com/muoncore/muon-cli[Muon CLI] and set up with the URL `amqp://muon:microservices@localhost`
 
 You can then see photon running
 
