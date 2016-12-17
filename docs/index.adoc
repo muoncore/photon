@@ -15,6 +15,8 @@ ifdef::env-doc[]
 :includedir: submodules/photon/docs
 endif::[]
 
+TIP: This document is maintained at https://github.com/muoncore/photon.
+Please submit issues at that repository.
 
 ## Photon
 
