@@ -11,8 +11,8 @@
                  [org.immutant/web "2.1.5"
                   :exclusions [ring/ring-core]]
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
-                 [ring "1.5.0"]
-                 [buddy "1.1.0"]
+                 [ring "1.5.1"]
+                 [buddy "1.2.0"]
                  [com.taoensso/nippy "2.12.2"
                   #_#_:exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
@@ -23,26 +23,26 @@
                   :exclusions [org.clojure/tools.reader]]
                  [org.marianoguerra/clj-rhino "0.2.3"]
                  [cheshire "5.6.3"]
-                 [clj-time "0.12.0"]
-                 [compojure "1.5.1"]
+                 [clj-time "0.13.0"]
+                 [compojure "1.5.2"]
                  [serializable-fn "1.1.4"]
                  [tranchis/photon-config "0.9.51"
                   :exclusions [io.muoncore/muon-core
                                io.muoncore/muon-transport-amqp
                                io.muoncore/muon-discovery-amqp]]
                  [tranchis/muon-schemas "0.1.9"]
-                 [io.muoncore/muon-clojure "7.1.3"
+                 [io.muoncore/muon-clojure "7.1.5"
                   :exclusions [org.clojure/tools.reader
                                com.google.guava/guava]]
                  [prismatic/schema "1.1.3"]
-                 [metosin/ring-http-response "0.8.0"]
-                 [metosin/compojure-api "1.1.8"]
+                 [metosin/ring-http-response "0.8.1"]
+                 [metosin/compojure-api "1.1.10"]
                  [dire "0.5.4"]
-                 [org.slf4j/slf4j-log4j12 "1.7.21"]
+                 [org.slf4j/slf4j-log4j12 "1.7.22"]
                  [tranchis/clj-schema-inspector "0.5.2"]
-                 [com.stuartsierra/component "0.3.1"]
+                 [com.stuartsierra/component "0.3.2"]
                  ;; clojurescript
-                 [org.clojure/clojurescript "1.9.229"
+                 [org.clojure/clojurescript "1.9.293"
                   :exclusions [org.clojure/tools.reader
                                com.google.code.findbugs/jsr305]]
                  [com.github.jsqlparser/jsqlparser "0.9.6"]
@@ -50,15 +50,15 @@
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs]]
                  [tailrecursion/cljson "1.0.7"]
-                 [clj-http "3.3.0"]
+                 [clj-http "3.4.1"]
                  [cljs-http "0.1.42"
                   :exclusions [org.clojure/tools.reader]]
                  [org.omcljs/om "1.0.0-alpha32"]
                  [jayq "2.5.4"]
-                 [fipp "0.6.6"]
+                 [fipp "0.6.7"]
                  [reagent-utils "0.2.0"]
                  ;; photon plugins
-                 [io.github.lukehutch/fast-classpath-scanner "2.0.4"]
+                 [io.github.lukehutch/fast-classpath-scanner "2.0.10"]
                  [congomongo "0.5.0"]
                  #_[tranchis/photon-riak "0.9.31"]
                  [tranchis/photon-h2 "0.9.45"]
