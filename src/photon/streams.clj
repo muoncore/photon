@@ -282,6 +282,8 @@
        true)
      false)))
 
+(def order-id-nano (atom 0))
+
 (defn as-process-event! [{:keys [stats db global-channel] :as stream}
                          ev]
   ;; Think about the order of store+send to taps
@@ -292,7 +294,8 @@
         new-msg (assoc! msg :event-time new-timestamp)
         new-msg (assoc! new-msg :order-id
                         (+ (* 1000 new-timestamp)
-                           (rem (System/nanoTime) 1000)))
+                           (swap! order-id-nano #(if (< % 999) (inc %) 0))
+                           #_(rem (System/nanoTime) 1000)))
         new-msg (persistent! new-msg)]
     (swap! stats update :incoming inc)
     (update-streams! stream (:stream-name new-msg))
