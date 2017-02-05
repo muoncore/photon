@@ -111,6 +111,7 @@
     (log/info "Loading default projections...")
     (let [stm (:manager stream-manager)
           projs (dp/starting-projections)]
+      (log/info "projs:" projs)
       (dorun (map #(api/post-projection! stm %) projs))
       (let [subs (streams/stream->ch
                   stm
@@ -119,6 +120,7 @@
         (go-loop [ev (<! subs)]
           (when ev
             (try
+              (log/info "Processing config event:" ev)
               (process-config-event! stm ev)
               (catch Throwable t
                 (log/error (.getMessage t))

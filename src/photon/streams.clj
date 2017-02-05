@@ -130,7 +130,7 @@
                          (:measure.rate sch-meta)))
                    (let [size (atom 0)
                          do (data-output size)]
-                     (time (nippy/freeze-to-out! do (:current-value rq)))
+                     (nippy/freeze-to-out! do (:current-value rq))
                      (assoc! (assoc! to-merge :mem-used @size)
                              :last-measured start-ts))
                    to-merge)

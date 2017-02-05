@@ -15,21 +15,25 @@
       url-str (str "stream://" s-name)
       m (cl/muon-client :local (str "client-" uuid)
                         "client" "test")
+      _ (Thread/sleep 5000)
+      projs (cl/with-muon m (cl/request! (str url-req "/projection-keys") {}))
       spn (cl/with-muon m
             (cl/request! (str url-req "/projection")
                          {:projection-name "idontexist"}))
       sp (cl/with-muon m
            (cl/request! (str url-req "/projection")
                         {:projection-name "__streams__"}))]
-  (fact "The streams projection indicates 0 events processed"
-        (:processed sp) => 0.0)
+  (log/info "projections:" projs)
+  (log/info "response:" sp)
+  (fact "The streams projection has 2 events processed"
+        (:processed sp) => 2.0)
   (post-one-event m s-name)
   (Thread/sleep 2000)
   (let [new-sp (cl/with-muon m
                  (cl/request! (str url-req "/projection")
                               {:projection-name "__streams__"}))]
-    (fact "Now there is one event processed"
-          (:processed new-sp) => 1.0))
+    (fact "Now there are three events processed"
+          (:processed new-sp) => 3.0))
   (let [res (cl/with-muon m
               (cl/request! (str url-req "/projection")
                            {:projection-name "__streams__"}))]
@@ -42,7 +46,7 @@
           (-> res :current-value :chatter :schemas :__unversioned__
               :schema :m ((keyword "[:service-id]")) :mode) => "required")
     (post-one-event m s-name "0.0.1")
-    (clojure.pprint/pprint (:schemas (:chatter (:current-value res))))
+    #_(clojure.pprint/pprint (:schemas (:chatter (:current-value res))))
     (let [res (cl/with-muon m
                 (cl/request! (str url-req "/projection")
                              {:projection-name "__streams__"}))]

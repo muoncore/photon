@@ -6,7 +6,8 @@
             [com.stuartsierra.component :as component]
             [cheshire.core :as json]
             [buddy.hashers :as hashers]
-            [photon.muon :as muon])
+            [photon.muon :as muon]
+            [clojure.tools.logging :as log])
   (:import (java.io File)))
 
 (defn new-file [^File s] (File. s))
@@ -78,7 +79,7 @@
 (defn new-component [c uuid secret]
   (let [temp-file (.getAbsolutePath
                    (java.io.File/createTempFile "muon" ".json"))
-        conf {:amqp.url :local
+        conf {:muon.url :local
               :rest.port 9997
               :microservice.name (str "photon-integration-test-" uuid)
               :parallel.projections 2
@@ -94,8 +95,7 @@
                         (merge conf {:db.backend "file"
                                      :file.path temp-file}))))
         d (:driver (:database comp))]
-    (db/delete-all! d)
-    (Thread/sleep 3000)
+    (log/info "Temporal file:" temp-file)
     comp))
 
 (defn new-server

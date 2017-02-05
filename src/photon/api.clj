@@ -18,6 +18,7 @@
   (streams/event stm stream-name order-id))
 
 (defn post-projection! [stm request]
+  (log/info "post-projection!" request)
   (streams/process-event! stm {:event-type "post-projection!"
                                :stream-name "__config__"
                                :service-id "me"

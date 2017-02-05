@@ -16,6 +16,7 @@
       url-str (str "stream://" s-name)
       m (cl/muon-client :local (str "client-" uuid)
                         "client" "test")
+      _ (Thread/sleep 5000)
       spn (cl/with-muon m
             (cl/request! (str url-req "/projection")
                          {:projection-name "idontexist"}))
@@ -26,16 +27,17 @@
         sp => truthy)
   (fact "But there are no 'imaginary' projections"
         spn => falsey)
-  (log/trace (with-out-str (clojure.pprint/pprint sp)))
-  (fact "The streams projection indicates 0 events processed"
-        (:processed sp) => 0.0)
+  (log/info (with-out-str (clojure.pprint/pprint sp)))
+  (fact "The streams projection indicates 2 event processed"
+        (:processed sp) => 2.0)
   (post-one-event m s-name)
   (Thread/sleep 2000)
   (let [new-sp (cl/with-muon m
                  (cl/request! (str url-req "/projection")
                               {:projection-name "__streams__"}))]
-    (fact "Now there is one event processed"
-          (:processed new-sp) => 1.0))
+    (log/info (with-out-str (clojure.pprint/pprint new-sp)))
+    (fact "Now there are three events processed"
+          (:processed new-sp) => 3.0))
   #_(let [sn (cl/with-muon m
              (cl/subscribe! (str url-str "/projection/imaginary")
                             {:from 0 :stream-type :hot}))]
@@ -45,8 +47,8 @@
             (cl/subscribe! (str url-str "/projection/__streams__")
                            {:from 0 :stream-type :hot}))]
     (post-one-event m s-name)
-    (fact "Two events in projection"
-          (:processed (<!! s)) => 2.0)
+    (fact "Four events in projection"
+          (:processed (<!! s)) => 4.0)
     (let [s2 (cl/with-muon m
                (cl/subscribe! (str url-str "/projection/__streams__")
                               {:from 0 :stream-type :hot
@@ -55,8 +57,8 @@
       (let [val2 (<!! s2)]
         (fact "Two streams receive the same result..."
               (:processed (<!! s)) => (:processed val2))
-        (fact "... and that result is 3.0"
-              (:processed val2) => 3.0))))
+        (fact "... and that result is 5.0"
+              (:processed val2) => 5.0))))
   (cl/with-muon m (cl/request! (str url-req "/projections")
                                {:projection-name "dummy-proj"
                                 :stream-name "dummy"

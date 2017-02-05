@@ -39,7 +39,7 @@
                                                                  :phrase "substitutable"}]}}
                           :service-id "request://chatter"
                           :stream-name "chatter"})))
-  (fact "Two events on stream" (elem-count ch) => 2)
+  (fact "Four events on stream" (elem-count ch) => 4)
   (dorun (take 9 (repeatedly
                   (fn []
                     (post-one-event
@@ -50,7 +50,7 @@
                             {:stream-name "__all__"
                              :stream-type "cold"
                              :from 0}))]
-    (fact "11 events on stream" (elem-count ch) => 11))
+    (fact "13 events on stream" (elem-count ch) => 13))
   (dorun (take 100 (repeatedly
                     (fn []
                       (post-one-event
@@ -61,7 +61,7 @@
                             {:stream-name "__all__"
                              :stream-type "cold"
                              :from 0}))]
-    (fact "111 events on stream" (elem-count ch) => 111))
+    (fact "113 events on stream" (elem-count ch) => 113))
   #_(dorun (take 10000 (repeatedly
                         (fn []
                           (post-one-event
