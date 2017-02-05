@@ -66,7 +66,7 @@
   (dosync
     (if-let [p (:publication @state)]
       p
-      (let [c (chan 1)
+      (let [c (chan (sliding-buffer 4096))
             new-p {:channel c :p (pub c :stream-name)}]
         (dosync
             (alter state
