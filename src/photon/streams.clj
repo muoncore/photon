@@ -13,6 +13,7 @@
                      pub sub alts!]])
   (:import (java.net ServerSocket)
            (java.io DataOutput)))
+
 ;; TODO: Do something about the conflict between keywords and strings
 ;;       for the keys (e.g. stream-name)
 
@@ -66,7 +67,8 @@
   (dosync
     (if-let [p (:publication @state)]
       p
-      (let [c (chan (sliding-buffer 4096))
+      (let [sb (sliding-buffer 1)
+            c (chan sb)
             new-p {:channel c :p (pub c :stream-name)}]
         (dosync
             (alter state
@@ -75,6 +77,7 @@
                            (conj (:all-channels old-state) c)]
                        (merge old-state
                               {:publication new-p
+                               :pub-buffer sb
                                :all-channels new-channels})))))
         new-p))))
 
@@ -365,7 +368,7 @@
 (defmethod stream->ch "hot-cold" [a-stream params]
   (log/info "Initialising hot-cold stream with params" (pr-str params))
   (let [date (extract-date params)
-        ch (chan (buffer 1))
+        ch (chan 1024)
         _ (log/info "Getting stream-name and data")
         stream-name (get params :stream-name "__all__")
         _ (log/info "Finished getting stream-name and data")]
@@ -394,14 +397,14 @@
     ch))
 
 (defmethod stream->ch "hot" [a-stream params]
-  (let [ch (chan 1)
+  (let [ch (chan 1024)
         stream-name (get params :stream-name "__all__")]
     (if (= stream-name "__all__")
       (tap (:mult-channel (:global-channel a-stream)) ch)
       (sub (:p (publisher a-stream)) stream-name ch))
     ch))
 
-(defrecord AsyncStreamState [projections publication active-streams
+(defrecord AsyncStreamState [projections publication pub-buffer active-streams
                              virtual-streams all-channels])
 
 (defn pipeline [num fn ch]
@@ -441,6 +444,7 @@
             initial-state (map->AsyncStreamState
                            {:projections {}
                             :publication nil
+                            :pub-buffer nil
                             :active-streams {}
                             :virtual-streams {}
                             :all-channels #{}})
