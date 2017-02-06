@@ -1,11 +1,13 @@
-.PHONY: docs
+.PHONY: docs test
 
-all: build
+all: clean target
 
-run: build
-	java -jar target/photon-*-standalone.jar
+run: target
+	java -jar target/photon-*-standalone.jar --muon.url=wibble://happy
 
-build: clean
+
+build: target
+target:
 	$(shell cp `lein do clean, cljsbuild once, uberjar | sed -n 's/^Created \(.*standalone\.jar\)/\1/p'` target/photon.jar)
 
 docker:
@@ -18,3 +20,6 @@ docker-release: build docker
 clean:
 	lein clean
 	rm -fR resources/public/ui/js
+
+test: target
+	lein midje
