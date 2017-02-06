@@ -73,7 +73,8 @@
             (<! (timeout t))
             (let [stats-stream @(:stats stream)
                   stats-rt (api/runtime-stats stream)
-                  all-stats {:stats (merge stats-stream stats-rt)}]
+                  stats-buf {:buffer-count (count (:pub-buffer @(:state stream)))}
+                  all-stats {:stats (merge stats-stream stats-rt stats-buf)}]
               (>! ws-channel all-stats))
             (recur 1000))
           (do
@@ -122,7 +123,8 @@
         (when (async/open? ch)
           (let [stats-stream @(:stats stream)
                 stats-rt (api/runtime-stats stream)
-                all-stats {:stats (merge stats-stream stats-rt)}]
+                stats-buf {:buffer-count (count (:pub-buffer @(:state stream)))}
+                all-stats {:stats (merge stats-stream stats-rt stats-buf)}]
             (ws-send! ch all-stats)
             (recur 1000)))))))
 

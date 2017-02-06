@@ -24,7 +24,9 @@
          {:left "Available Memory (KB)"
           :right (quot (:available-memory data) 1024)}
          {:left "CPU Load"
-          :right (str (:cpu-load data) "%")}]))
+          :right (str (:cpu-load data) "%")}
+         {:left "Buffer load"
+          :right (str (:buffer-count data) "/4096")}]))
       (dom/div
        #js {:className "col-md-8"}
        ((om/factory comp/Chart)
@@ -35,7 +37,9 @@
          :sets [{:name "Memory usage"
                  :data (:memory (:last-25 data))}
                 {:name "CPU load"
-                 :data (:cpu (:last-25 data))}]}))))))
+                 :data (:cpu (:last-25 data))}
+                {:name "Buffer load"
+                 :data (:buffer (:last-25 data))}]}))))))
 
 (defui EventsProcessedPanel
   Object
