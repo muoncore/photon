@@ -27,3 +27,4 @@ pom.xml.asc
 /bin/
 \#project.clj\#
 .leinbin/
+tempdocumentation/
