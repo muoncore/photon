@@ -48,6 +48,10 @@
                     (api/post-event!
                      stream-manager
                      (clojure.walk/keywordize-keys ev)))}
+     {:endpoint "stream-names"
+      :fn-process (fn [ev]
+                    (log/trace ":::: EVENTS" (pr-str ev))
+                    (api/streams stream-manager))}this
      {:endpoint "projections"
       :fn-process (fn [resource]
                     (let [params (clojure.walk/keywordize-keys resource)]
