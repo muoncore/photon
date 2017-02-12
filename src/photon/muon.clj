@@ -51,7 +51,7 @@
      {:endpoint "stream-names"
       :fn-process (fn [ev]
                     (log/trace ":::: EVENTS" (pr-str ev))
-                    (api/streams stream-manager))}this
+                    (api/streams stream-manager))}
      {:endpoint "projections"
       :fn-process (fn [resource]
                     (let [params (clojure.walk/keywordize-keys resource)]
