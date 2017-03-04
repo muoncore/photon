@@ -11,16 +11,15 @@
             [photon.muon :as m])
   (:use midje.sweet))
 
-(.delete (java.io.File. "/tmp/temporalphoton.log"))
-
 (def uuid (java.util.UUID/randomUUID))
 (def amazon-url :local)
+(def temp-file (java.io.File/createTempFile "midje" ".json"))
 (def conf {:amqp.url :local
            :microservice.name (str "photon-test-" uuid)
            :projections.port 9998
            :events.port 9999
            :db.backend "file"
-           :file.path "/tmp/temporalphoton.log"
+           :file.path (.getAbsolutePath temp-file)
            :parallel.projections 2})
 (def c
   (component/start (core/photon-system conf)))

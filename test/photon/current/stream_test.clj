@@ -9,8 +9,6 @@
             [clojure.tools.logging :as log])
   (:use midje.sweet))
 
-(.delete (java.io.File. "/tmp/temporalphoton.log"))
-
 (def temp-file (java.io.File/createTempFile "midje" ".json"))
 (def conf {:amqp.url :local
            :microservice.name (str "photon-integration-test-" (db/uuid))
