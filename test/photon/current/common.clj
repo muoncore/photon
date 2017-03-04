@@ -12,48 +12,6 @@
 
 (defn new-file [^File s] (File. s))
 
-(defrecord TempDBFile [file-name]
-  db/DB
-  (db/driver-name [this] "file")
-  (db/fetch [this stream-name order-id]
-            (first (db/search this order-id)))
-  (db/delete! [this id]
-              (let [all (db/lazy-events this "__all__" 0)
-                    filtered (remove #(= id (:order-id %)) all)]
-                (db/delete-all! this)
-                (dorun (map #(db/store this %) filtered))))
-  (db/delete-all! [this]
-                  (.delete (new-file file-name))
-                  (new-file file-name))
-  (db/put [this data]
-          (db/delete! this (:order-id data))
-          (db/store this data))
-  (db/search [this id]
-             (let [all (db/lazy-events this "__all__" 0)
-                   filtered (filter #(= id (:order-id %)) all)]
-               filtered))
-  (db/store [this payload]
-    (with-open [w (clojure.java.io/writer file-name :append true)]
-      (.write w (str (json/generate-string payload) "\n"))))
-  (db/distinct-values [this k]
-                      (into #{} (map #(get % k)
-                                     (db/lazy-events this "__all__" 0))))
-  (db/lazy-events [this stream-name date]
-                  (try
-                    (with-open [rdr (clojure.java.io/reader file-name)]
-                      (doall
-                       (filter (fn [ev]
-                                 (and
-                                  (or (= "__all__" stream-name)
-                                      (= :__all__ stream-name)
-                                      (= stream-name (:stream-name ev)))
-                                  (<= date (:event-time ev))))
-                               (map #(json/parse-string % true)
-                                    (line-seq rdr)))))
-      (catch java.io.IOException e
-        '())))
-  (db/lazy-events-page [this stream-name date page] []))
-
 (defn post-one-event
   ([m url schema-version]
    (cl/with-muon m

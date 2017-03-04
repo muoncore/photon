@@ -81,6 +81,7 @@
              (cl/subscribe! (str url-str "/projection/chatter-proj")
                             {:from 0 :stream-type :hot
                              :stream-name "__all__"}))]
+    (Thread/sleep 5000)
     (fact "There is now a chatter count projection"
           (contains? (into #{} (:projection-keys res)) "chatter-proj")
           => true)
@@ -88,9 +89,8 @@
           (contains? (into #{} (:projection-keys res)) "dummy-proj")
           => true)
     (post-one-event m s-name)
-    (Thread/sleep 2000)
     (let [val (time-limited 3000 (<!! sc))]
-      (fact "There are 4 events proccesed in chatter-proj"
+      (fact "There are 4 events processed in chatter-proj"
             (:current-value val) => 4.0)
       (dorun (take 1000 (repeatedly #(post-one-event m s-name))))
       (Thread/sleep 5000)

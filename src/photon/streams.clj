@@ -330,7 +330,7 @@
   EventProcessor
   (register-query!
       [this {:keys [projection-name] :as projection-descriptor}]
-    (if (contains? (:projections @state) projection-name)
+    (when (contains? (:projections @state) projection-name)
       (as-unregister-query! this projection-name))
     (as-register-query! this projection-descriptor))
   (unregister-query! [this projection-name]
@@ -376,7 +376,7 @@
       (loop [full-s (data-from a-stream stream-name
                                (extract-date params))
              closed? false
-             last-t (System/currentTimeMillis)]
+             last-t (* 1000 (System/currentTimeMillis))]
         (let [e (first full-s) s (rest full-s)]
           (if (nil? e)
             (log/info ":::::::::::::::::::: Stream depleted, switching to hot stream")
@@ -385,7 +385,7 @@
                           (concat s
                                   (data-from a-stream stream-name last-t))
                           s)
-                  last-t (if (empty? rest-s) (System/currentTimeMillis) last-t)]
+                  last-t (if (empty? rest-s) (* 1000 (System/currentTimeMillis)) last-t)]
               (if closed?
                 (log/info ":::::::::::::::::::: Stream closed by peer, switching to hot stream")
                 (let [closed? (not (>! ch e))]

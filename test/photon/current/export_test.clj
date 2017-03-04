@@ -38,7 +38,7 @@
       (recur (<!! ch) (inc n)))))
 
 (db/delete-all! d)
-(dorun (take 10 (repeatedly #(db/store d {:stream-name "test"}))))
+(dorun (take 10 (map #(db/store d {:stream-name "test" :order-id %}) (range))))
 
 (defn count-result []
   (let [f (api/stream->file s "test")
