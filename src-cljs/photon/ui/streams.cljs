@@ -146,7 +146,7 @@
       (str "Unexpected error: " (pr-str msg)))))
 
 (defn iframeio-upload-file [form-id owner parent]
-  (let [el (.getDOMNode (om/react-ref owner form-id))
+  (let [el (dom/node (om/react-ref owner form-id))
         iframe (IframeIo.)]
     #_(.log js/console el)
     (events/listen iframe EventType.COMPLETE

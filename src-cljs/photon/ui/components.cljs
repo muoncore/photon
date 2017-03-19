@@ -396,7 +396,7 @@
    (if (:modal? (om/props this))
      (.height ($ (om/react-ref this "code-block"))
               (max 300 (- (.-innerHeight js/window) 325))))
-   (let [dn (.getDOMNode (om/react-ref this "cb"))
+   (let [dn (dom/node (om/react-ref this "cb"))
          k (:edit-key (om/props this))
          editable? (not (nil? k))
          cm (.fromTextArea js/CodeMirror dn

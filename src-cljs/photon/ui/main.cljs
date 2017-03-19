@@ -147,23 +147,19 @@
    (dom/div
     #js {:className "sidebar-footer hidden-small"}
     (dom/a #js {:data-toggle "tooltip"
-                :data-placement "top"
-                :title-data-original-title "Settings"}
+                :data-placement "top"}
            (dom/span #js {:className "glyphicon glyphicon-cog"
                           :aria-hidden "true"}))
     (dom/a #js {:data-toggle "tooltip"
-                :data-placement "top"
-                :title-data-original-title "FullScreen"}
+                :data-placement "top"}
            (dom/span #js {:className "glyphicon glyphicon-fullscreen"
                           :aria-hidden "true"}))
     (dom/a #js {:data-toggle "tooltip"
-                :data-placement "top"
-                :title-data-original-title "Lock"}
+                :data-placement "top"}
            (dom/span #js {:className "glyphicon glyphicon-eye-close"
                           :aria-hidden "true"}))
     (dom/a #js {:data-toggle "tooltip"
                 :data-placement "top"
-                :title-data-original-title "Logout"
                 :onClick (fn [_]
                            (go
                              (println (<! (ws/get-api "/auth/logout")))

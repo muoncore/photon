@@ -110,7 +110,7 @@
   Object
   (componentDidMount
    [this]
-   (let [v (.-value (.getDOMNode (om/react-ref this "select")))]
+   (let [v (.-value (dom/node (om/react-ref this "select")))]
      (ck/set "server" v)
      (om/transact! this `[(root/update ~{:server v})])))
   (render
