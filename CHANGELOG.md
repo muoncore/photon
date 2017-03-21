@@ -1,5 +1,8 @@
 # Change Log
 
+## [v1.0.0](https://github.com/muoncore/photon/tree/v1.0.0) (2017-03-21)
+[Full Changelog](https://github.com/muoncore/photon/compare/1.0.0...v1.0.0)
+
 ## [1.0.0](https://github.com/muoncore/photon/tree/1.0.0) (2017-03-19)
 [Full Changelog](https://github.com/muoncore/photon/compare/1.0.1...1.0.0)
 
