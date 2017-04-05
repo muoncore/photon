@@ -14,6 +14,7 @@ docker:
 	docker build . -t photon
 
 docker-release: build docker
+	docker tag photon simplicityitself-muon-image.jfrog.io/photon:2017.1
 	docker tag photon simplicityitself-muon-image.jfrog.io/photon:latest
 	docker push simplicityitself-muon-image.jfrog.io/photon:latest
 

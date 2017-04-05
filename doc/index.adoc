@@ -53,7 +53,7 @@ You can then see photon running
 You can emit an event using the CLI
 
 ```bash
-> muon event '{ "event-type": "SomethingHappened", "schema": "1","stream-name": "something","payload": {"message": "Hi there!"}}'
+> muon emit '{ "event-type": "SomethingHappened", "schema": "1","stream-name": "something","payload": {"message": "Hi there!"}}'
 ```
 
 This will persist the event in the given stream. It can be replayed at any point later on
@@ -320,4 +320,18 @@ To restore from this file
 
 ### Monitoring
 
+
+## Backing data stores
+
+Photon persists streams into a variety of different data stores, provided by internal persistence plugins.
+
+The default docker image provided uses the embedded H2 plugin, which persists to the container local disk.
+
+### Embedded H2
+
+### Cassandra
+
+
+
+### MongoDB
 
