@@ -25,6 +25,7 @@ endif
 
 clean:
 	lein clean
+	rm -rf target
 	rm -fR resources/public/ui/js
 
 test: target
