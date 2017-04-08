@@ -1,4 +1,4 @@
-.PHONY: docs test
+.PHONY: docs test target
 
 all: clean target
 
