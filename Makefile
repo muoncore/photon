@@ -13,10 +13,15 @@ target:
 docker:
 	docker build . -t photon
 
-docker-release: build docker
-	docker tag photon simplicityitself-muon-image.jfrog.io/photon:2017.1
+publish: clean build docker
+ifndef VERSION
+	$(error VERSION is undefined for Photon Release)
+endif
+	docker tag photon simplicityitself-muon-image.jfrog.io/photon:$(VERSION)
 	docker tag photon simplicityitself-muon-image.jfrog.io/photon:latest
 	docker push simplicityitself-muon-image.jfrog.io/photon:latest
+	docker push simplicityitself-muon-image.jfrog.io/photon:$(VERSION)
+
 
 clean:
 	lein clean
