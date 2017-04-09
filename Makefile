@@ -3,7 +3,10 @@
 all: clean target
 
 run: target
-	java -jar target/photon-*-standalone.jar --muon.url=wibble://happy
+	java -jar target/photon.jar
+
+run-mongo: target
+	java -jar target/photon.jar -db.backend mongo -mongodb.host localhost
 
 
 build: target
@@ -12,16 +15,6 @@ target:
 
 docker:
 	docker build . -t photon
-
-publish: clean build docker
-ifndef VERSION
-	$(error VERSION is undefined for Photon Release)
-endif
-	docker tag photon simplicityitself-muon-image.jfrog.io/photon:$(VERSION)
-	docker tag photon simplicityitself-muon-image.jfrog.io/photon:latest
-	docker push simplicityitself-muon-image.jfrog.io/photon:latest
-	docker push simplicityitself-muon-image.jfrog.io/photon:$(VERSION)
-
 
 clean:
 	lein clean
