@@ -1,5 +1,11 @@
 # Change Log
 
+## [v2017.5](https://github.com/muoncore/photon/tree/v2017.5) (2017-04-08)
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.4...v2017.5)
+
+## [v2017.4](https://github.com/muoncore/photon/tree/v2017.4) (2017-04-08)
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.3...v2017.4)
+
 ## [v2017.3](https://github.com/muoncore/photon/tree/v2017.3) (2017-04-08)
 [Full Changelog](https://github.com/muoncore/photon/compare/v2017.2...v2017.3)
 
