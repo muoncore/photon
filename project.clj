@@ -70,7 +70,7 @@
                  #_[tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  #_[tranchis/photon-redis "0.9.42"]
-                 #_[tranchis/photon-mongo "0.9.45"]
+                 [tranchis/photon-mongo "0.10.1"]
                  [tranchis/photon-file "0.10.1"]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
