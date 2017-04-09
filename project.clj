@@ -17,9 +17,10 @@
                  [org.jboss.logging/jboss-logging "3.3.0.Final"]
                  [ring "1.5.1"]
                  [buddy "1.3.0"]
-                 [com.taoensso/nippy "2.13.0"]
+                 [com.taoensso/nippy "2.13.0"
+                  :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
-                 [tranchis/photon-db "0.10.2"
+                 [tranchis/photon-db "0.10.4"
                   :exclusions [org.clojure/java.classpath]]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.3.441"
@@ -47,7 +48,8 @@
                  [com.stuartsierra/component "0.3.2"]
                  ;; clojurescript
                  [org.clojure/clojurescript "1.9.495"
-                  :exclusions [org.clojure/tools.reader]]
+                  :exclusions [org.clojure/tools.reader
+                               com.google.guava/guava]]
                  [com.github.jsqlparser/jsqlparser "0.9.7"]
                  [jarohen/chord "0.8.0"
                   :exclusions [com.cognitect/transit-clj
@@ -64,14 +66,14 @@
                  [io.github.lukehutch/fast-classpath-scanner "2.0.17"]
                  [congomongo "0.5.0"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-h2 "0.10.1"
-                  :exclusions [org.clojure/tools.reader]]
-                 #_[tranchis/photon-cassandra "0.9.49"]
+                 [tranchis/photon-h2 "0.10.4"]
+                 [tranchis/photon-cassandra "0.10.5"
+                  :exclusions [com.google.guava/guava]]
                  #_[tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  #_[tranchis/photon-redis "0.9.42"]
-                 [tranchis/photon-mongo "0.10.3"]
-                 [tranchis/photon-file "0.10.1" :exclusions [tranchis/photon-db]]]
+                 [tranchis/photon-mongo "0.10.4"]
+                 [tranchis/photon-file "0.10.4"]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
   :plugins [[lein-cljsbuild "1.1.5" :exclusions [org.clojure/clojure]]
