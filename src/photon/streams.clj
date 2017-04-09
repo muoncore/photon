@@ -323,7 +323,7 @@
   (delete-event! [this ev] (db/delete! db ev))
   (clean! [this] (db/delete-all! db))
   (data-from [this stream-name date]
-    (log/info "data-from" stream-name)
+    (log/info "data-from" stream-name date)
     (db/lazy-events db stream-name date))
   HotStream
   (next! [this] (<!! (:channel global-channel)))

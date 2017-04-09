@@ -19,7 +19,7 @@
                  [buddy "1.3.0"]
                  [com.taoensso/nippy "2.13.0"]
                  [ring/ring-json "0.4.0"]
-                 [tranchis/photon-db "0.10.1"
+                 [tranchis/photon-db "0.10.2"
                   :exclusions [org.clojure/java.classpath]]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.3.441"
@@ -70,8 +70,8 @@
                  #_[tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  #_[tranchis/photon-redis "0.9.42"]
-                 [tranchis/photon-mongo "0.10.1"]
-                 [tranchis/photon-file "0.10.1"]]
+                 [tranchis/photon-mongo "0.10.3"]
+                 [tranchis/photon-file "0.10.1" :exclusions [tranchis/photon-db]]]
   :ring {:handler photon.core/figwheel-instance
          :init photon.core/figwheel-init!}
   :plugins [[lein-cljsbuild "1.1.5" :exclusions [org.clojure/clojure]]
