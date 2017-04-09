@@ -1,5 +1,12 @@
 # Change Log
 
+## [v2017.7](https://github.com/muoncore/photon/tree/v2017.7) (2017-04-09)
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.6...v2017.7)
+
+**Fixed bugs:**
+
+- When run against mongo, enters a seemingly infinite loop [\#9](https://github.com/muoncore/photon/issues/9)
+
 ## [v2017.6](https://github.com/muoncore/photon/tree/v2017.6) (2017-04-09)
 [Full Changelog](https://github.com/muoncore/photon/compare/v2017.5...v2017.6)
 
