@@ -1,4 +1,4 @@
-(defproject tranchis/photon "0.9.6"
+(defproject muoncore/photon "0.9.6"
   :description "Simple, lightweight high-performant eventstore with hot and cold
                 streaming especially tailored for microservice architectures.
                 Provides interfaces for muon and HTTP."
@@ -46,22 +46,11 @@
                  [org.slf4j/slf4j-log4j12 "1.7.24"]
                  [tranchis/clj-schema-inspector "0.5.2"]
                  [com.stuartsierra/component "0.3.2"]
-                 ;; clojurescript
-                 [org.clojure/clojurescript "1.9.495"
-                  :exclusions [org.clojure/tools.reader
-                               com.google.guava/guava]]
-                 [com.github.jsqlparser/jsqlparser "0.9.7"]
                  [jarohen/chord "0.8.0"
                   :exclusions [com.cognitect/transit-clj
                                com.cognitect/transit-cljs
                                org.clojure/tools.reader]]
-                 [tailrecursion/cljson "1.0.7"]
                  [clj-http "3.4.1"]
-                 [cljs-http "0.1.42" :exclusions [org.clojure/tools.reader]]
-                 [org.omcljs/om "1.0.0-alpha48"]
-                 [jayq "2.5.4"]
-                 [fipp "0.6.9"]
-                 [reagent-utils "0.2.1"]
                  ;; photon plugins
                  [io.github.lukehutch/fast-classpath-scanner "2.0.17"]
                  [congomongo "0.5.0"]
@@ -74,12 +63,8 @@
                  #_[tranchis/photon-redis "0.9.42"]
                  [tranchis/photon-mongo "0.10.4"]
                  [tranchis/photon-file "0.10.4"]]
-  :ring {:handler photon.core/figwheel-instance
-         :init photon.core/figwheel-init!}
-  :plugins [[lein-cljsbuild "1.1.5" :exclusions [org.clojure/clojure]]
-            [lein-midje "3.2.1"]
-            [lein-ring "0.11.0" :exclusions [org.clojure/clojure]]
-            [lein-figwheel "0.5.9" :exclusions [org.clojure/clojure]]]
+  :plugins [[lein-midje "3.2.1"]
+            [lein-ring "0.11.0" :exclusions [org.clojure/clojure]]]
   :main photon.core ;; http-kit
   #_#_:warn-on-reflection true
   :jvm-opts ["-server" #_#_#_#_"-Xmx1g" "-Xms1g" "-XX:MaxMetaspaceSize=1g"
@@ -94,23 +79,6 @@
              "-XX:CMSInitiatingOccupancyFraction=90"
              "-XX:CMSIncrementalSafetyFactor=10"
              "-XX:+CMSClassUnloadingEnabled" "-XX:+DoEscapeAnalysis"]
-  :figwheel {:server-port 3000
-             :open-file-command "atom"
-             :ring-handler photon.core/figwheel-init!}
-  :prep-tasks ["compile" ["cljsbuild" "once"]]
-  :cljsbuild
-  {:builds [{:id "production"
-             :source-paths ["src-cljs"]
-             :figwheel true
-             :jar true
-             :compiler {:main photon.ui.frontend
-                        :asset-path "ui/js/out"
-                        :output-to "resources/public/ui/js/main.js"
-                        :output-dir "resources/public/ui/js/out"
-                        :source-map true
-                        :preamble ["react/react.min.js"]
-                        :optimizations :none
-                        :pretty-print true}}]}
   :docker {:image-name "myregistry.example.org/myimage"
            :dockerfile "target/dist/Dockerfile"
            :build-dir  "target"}
