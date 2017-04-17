@@ -34,8 +34,8 @@
          (fact res =>
                (contains {:payload {:id "dbd6eecf-8f5c-42aa-8aa8-1b2172d53c71"
                                     :text "substitutable"
-                                    :textanalysis {:aggregateSentiment 40.0
-                                                   :keyphrases [{:count 1.0
+                                    :textanalysis {:aggregateSentiment 40
+                                                   :keyphrases [{:count 1
                                                                  :phrase "substitutable"}]}}
                           :service-id "request://chatter"
                           :stream-name "chatter"})))

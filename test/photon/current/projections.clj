@@ -29,7 +29,7 @@
         spn => falsey)
   (log/info (with-out-str (clojure.pprint/pprint sp)))
   (fact "The streams projection indicates 2 event processed"
-        (:processed sp) => 2.0)
+        (:processed sp) => 2)
   (post-one-event m s-name)
   (Thread/sleep 2000)
   (let [new-sp (cl/with-muon m
@@ -37,7 +37,7 @@
                               {:projection-name "__streams__"}))]
     (log/info (with-out-str (clojure.pprint/pprint new-sp)))
     (fact "Now there are three events processed"
-          (:processed new-sp) => 3.0))
+          (:processed new-sp) => 3))
   #_(let [sn (cl/with-muon m
              (cl/subscribe! (str url-str "/projection/imaginary")
                             {:from 0 :stream-type :hot}))]
@@ -47,8 +47,7 @@
             (cl/subscribe! (str url-str "/projection/__streams__")
                            {:from 0 :stream-type :hot}))]
     (post-one-event m s-name)
-    (fact "Four events in projection"
-          (:processed (<!! s)) => 4.0)
+    (fact "Four events in projection" (:processed (<!! s)) => 4)
     (let [s2 (cl/with-muon m
                (cl/subscribe! (str url-str "/projection/__streams__")
                               {:from 0 :stream-type :hot
@@ -57,8 +56,7 @@
       (let [val2 (<!! s2)]
         (fact "Two streams receive the same result..."
               (:processed (<!! s)) => (:processed val2))
-        (fact "... and that result is 5.0"
-              (:processed val2) => 5.0))))
+        (fact "... and that result is 5.0" (:processed val2) => 5))))
   (cl/with-muon m (cl/request! (str url-req "/projections")
                                {:projection-name "dummy-proj"
                                 :stream-name "dummy"
@@ -91,18 +89,18 @@
     (post-one-event m s-name)
     (let [val (time-limited 3000 (<!! sc))]
       (fact "There are 4 events processed in chatter-proj"
-            (:current-value val) => 4.0)
+            (:current-value val) => 4)
       (dorun (take 1000 (repeatedly #(post-one-event m s-name))))
       (Thread/sleep 5000)
       (let [res (cl/with-muon m
                   (cl/request! (str url-req "/projection")
                                {:projection-name "chatter-proj"}))]
-        (fact (:current-value res) => 1004.0))
+        (fact (:current-value res) => 1004))
       (let [res (cl/with-muon m
                   (cl/request! (str url-req "/projection")
                                {:projection-name "chatter-proj"
                                 :query-key "current-value"}))]
-        (fact res => 1004.0)))
+        (fact res => 1004)))
     (fact "The dummy-proj stream has generated nothing as of yet"
           (time-limited 3000 (<!! sd)) => (throws Exception))
 

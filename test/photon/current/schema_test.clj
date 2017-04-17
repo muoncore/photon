@@ -25,15 +25,13 @@
                         {:projection-name "__streams__"}))]
   (log/info "projections:" projs)
   (log/info "response:" sp)
-  (fact "The streams projection has 2 events processed"
-        (:processed sp) => 2.0)
+  (fact "The streams projection has 2 events processed" (:processed sp) => 2)
   (post-one-event m s-name)
   (Thread/sleep 2000)
   (let [new-sp (cl/with-muon m
                  (cl/request! (str url-req "/projection")
                               {:projection-name "__streams__"}))]
-    (fact "Now there are three events processed"
-          (:processed new-sp) => 3.0))
+    (fact "Now there are three events processed" (:processed new-sp) => 3))
   (let [res (cl/with-muon m
               (cl/request! (str url-req "/projection")
                            {:projection-name "__streams__"}))]
@@ -59,14 +57,14 @@
             => truthy)
       (fact "Schema parts for unversioned are correct"
             (-> res :current-value :chatter :schemas :__unversioned__
-                :schema :m ((keyword "[:service-id]")) :count) => 1.0
+                :schema :m ((keyword "[:service-id]")) :count) => 1
             (-> res :current-value :chatter :schemas :__unversioned__
                 :schema :m ((keyword "[:service-id]")) :type) => "s/Str"
             (-> res :current-value :chatter :schemas :__unversioned__
                 :schema :m ((keyword "[:service-id]")) :mode) => "required")
       (fact "Schema parts for 0.0.1 are correct"
             (-> res :current-value :chatter :schemas :0.0.1
-                :schema :m ((keyword "[:service-id]")) :count) => 1.0
+                :schema :m ((keyword "[:service-id]")) :count) => 1
             (-> res :current-value :chatter :schemas :0.0.1
                 :schema :m ((keyword "[:service-id]")) :type) => "s/Str"
             (-> res :current-value :chatter :schemas :0.0.1
