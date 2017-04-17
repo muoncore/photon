@@ -304,9 +304,6 @@
                                             (ws-route-stats-hk ms))
                                     (routes (ws-route ms)))))
                            {:keywords? true})))
-         (GET "/" []
-              :no-doc true
-              (response/resource-response "index.html" {:root "public/ui"}))
          (route/resources "/")
          (route/not-found (http/not-found "Not found")))]
     (wrap-session (reload/wrap-reload app-no-reload))))
