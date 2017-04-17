@@ -35,7 +35,7 @@
                                io.muoncore/muon-transport-amqp
                                io.muoncore/muon-discovery-amqp]]
                  [tranchis/muon-schemas "0.1.9"]
-                 [io.muoncore/muon-clojure "7.2.9"
+                 [io.muoncore/muon-clojure "7.2.4"
                   :exclusions [org.clojure/tools.reader
                                com.google.guava/guava]]
                  [prismatic/schema "1.1.3"]
