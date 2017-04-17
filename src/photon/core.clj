@@ -159,7 +159,6 @@
   (let [system (photon-system conf)
         comp {:rest-server (component/using (web-server conf) [:ui])}
         web-system (merge system comp)]
-    (clojure.pprint/pprint web-system)
     (component/start web-system)))
 
 (defn -main [& args]

@@ -129,7 +129,7 @@
         (let [response (handler request)]
           (-> response
               (assoc-in [:headers "Access-Control-Allow-Origin"]
-                        "http://localhost:3000")
+                        [(get (:headers request) "origin")])
               (assoc-in [:headers "Access-Control-Allow-Credentials"] "true")
               (assoc-in [:headers "Access-Control-Allow-Methods"]
                         "GET, PUT, PATCH, POST, DELETE, OPTIONS")
