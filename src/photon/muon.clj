@@ -9,7 +9,7 @@
   (:import (org.reactivestreams Publisher)
            (java.util Map)))
 
-(defrecord PhotonMicroservice [stream-manager]
+(defrecord PhotonMicroservice [stream-manager options]
   mcs/MicroserviceStream
   (stream-mappings [this]
     ;; TODO: Explore the case of pure hot/cold streams
@@ -55,7 +55,13 @@
      {:endpoint "projections"
       :fn-process (fn [resource]
                     (let [params (clojure.walk/keywordize-keys resource)]
-                      (api/post-projection! stream-manager params)))}]))
+                      (api/post-projection! stream-manager params)))}
+     {:endpoint "rest-url"
+      :fn-process (fn [_]
+                    (let [no-ssl? (nil? (:rest.keystore options))
+                          prot (if no-ssl? "http" "https")]
+                      (str prot "://" (:rest.host options) ":"
+                           (:rest.port options))))}]))
 
 (defrecord MuonService [options stream-manager]
   component/Lifecycle
@@ -63,7 +69,7 @@
     (if (nil? (:muon component))
       (try
         (let [stream-manager (:manager stream-manager)
-              impl (PhotonMicroservice. stream-manager)
+              impl (PhotonMicroservice. stream-manager options)
               projections (:proj-ch stream-manager)
               conf (if-let [mcb (:muon-builder options)]
                      {:config
