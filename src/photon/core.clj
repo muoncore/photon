@@ -9,6 +9,7 @@
             [photon.streams :as streams]
             [photon.security :as sec]
             [photon.default-projs :as dp]
+            [photon-ui.core :as photon-ui]
             [immutant.web :as web]
             [com.stuartsierra.component :as component]
             [clojure.core.async :refer [<! go-loop]]
@@ -134,24 +135,31 @@
   (map->ConfigManager {:options options}))
 
 (defn photon-system [conf]
-  (component/system-map
-   :security (component/using (sec/security conf) [])
-   :database (component/using (db-component conf) [])
-   :stream-manager (component/using (streams/stream-manager conf)
-                                    [:database])
-   :muon-service (component/using (m/muon-service conf)
-                                  [:stream-manager])
-   :config-manager (component/using (config-manager conf)
-                                    [:stream-manager])
-   :ui (component/using (ui-handler conf) [:stream-manager :security])))
+  (let [c (component/system-map
+           :security (component/using (sec/security conf) [])
+           :database (component/using (db-component conf) [])
+           :stream-manager (component/using (streams/stream-manager conf)
+                                            [:database])
+           :muon-service (component/using (m/muon-service conf)
+                                          [:stream-manager])
+           :config-manager (component/using (config-manager conf)
+                                            [:stream-manager])
+           :ui (component/using (ui-handler conf) [:stream-manager :security]))]
+    (if (nil? (:ui.port conf))
+      c
+      (merge c {:photon-ui (component/using (photon-ui.core/ui-handler conf)
+                                            [:muon-service])
+                :web-server (component/using (photon-ui.core/web-server conf)
+                                             [:photon-ui])}))))
 
 ;; Workaround to have http-kit as the provider for Ring
 ;; In order to use http-kit, run `lein run` instead of `lein ring server`
 (defn photon-component [conf]
   (log/info "Starting photon...")
   (let [system (photon-system conf)
-        comp {:web-server (component/using (web-server conf) [:ui])}
+        comp {:rest-server (component/using (web-server conf) [:ui])}
         web-system (merge system comp)]
+    (clojure.pprint/pprint web-system)
     (component/start web-system)))
 
 (defn -main [& args]
