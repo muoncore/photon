@@ -1,5 +1,17 @@
 # Change Log
 
+## [Unreleased](https://github.com/muoncore/photon/tree/HEAD)
+
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.7...HEAD)
+
+**Implemented enhancements:**
+
+- Extract GUI into a different module [\#11](https://github.com/muoncore/photon/issues/11)
+
+**Merged pull requests:**
+
+- Without ui [\#12](https://github.com/muoncore/photon/pull/12) ([tranchis](https://github.com/tranchis))
+
 ## [v2017.7](https://github.com/muoncore/photon/tree/v2017.7) (2017-04-09)
 [Full Changelog](https://github.com/muoncore/photon/compare/v2017.6...v2017.7)
 
