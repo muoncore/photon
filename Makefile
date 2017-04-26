@@ -11,7 +11,7 @@ run-mongo: target
 
 build: target
 target:
-	$(shell cp `lein do clean, cljsbuild once, uberjar | sed -n 's/^Created \(.*standalone\.jar\)/\1/p'` target/photon.jar)
+	$(shell cp `lein do clean, uberjar | sed -n 's/^Created \(.*standalone\.jar\)/\1/p'` target/photon.jar)
 
 docker:
 	docker build . -t photon

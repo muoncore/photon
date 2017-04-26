@@ -48,6 +48,11 @@
                     (api/post-event!
                      stream-manager
                      (clojure.walk/keywordize-keys ev)))}
+     {:endpoint "stream/delete"
+      :fn-process (fn [resource]
+                    (log/trace ":::: DELETING STREAM" (pr-str resource))
+                    (let [params (clojure.walk/keywordize-keys resource)]
+                      (api/delete-stream! stream-manager (:stream-name params))))}
      {:endpoint "stream-names"
       :fn-process (fn [ev]
                     (log/trace ":::: EVENTS" (pr-str ev))
