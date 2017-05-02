@@ -14,7 +14,7 @@ In order to use the Software under this Agreement, you must receive a “Source 
 
 1.2 Unlimited Organization License. If you purchased an Organization License (included with the Muon Pro Software), you may install the Software on an unlimited number of Hosts. “Host” means any physical or virtual machine which is controlled by you.
 
-1.3 Limited Organization License. If you purchased an Organization License (included with the Sidekiq Enterprise Software), you may install the Software on an unlimited number of Hosts. “Host” means any physical or virtual machine which is controlled by you.
+1.3 Limited Organization License. If you purchased an Organization License (included with the Muon Enterprise Software), you may install the Software on an unlimited number of Hosts. “Host” means any physical or virtual machine which is controlled by you.
 
 1.4 Archive Copies. You are entitled to make a reasonable amount of copies of the Software for archival purposes. Each copy must reproduce all copyright and other proprietary rights notices on or in the Software Product.
 
@@ -28,15 +28,15 @@ In order to use the Software under this Agreement, you must receive a “Source 
 
 3.2 UNDER NO CIRCUMSTANCES MAY YOU USE THE SOFTWARE AS PART OF A PRODUCT OR SERVICE THAT PROVIDES SIMILAR FUNCTIONALITY TO THE SOFTWARE ITSELF.
 
-The Open Source version of the Software (“AGPL Version”) is licensed
+The Open Source version of the Software (“LGPL Version”) is licensed
 under the terms of the GNU Lesser General Public License versions 3.0
-(“AGPL”) and not under this EULA.
+(“LGPL”) and not under this EULA.
 
 4. Ownership. Notwithstanding anything to the contrary contained herein, except for the limited license rights expressly provided herein, Contributed Systems and its suppliers have and will retain all rights, title and interest (including, without limitation, all patent, copyright, trademark, trade secret and other intellectual property rights) in and to the Software and all copies, modifications and derivative works thereof (including any changes which incorporate any of your ideas, feedback or suggestions). You acknowledge that you are obtaining only a limited license right to the Software, and that irrespective of any use of the words “purchase”, “sale” or like terms hereunder no ownership rights are being conveyed to you under this Agreement or otherwise. 
 
 5. Fees and Payment. The Software license fees will be due and payable in full as set forth in the applicable invoice or at the time of purchase. If the Software does not function properly within two weeks of purchase, please contact us within those two weeks for a refund. You shall be responsible for all taxes, withholdings, duties and levies arising from the order (excluding taxes based on the net income of Contributed Systems). 
 
-6. Support, Maintenance and Services. Subject to the terms and conditions of this Agreement, as set forth in your invoice, and as set forth on the Sidekiq Pro support page (https://muoncore.io/pro-support), support and maintenance services may be included with the purchase of your license subscription.
+6. Support, Maintenance and Services. Subject to the terms and conditions of this Agreement, as set forth in your invoice, and as set forth on the Muon Pro support page (https://muoncore.io/pro), support and maintenance services may be included with the purchase of your license subscription.
 
 7. Term of Agreement. 
 
