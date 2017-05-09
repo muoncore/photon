@@ -1,8 +1,7 @@
 # Change Log
 
-## [Unreleased](https://github.com/muoncore/photon/tree/HEAD)
-
-[Full Changelog](https://github.com/muoncore/photon/compare/v2017.7...HEAD)
+## [v2017.8](https://github.com/muoncore/photon/tree/v2017.8) (2017-05-09)
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.7...v2017.8)
 
 **Implemented enhancements:**
 
