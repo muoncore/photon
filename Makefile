@@ -3,10 +3,10 @@
 all: clean target
 
 run: target
-	java -jar target/photon.jar
+	java -jar target/photon.jar -ui.port 3500
 
 run-mongo: target
-	java -jar target/photon.jar -db.backend mongo -mongodb.host localhost
+	java -jar target/photon.jar -db.backend mongo -mongodb.host localhost -ui.port 3500
 
 
 build: target
