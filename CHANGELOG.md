@@ -1,5 +1,12 @@
 # Change Log
 
+## [v2017.10](https://github.com/muoncore/photon/tree/v2017.10) (2017-05-09)
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.9...v2017.10)
+
+**Merged pull requests:**
+
+- Fixes \#14 - muon api to delete streams. [\#16](https://github.com/muoncore/photon/pull/16) ([daviddawson](https://github.com/daviddawson))
+
 ## [v2017.9](https://github.com/muoncore/photon/tree/v2017.9) (2017-05-09)
 [Full Changelog](https://github.com/muoncore/photon/compare/v2017.8...v2017.9)
 
@@ -8,6 +15,7 @@
 
 **Implemented enhancements:**
 
+- Add muon api to remove streams [\#14](https://github.com/muoncore/photon/issues/14)
 - Extract GUI into a different module [\#11](https://github.com/muoncore/photon/issues/11)
 
 **Merged pull requests:**
