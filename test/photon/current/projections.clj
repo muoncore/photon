@@ -46,13 +46,20 @@
   (let [s (cl/with-muon m
             (cl/subscribe! (str url-str "/projection/__streams__")
                            {:from 0 :stream-type :hot}))]
+    (log/info "Subscribing")
+    (Thread/sleep 5000)
     (post-one-event m s-name)
+    (log/info "Posted")
     (fact "Four events in projection" (:processed (<!! s)) => 4)
+    (log/info "To next subscription")
     (let [s2 (cl/with-muon m
                (cl/subscribe! (str url-str "/projection/__streams__")
                               {:from 0 :stream-type :hot
                                :stream-name "__all__"}))]
+      (log/info "Subscribing")
+      (Thread/sleep 5000)
       (post-one-event m s-name)
+      (log/info "Posted")
       (let [val2 (<!! s2)]
         (fact "Two streams receive the same result..."
               (:processed (<!! s)) => (:processed val2))

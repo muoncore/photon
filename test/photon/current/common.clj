@@ -51,7 +51,8 @@
         comp (component/start
               (c (merge conf/default-config
                         (merge conf {:db.backend "file"
-                                     :file.path temp-file}))))
+                                     :file.path temp-file
+                                     :ui.port nil}))))
         d (:driver (:database comp))]
     (log/info "Temporal file:" temp-file)
     comp))
