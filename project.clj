@@ -30,7 +30,7 @@
                  [clj-time "0.13.0"]
                  [compojure "1.5.2"]
                  [serializable-fn "1.1.4"]
-                 [muoncore/photon-config "0.9.10"]
+                 [muoncore/photon-config "0.9.11"]
                  [tranchis/muon-schemas "0.1.9"]
                  [io.muoncore/muon-clojure "7.2.9"
                   :exclusions [org.clojure/tools.reader
@@ -58,7 +58,7 @@
                  #_[tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  #_[tranchis/photon-redis "0.9.42"]
-                 [tranchis/photon-mongo "0.10.4"]
+                 [muoncore/photon-mongo "0.10.5"]
                  [tranchis/photon-file "0.10.4"]
                  [muoncore/photon-ui "0.9.7"]]
   :plugins [[lein-midje "3.2.1"]
