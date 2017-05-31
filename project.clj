@@ -20,7 +20,7 @@
                  [com.taoensso/nippy "2.13.0"
                   :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
-                 [tranchis/photon-db "0.10.4"
+                 [tranchis/photon-db "0.10.8"
                   :exclusions [org.clojure/java.classpath]]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.3.441"
@@ -52,14 +52,14 @@
                  [io.github.lukehutch/fast-classpath-scanner "2.0.17"]
                  [congomongo "0.5.0"]
                  #_[tranchis/photon-riak "0.9.31"]
-                 [tranchis/photon-h2 "0.10.4"]
-                 [tranchis/photon-cassandra "0.10.5"
+                 [tranchis/photon-h2 "0.10.8"]
+                 [tranchis/photon-cassandra "0.10.8"
                   :exclusions [com.google.guava/guava]]
                  #_[tranchis/photon-hazelcast "0.9.40"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  #_[tranchis/photon-redis "0.9.42"]
-                 [muoncore/photon-mongo "0.10.5"]
-                 [tranchis/photon-file "0.10.4"]
+                 [muoncore/photon-mongo "0.10.8"]
+                 [tranchis/photon-file "0.10.8"]
                  [muoncore/photon-ui "0.9.7"]]
   :plugins [[lein-midje "3.2.1"]
             [lein-ring "0.11.0" :exclusions [org.clojure/clojure]]]
