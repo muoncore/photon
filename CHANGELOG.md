@@ -1,5 +1,13 @@
 # Change Log
 
+## [Unreleased](https://github.com/muoncore/photon/tree/HEAD)
+
+[Full Changelog](https://github.com/muoncore/photon/compare/v2017.10...HEAD)
+
+**Fixed bugs:**
+
+- Cannot delete streams that have / in the name [\#17](https://github.com/muoncore/photon/issues/17)
+
 ## [v2017.10](https://github.com/muoncore/photon/tree/v2017.10) (2017-05-09)
 [Full Changelog](https://github.com/muoncore/photon/compare/v2017.9...v2017.10)
 
