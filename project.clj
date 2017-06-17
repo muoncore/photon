@@ -32,9 +32,8 @@
                  [serializable-fn "1.1.4"]
                  [muoncore/photon-config "0.9.11"]
                  [tranchis/muon-schemas "0.1.9"]
-                 [io.muoncore/muon-clojure "7.2.9"
-                  :exclusions [org.clojure/tools.reader
-                               com.google.guava/guava]]
+                 [io.muoncore/muon-clojure "7.2.10"
+                  :exclusions [com.google.guava/guava]]
                  [prismatic/schema "1.1.3"]
                  [metosin/ring-http-response "0.8.2"]
                  [metosin/compojure-api "1.1.10"
