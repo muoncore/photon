@@ -8,6 +8,10 @@
 
 - Cannot delete streams that have / in the name [\#17](https://github.com/muoncore/photon/issues/17)
 
+**Closed issues:**
+
+- ConcurrentModificationException [\#18](https://github.com/muoncore/photon/issues/18)
+
 ## [v2017.10](https://github.com/muoncore/photon/tree/v2017.10) (2017-05-09)
 [Full Changelog](https://github.com/muoncore/photon/compare/v2017.9...v2017.10)
 
