@@ -10,6 +10,7 @@
 
 **Closed issues:**
 
+- README link to latest photon docs points to 404 [\#19](https://github.com/muoncore/photon/issues/19)
 - ConcurrentModificationException [\#18](https://github.com/muoncore/photon/issues/18)
 
 ## [v2017.10](https://github.com/muoncore/photon/tree/v2017.10) (2017-05-09)
