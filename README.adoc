@@ -47,9 +47,9 @@ You can replay the persisted events using the CLI
 All the events stored will then be replayed.
 
 
-Check the latest http://muoncore.io/submodules/photon/docs/index.html[photon documentation] for more information.
+Check the latest http://muoncore.io/submodules/photon/doc/index.html[photon documentation] for more information.
 
-Check the http://muoncore.io/guide/index.html[Muon Guide "12 Days of Muon"] to see patterns for developing with events using Photon
+Check the http://muoncore.io/guide/index.html to see patterns for developing with events using Photon
 
 ## Developing Photon
 
